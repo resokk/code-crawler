@@ -70,12 +70,37 @@ def build(root: Path, paths: list[str], on_file: Callable[[], None]) -> Graph:
         # Ссылка может вести за пределы репозитория — такие файлы не читаем.
         if file.is_file() and not file.is_symlink():
             try:
+                before = file.stat()
+                source = file.read_bytes()
+                after = file.stat()
+                if (
+                    before.st_ino,
+                    before.st_size,
+                    before.st_mtime_ns,
+                    before.st_ctime_ns,
+                ) != (
+                    after.st_ino,
+                    after.st_size,
+                    after.st_mtime_ns,
+                    after.st_ctime_ns,
+                ):
+                    raise RuntimeError("source changed during read")
                 add = _add_plp_file if path.endswith(".plp") else _add_file
-                add(graph, path, file.read_bytes())
+                add(graph, path, source)
             # Один плохой файл не должен срывать индекс всего репозитория.
             except Exception as exc:  # noqa: BLE001
                 graph.failed.append((path, f"{type(exc).__name__}: {exc}"))
         on_file()
+    _link_calls(graph)
+    return graph
+
+
+def build_sources(sources: list[tuple[str, bytes]]) -> Graph:
+    """Build the existing Java/PLPlus graph from captured bytes without filesystem IO."""
+    graph = Graph()
+    for path, source in sources:
+        add = _add_plp_file if path.endswith(".plp") else _add_file
+        add(graph, path, source)
     _link_calls(graph)
     return graph
 
@@ -101,9 +126,34 @@ def _link_calls(graph: Graph) -> None:
 
 
 def _add_file(graph: Graph, path: str, source: bytes) -> None:
-    symbols = java.parse(source)
+    result = java.analyze(source)
+    symbols = result.symbols
     file_id = graph.node(
-        "file", Path(path).name, path, path, attrs={"language": "java"}
+        "file",
+        Path(path).name,
+        path,
+        path,
+        attrs={
+            "language": "java",
+            "source_sha256": result.source_sha256,
+            "byte_length": result.byte_length,
+            "parse_coverage": result.coverage,
+            "diagnostics": [
+                {
+                    "code": d.code,
+                    "message": d.message,
+                    "node_type": d.node_type,
+                    "severity": d.severity,
+                    "source_span": {
+                        "start": d.source_span.start.model_dump(),
+                        "end": d.source_span.end.model_dump(),
+                        "start_byte": d.source_span.start_byte,
+                        "end_byte": d.source_span.end_byte,
+                    },
+                }
+                for d in result.diagnostics
+            ],
+        },
     )
     ids: list[int] = []
     queries: dict[str, int] = {}

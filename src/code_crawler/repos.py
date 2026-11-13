@@ -30,7 +30,8 @@ def resolve(source: str) -> Repo:
     return Repo(name, source, REPOS_DIR / name, remote=True)
 
 
-async def git(*args: str, cwd: Path | None = None) -> str:
+async def git_output(*args: str, cwd: Path | None = None) -> bytes:
+    """Git output without decoding or trimming, including NUL-separated paths."""
     process = await asyncio.create_subprocess_exec(
         "git",
         *args,
@@ -43,7 +44,11 @@ async def git(*args: str, cwd: Path | None = None) -> str:
     stdout, stderr = await process.communicate()
     if process.returncode:
         raise RuntimeError(f"git {args[0]}: {stderr.decode(errors='replace').strip()}")
-    return stdout.decode(errors="replace").strip()
+    return stdout
+
+
+async def git(*args: str, cwd: Path | None = None) -> str:
+    return (await git_output(*args, cwd=cwd)).decode(errors="replace").strip()
 
 
 async def sync(repo: Repo) -> None:

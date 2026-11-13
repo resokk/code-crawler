@@ -39,3 +39,8 @@ resume, durable ingest jobs/stages/diagnostics и partial-file batches потр�
 отдельного расширения. Ошибки возвращаются вызывающей стороне; автоматического
 retry или публикации нет. Readiness gate описан в
 [ucm-publication.md](ucm-publication.md).
+
+Инкрементальный orchestrator формирует новый полный batch из переиспользованных
+и вновь извлечённых facts и сохраняет его вместе с file manifests одной
+транзакцией. См. [ucm-incremental.md](ucm-incremental.md). Public ingest_batch
+сохраняет прежний контракт полного закрытого batch.

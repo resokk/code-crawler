@@ -82,3 +82,13 @@ snapshot-scoped FK и защиту immutable content. Структура и гр
 проверку lifecycle и согласованности publication pointer при commit.
 Валидация, CAS-публикация и восстановление прежнего snapshot описаны в
 [ucm-publication.md](ucm-publication.md).
+
+Миграция `0006_ucm_incremental_indexing.sql` сохраняет profile анализа, file
+ownership и reverse dependency metadata по snapshot. Эти manifests становятся
+immutable вместе с canonical facts. API описан в
+[ucm-incremental.md](ucm-incremental.md).
+
+Миграция `0007_ucm_legacy_migration.sql` добавляет explicit legacy/UCM repository
+mapping, persistent read selection и immutable compatibility projections.
+Таблицы repos/nodes/edges/data_* сохраняются. См.
+[ucm-legacy-migration.md](ucm-legacy-migration.md).

@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 
@@ -7,7 +8,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn
 
-from code_crawler import datamodel, db, indexer, repos
+from code_crawler import datamodel, db, indexer, legacy, repos
 
 console = Console()
 
@@ -102,12 +103,67 @@ async def index(source: str) -> None:
             await conn.close()
         for path, error in graph.failed:
             progress.console.print(f"  [yellow]пропущен[/] {path}: {escape(error)}")
+        for node in graph.nodes:
+            if node[0] == "file":
+                for diagnostic in node[6].get("diagnostics", []):
+                    position = diagnostic["source_span"]["start"]
+                    console.print(
+                        escape(
+                            f"  {node[3]}:{position['line']}:{position['byte_column']}: {diagnostic['code']} — {diagnostic['message']}"
+                        )
+                    )
         progress.console.print(
             f"  {repo.name}: ветка {branch or '(нет)'}, коммит {commit[:12]}\n"
             f"  файлов {graph.count('file')}, классов {graph.count('class')}, "
             f"методов {graph.count('method')}, SQL-запросов {graph.count('sql_query')}, "
             f"таблиц {len({ref[2] for ref in graph.refs})}"
         )
+
+
+async def migrate_index(legacy_name: str, repository_key: str) -> None:
+    with operation("Миграция legacy индекса"):
+        conn = await db.connect()
+        try:
+            snapshot = await legacy.migrate_index(conn, legacy_name, repository_key)
+            console.print(f"snapshot: {snapshot}")
+        finally:
+            await conn.close()
+
+
+async def compare_index(repository_key: str) -> None:
+    with operation("Сравнение индексов"):
+        conn = await db.connect()
+        try:
+            report = await legacy.compare_index(conn, repository_key)
+            console.print_json(json.dumps(report, ensure_ascii=False))
+            if not report["matches"]:
+                raise ValueError("индексы различаются")
+        finally:
+            await conn.close()
+
+
+async def use_index(repository_key: str, backend: str) -> None:
+    with operation("Переключение чтения"):
+        conn = await db.connect()
+        try:
+            await legacy.use_index(conn, repository_key, backend)
+        finally:
+            await conn.close()
+
+
+async def show_index(repository_key: str) -> None:
+    with operation("Чтение индекса"):
+        conn = await db.connect()
+        try:
+            graph = await legacy.read_graph(conn, repository_key)
+            console.print_json(
+                json.dumps(
+                    {"nodes": graph.nodes, "edges": graph.edges, "refs": graph.refs},
+                    ensure_ascii=False,
+                )
+            )
+        finally:
+            await conn.close()
 
 
 async def schema_import() -> None:
@@ -159,5 +215,21 @@ def main() -> None:
     )
     index_parser.add_argument("source", help="локальный каталог или URL репозитория")
     index_parser.set_defaults(run=index)
+    migrate_parser = commands.add_parser(
+        "migrate-index", help="перенести legacy индекс в UCM snapshot"
+    )
+    migrate_parser.add_argument("legacy_name")
+    migrate_parser.add_argument("--repository-key", required=True)
+    migrate_parser.set_defaults(run=migrate_index)
+    for name, run in (
+        ("compare-index", compare_index),
+        ("use-index", use_index),
+        ("show-index", show_index),
+    ):
+        command = commands.add_parser(name)
+        command.add_argument("repository_key")
+        if name == "use-index":
+            command.add_argument("--backend", choices=("legacy", "ucm"), required=True)
+        command.set_defaults(run=run)
     args = vars(parser.parse_args())
     asyncio.run(args.pop("run")(**args))

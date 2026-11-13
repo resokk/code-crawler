@@ -344,41 +344,51 @@ async def ingest_batch(
         )
     rows = await asyncio.to_thread(_records, snapshot_id, batch)
     async with conn.transaction():
-        snapshot = await conn.fetchrow(
-            "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1 FOR UPDATE",
-            snapshot_id,
-        )
-        if snapshot is None or snapshot["repository_id"] != batch.repository_id:
-            raise ValueError("snapshot missing or belongs to a different repository")
-        if snapshot["state"] != "BUILDING":
-            raise ValueError("ingestion requires BUILDING snapshot")
-        if await conn.fetchval(
-            "SELECT EXISTS(SELECT 1 FROM public.ucm_entities WHERE snapshot_id=$1)",
-            snapshot_id,
-        ):
-            raise ValueError("ingestion requires an empty snapshot")
-        prefix = "ingest_" + uuid4().hex
-        stages = {}
-        for table, records in rows.items():
-            stage = prefix + "_" + table.removeprefix("ucm_")
-            stages[table] = stage
-            await conn.execute(
-                f"CREATE TEMP TABLE {stage} (LIKE public.{table} INCLUDING DEFAULTS) ON COMMIT DROP"
-            )
-            columns = tuple(records[0])
-            await conn.copy_records_to_table(
-                stage,
-                schema_name="pg_temp",
-                columns=columns,
-                records=[tuple(row[column] for column in columns) for row in records],
-            )
-        # Envelope IDs first; deferred FKs allow cyclic subtype references in pass two.
-        for table in ["ucm_entities", *(t for t in rows if t != "ucm_entities")]:
-            if table not in rows:
-                continue
-            columns = ",".join(rows[table][0])
-            await conn.execute(
-                f"INSERT INTO public.{table} ({columns}) SELECT {columns} FROM pg_temp.{stages[table]}"
-            )
-        await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        await _ingest_records(conn, snapshot_id, batch.repository_id, rows)
     return {entity.id: (snapshot_id, entity.id) for entity in batch.entities}
+
+
+async def _ingest_records(
+    conn: asyncpg.Connection,
+    snapshot_id: UUID,
+    repository_id: UUID,
+    rows: dict[str, list[dict]],
+) -> None:
+    """Write normalized records inside the caller's transaction."""
+    snapshot = await conn.fetchrow(
+        "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1 FOR UPDATE",
+        snapshot_id,
+    )
+    if snapshot is None or snapshot["repository_id"] != repository_id:
+        raise ValueError("snapshot missing or belongs to a different repository")
+    if snapshot["state"] != "BUILDING":
+        raise ValueError("ingestion requires BUILDING snapshot")
+    if await conn.fetchval(
+        "SELECT EXISTS(SELECT 1 FROM public.ucm_entities WHERE snapshot_id=$1)",
+        snapshot_id,
+    ):
+        raise ValueError("ingestion requires an empty snapshot")
+    prefix = "ingest_" + uuid4().hex
+    stages = {}
+    for table, records in rows.items():
+        stage = prefix + "_" + table.removeprefix("ucm_")
+        stages[table] = stage
+        await conn.execute(
+            f"CREATE TEMP TABLE {stage} (LIKE public.{table} INCLUDING DEFAULTS) ON COMMIT DROP"
+        )
+        columns = tuple(records[0])
+        await conn.copy_records_to_table(
+            stage,
+            schema_name="pg_temp",
+            columns=columns,
+            records=[tuple(row[column] for column in columns) for row in records],
+        )
+    # Envelope IDs first; deferred FKs allow cyclic subtype references in pass two.
+    for table in ["ucm_entities", *(t for t in rows if t != "ucm_entities")]:
+        if table not in rows:
+            continue
+        columns = ",".join(rows[table][0])
+        await conn.execute(
+            f"INSERT INTO public.{table} ({columns}) SELECT {columns} FROM pg_temp.{stages[table]}"
+        )
+    await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")

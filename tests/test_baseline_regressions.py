@@ -56,11 +56,18 @@ def test_legacy_quoted_table_identity_is_folded() -> None:
     assert quoted.tables == ordinary.tables == {"users": {"read"}}
 
 
-def test_legacy_syntax_error_has_no_diagnostic(tmp_path: Path) -> None:
+def test_syntax_error_has_diagnostic_and_keeps_neighbouring_file(
+    tmp_path: Path,
+) -> None:
     (tmp_path / "Broken.java").write_text("class Broken { void m( { }")
     (tmp_path / "Good.java").write_text("class Good { void ok() {} }")
     graph = indexer.build(tmp_path, ["Broken.java", "Good.java"], lambda: None)
     assert graph.failed == []
+    broken = next(
+        node for node in graph.nodes if node[0] == "file" and node[3] == "Broken.java"
+    )
+    assert broken[6]["diagnostics"]
+    assert broken[6]["parse_coverage"] == "PARTIAL"
     assert graph.count("file") == 2
     assert "Good.ok" in {node[2] for node in graph.nodes}
 

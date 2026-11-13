@@ -43,3 +43,21 @@ with operation("Индексация repo") as progress:
 ```
 
 Вывод идёт через `rich`; вне терминала (перенаправление в файл, CI) анимация отключается, строка статуса остаётся.
+
+## Переход с legacy на UCM
+
+```bash
+uv run code-crawler index ~/work/billing
+uv run code-crawler migrate-index billing --repository-key org/billing
+uv run code-crawler compare-index org/billing
+uv run code-crawler use-index org/billing --backend ucm
+uv run code-crawler show-index org/billing
+# Возврат чтения без удаления snapshots:
+uv run code-crawler use-index org/billing --backend legacy
+```
+
+`migrate-index` публикует новый snapshot, сохраняя legacy. `compare-index` выдаёт
+полный compatibility report и exit 1 при расхождении. `use-index ucm` требует
+совпадения индексов; `show-index` возвращает nodes/edges/refs выбранного reader.
+После следующего `index` повторите `migrate-index`, чтобы обновить UCM snapshot.
+Точный контракт и ограничения семантики: [ucm-legacy-migration.md](ucm-legacy-migration.md).

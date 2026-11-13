@@ -236,6 +236,24 @@ def _require_free_connection(conn: asyncpg.Connection) -> None:
         )
 
 
+async def load_snapshot_batch(conn: asyncpg.Connection, snapshot_id: UUID) -> UcmBatch:
+    """Read and validate a frozen canonical snapshot without changing its state."""
+    snapshot = await conn.fetchrow(
+        "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1", snapshot_id
+    )
+    if snapshot is None or snapshot["state"] == "BUILDING":
+        raise ValueError("reading batch requires a frozen snapshot")
+    tables = {}
+    for table in ("ucm_entities", *_SUBTYPES.values(), *_AUXILIARY):
+        tables[table] = [
+            dict(row)
+            for row in await conn.fetch(
+                f"SELECT * FROM public.{table} WHERE snapshot_id=$1", snapshot_id
+            )
+        ]
+    return await asyncio.to_thread(_restore, snapshot["repository_id"], tables)
+
+
 async def validate_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> int:
     """Freeze and validate all stored facts, then record readiness; return entity count."""
     _require_free_connection(conn)
@@ -259,15 +277,7 @@ async def validate_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> int:
             "UPDATE public.ucm_snapshots SET state='VALIDATING' WHERE id=$1",
             snapshot_id,
         )
-    tables = {}
-    for table in ("ucm_entities", *_SUBTYPES.values(), *_AUXILIARY):
-        tables[table] = [
-            dict(row)
-            for row in await conn.fetch(
-                f"SELECT * FROM public.{table} WHERE snapshot_id=$1", snapshot_id
-            )
-        ]
-    batch = await asyncio.to_thread(_restore, snapshot["repository_id"], tables)
+    batch = await load_snapshot_batch(conn, snapshot_id)
     count = len(batch.entities)
     async with conn.transaction():
         state = await conn.fetchval(

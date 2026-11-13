@@ -1,15 +1,18 @@
 """Разбор Java: классы, методы и SQL-запросы, восстановленные из строковых выражений."""
 
+import hashlib
 import re
 import textwrap
 from dataclasses import dataclass, field
+from typing import Literal
 
 import tree_sitter_java
-from tree_sitter import Language, Node, Parser
+from tree_sitter import Language, Node, Parser, Tree
 
 from code_crawler.sql import UNKNOWN, looks_like_sql
+from code_crawler.ucm import Position
 
-_PARSER = Parser(Language(tree_sitter_java.language()))
+_LANGUAGE = Language(tree_sitter_java.language())
 
 _TYPES = {
     "class_declaration": "class",
@@ -73,6 +76,33 @@ class Query:
     line: int
 
 
+@dataclass(frozen=True)
+class SourceSpan:
+    start: Position
+    end: Position
+    start_byte: int
+    end_byte: int
+
+
+@dataclass(frozen=True)
+class Diagnostic:
+    code: Literal["SYNTAX_ERROR", "MISSING_TOKEN", "INVALID_UTF8"]
+    message: str
+    node_type: str
+    source_span: SourceSpan
+    severity: Literal["ERROR"] = "ERROR"
+
+
+@dataclass(frozen=True)
+class ParseResult:
+    symbols: list["Symbol"]
+    diagnostics: tuple[Diagnostic, ...]
+    source_sha256: str
+    byte_length: int
+    coverage: Literal["COMPLETE", "PARTIAL"]
+    _tree: Tree | None = field(default=None, repr=False, compare=False)
+
+
 @dataclass
 class Symbol:
     kind: str  # "class" или "method"
@@ -83,6 +113,7 @@ class Symbol:
     parent: int | None  # индекс объемлющего символа в списке
     attrs: dict[str, str] = field(default_factory=dict)
     queries: list[Query] = field(default_factory=list)
+    source_span: SourceSpan | None = None
 
 
 @dataclass
@@ -101,7 +132,70 @@ class _Variable:
 
 
 def parse(source: bytes) -> list[Symbol]:
-    root = _PARSER.parse(source).root_node
+    """Extract legacy symbols; use analyze for diagnostics and source provenance."""
+    return analyze(source).symbols
+
+
+def _span(node: Node) -> SourceSpan:
+    return SourceSpan(
+        Position(line=node.start_point.row + 1, byte_column=node.start_point.column),
+        Position(line=node.end_point.row + 1, byte_column=node.end_point.column),
+        node.start_byte,
+        node.end_byte,
+    )
+
+
+def _position(source: bytes, offset: int) -> Position:
+    prefix = source[:offset]
+    return Position(
+        line=prefix.count(b"\n") + 1, byte_column=len(prefix.rsplit(b"\n", 1)[-1])
+    )
+
+
+def analyze(source: bytes) -> ParseResult:
+    """Analyze exact UTF-8 bytes, retaining AST diagnostics and declaration spans."""
+    if not isinstance(source, bytes):
+        raise TypeError("Java source must be immutable bytes")
+    fingerprint = hashlib.sha256(source).hexdigest()
+    try:
+        source.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        diagnostic = Diagnostic(
+            "INVALID_UTF8",
+            "Source is not valid UTF-8",
+            "encoding",
+            SourceSpan(
+                _position(source, exc.start),
+                _position(source, exc.end),
+                exc.start,
+                exc.end,
+            ),
+        )
+        return ParseResult([], (diagnostic,), fingerprint, len(source), "PARTIAL")
+    tree = Parser(_LANGUAGE).parse(source)
+    root = tree.root_node
+    diagnostics = []
+    pending = [root]
+    while pending:
+        node = pending.pop()
+        if node.is_error or node.is_missing:
+            code = "MISSING_TOKEN" if node.is_missing else "SYNTAX_ERROR"
+            message = (
+                f"Missing {node.type}"
+                if node.is_missing
+                else "Unrecognized Java syntax"
+            )
+            diagnostics.append(Diagnostic(code, message, node.type, _span(node)))
+        if node.has_error or node.is_error:
+            pending.extend(reversed(node.children))
+    diagnostics.sort(
+        key=lambda d: (
+            d.source_span.start_byte,
+            d.source_span.end_byte,
+            d.code,
+            d.node_type,
+        )
+    )
     package = next(
         (
             _text(child.named_children[-1])
@@ -116,11 +210,18 @@ def parse(source: bytes) -> list[Symbol]:
     for child in root.named_children:
         if child.type in _TYPES:
             _type(child, package, None, symbols, constants)
-    return symbols
+    return ParseResult(
+        symbols,
+        tuple(diagnostics),
+        fingerprint,
+        len(source),
+        "PARTIAL" if diagnostics else "COMPLETE",
+        tree,
+    )
 
 
-def _text(node: Node) -> str:
-    return node.text.decode("utf-8", errors="replace")
+def _text(node: Node | None) -> str:
+    return node.text.decode("utf-8", errors="replace") if node is not None else ""
 
 
 def _line(node: Node) -> int:
@@ -149,7 +250,10 @@ def _type(
     symbols: list[Symbol],
     constants: dict[str, _Value | None],
 ) -> None:
-    name = _text(node.child_by_field_name("name"))
+    name_node = node.child_by_field_name("name")
+    if name_node is None or name_node.is_missing:
+        return
+    name = _text(name_node)
     qualified = f"{prefix}.{name}" if prefix else name
     index = len(symbols)
     symbol = Symbol(
@@ -160,6 +264,7 @@ def _type(
         node.end_point.row + 1,
         parent,
         {"type": _TYPES[node.type]},
+        source_span=_span(node),
     )
     symbols.append(symbol)
     _Flow(constants, symbol.queries).run(node.child_by_field_name("body"), members=True)
@@ -167,7 +272,10 @@ def _type(
         if member.type in _TYPES:
             _type(member, qualified, index, symbols, constants)
         elif member.type in _METHODS:
-            method_name = _text(member.child_by_field_name("name"))
+            name_node = member.child_by_field_name("name")
+            if name_node is None or name_node.is_missing:
+                continue
+            method_name = _text(name_node)
             method = Symbol(
                 "method",
                 method_name,
@@ -175,6 +283,7 @@ def _type(
                 _line(member),
                 member.end_point.row + 1,
                 index,
+                source_span=_span(member),
             )
             symbols.append(method)
             _Flow(constants, method.queries).run(member)

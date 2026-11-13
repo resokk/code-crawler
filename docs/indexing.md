@@ -184,7 +184,8 @@ identifiers, синтаксическую ошибку, dirty worktree, один
 Известные дефекты legacy-поведения: SQL construction получает `executes` без
 подтверждённого execution sink; константы одного файла конфликтуют по имени;
 перегрузки имеют одинаковый qualified_name; quoted имена таблиц приводятся к
-нижнему регистру; восстановление Java AST не выдаёт parser diagnostics.
+нижнему регистру. Parser diagnostics Java реализованы — см.
+[java-diagnostics.md](java-diagnostics.md).
 Dirty worktree читается с диска при сохранении прежнего HEAD, поэтому commit hash
 сам по себе не описывает точное содержимое индекса. Basename остаётся уникальным
 именем регистрации.
@@ -192,3 +193,29 @@ Dirty worktree читается с диска при сохранении пре
 Тесты с `legacy` проверяют наблюдаемые ошибки, а не нормативную семантику будущего
 UCM. При исправлении ошибки соответствующий тест обновляется вместе с кодом и
 документацией. PostgreSQL integration coverage вводится отдельным change.
+
+## Инкрементальные UCM snapshots
+
+UCM API поддерживает fingerprints tracked-файлов, Git diff, invalidation зависимых
+файлов и перенос facts неизменённых файлов в новый snapshot. Контракт analyzer,
+ownership manifests и границы описаны в [ucm-incremental.md](ucm-incremental.md).
+Текущая команда `index` по-прежнему использует legacy writer и полную индексацию;
+управляемый переход чтения и миграция доступны через команды из
+[ucm-legacy-migration.md](ucm-legacy-migration.md).
+
+
+## Java parser diagnostics
+
+Java file nodes сохраняют hash/byte_length фактически прочитанных bytes,
+parse_coverage и structured diagnostics ERROR/missing/invalid UTF-8. CLI выводит
+точные byte coordinates. Файл с восстановленным AST сохраняется как PARTIAL;
+нестабильный при чтении файл пропускается с явной ошибкой. Подробнее:
+[java-diagnostics.md](java-diagnostics.md).
+
+
+## Нормативные Java symbols
+
+Adapter `java_symbols` извлекает signatures/overload identity, parameters,
+scopes и lexical occurrences в UCM через incremental API. Неоднозначные вызовы
+не превращаются в подтверждённые CALLS. Legacy CLI/SQL extraction остаются
+прежними. Контракт и ограничения: [java-symbols.md](java-symbols.md).
