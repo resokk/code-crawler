@@ -1,0 +1,27 @@
+[project]
+name = "code-crawler"
+version = "0.1.0"
+description = "MCP-сервер с GraphRAG по коду"
+authors = [
+    { name = "Roman Sokk", email = "resokk@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.32.0",
+    "fastmcp>=4.1.8",
+    "rich>=15.0.0",
+]
+
+[project.scripts]
+code-crawler = "code_crawler.cli:main"
+code-crawler-server = "code_crawler.server:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
