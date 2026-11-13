@@ -18,19 +18,18 @@ created_at и state. Fingerprint передаёт будущий ingestion; эт
 commit/fingerprint создаёт отдельный snapshot, история не перезаписывается.
 Snapshot metadata неизменяемы с момента создания. Lifecycle:
 BUILDING → VALIDATING → READY → PUBLISHED → RETIRED; переходы назад и пропуск
-состояний запрещены триггером. Повторное присвоение того же state допустимо.
+состояний запрещены триггером (кроме явного rollback RETIRED→PUBLISHED). Повторное присвоение того же state допустимо.
 
 Publication pointer: одна строка на repository_id с snapshot_id и updated_at;
 composite FK гарантирует принадлежность snapshot тому же репозиторию.
 Новый snapshot не меняет pointer; чтение published_snapshot возвращает snapshot
 через этот pointer, или None, если публикации нет.
 
-Это фундамент хранения: здесь нет API публикации и проверки готовности
-содержимого. Таблица pointer пока гарантирует только ownership, не согласование
-со state. Короткая транзакция переключения, validation gate, concurrency и rollback
-будут реализованы `ucm-atomic-publication`; производственный writer не должен
-использовать pointer до этого change. В тестах pointer устанавливается SQL для
-проверки схемы и чтения. State PUBLISHED сам по себе не делает snapshot видимым.
-Удаление опубликованного snapshot запрещает FK (NO ACTION); retention и каскадная
-очистка не вводятся. Канонические факты и защита их immutable content введены миграцией 0004 —
-см. [ucm-storage.md](ucm-storage.md). Bulk ingestion появится следующим change.
+Публикация и validation gate реализованы в [ucm-publication.md](ucm-publication.md).
+Migration 0005 требует immutable validation receipt для READY/PUBLISHED и
+проверяет соответствие pointer единственному PUBLISHED snapshot при commit.
+Переход RETIRED→PUBLISHED добавлен только для восстановления прежней публикации;
+факты при этом остаются read-only. Новый snapshot не переключает pointer сам.
+Удаление опубликованного snapshot запрещают FK; retention вводится отдельно.
+Канонические факты и их immutable guards описаны в
+[ucm-storage.md](ucm-storage.md), загрузка — в [ucm-ingestion.md](ucm-ingestion.md).

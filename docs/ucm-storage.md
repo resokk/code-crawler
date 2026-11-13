@@ -31,7 +31,7 @@ SQL checks проверяют домены, ordered ranges, resolution/target, c
 coverage status, selector shape и payload. Полнота extension rows, обязательное
 Evidence, количество candidates/reasons, callable subtypes, кардинальности
 операций и детерминированность ID дополняются Python/batch validation в
-[ucm-ingestion.md](ucm-ingestion.md). Readiness gate вводится следующим change.
+[ucm-ingestion.md](ucm-ingestion.md). Readiness gate реализован в [ucm-publication.md](ucm-publication.md).
 
 Fact INSERT/UPDATE/DELETE допускаются только для BUILDING snapshot. Триггер
 берёт FOR SHARE lock snapshot, поэтому переход состояния ждёт завершения записи.

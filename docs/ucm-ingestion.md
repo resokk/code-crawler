@@ -37,4 +37,5 @@ hash, но не исходные bytes). Полнота анализа и ист
 ответственностью адаптера. Writer держит весь batch/records в памяти: streaming,
 resume, durable ingest jobs/stages/diagnostics и partial-file batches потребуют
 отдельного расширения. Ошибки возвращаются вызывающей стороне; автоматического
-retry или публикации нет. Readiness gate будет следующим change.
+retry или публикации нет. Readiness gate описан в
+[ucm-publication.md](ucm-publication.md).

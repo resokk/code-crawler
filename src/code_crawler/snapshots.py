@@ -1,4 +1,4 @@
-"""Repository identity and snapshot metadata; publication is a later change."""
+"""Repository identity, immutable snapshot metadata and publication pointer reads."""
 
 from uuid import UUID, uuid4
 

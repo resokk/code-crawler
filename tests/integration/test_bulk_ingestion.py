@@ -8,6 +8,7 @@ import pytest
 
 from code_crawler import db, snapshots
 from code_crawler.ingestion import UcmBatch, ingest_batch
+from code_crawler.publication import publish_snapshot, validate_snapshot
 from code_crawler.ucm import EntityType, SourceFile, Value, logical_id
 
 pytestmark = pytest.mark.integration
@@ -155,15 +156,8 @@ def test_failed_load_rolls_back_and_can_retry(
             repo, old = await initialize(conn)
             batch = ucm_batch_factory(repo)
             await ingest_batch(conn, old, batch)
-            for state in ("VALIDATING", "READY", "PUBLISHED"):
-                await conn.execute(
-                    "UPDATE ucm_snapshots SET state=$1 WHERE id=$2", state, old
-                )
-            await conn.execute(
-                "INSERT INTO ucm_repository_publications(repository_id,snapshot_id) VALUES ($1,$2)",
-                repo,
-                old,
-            )
+            await validate_snapshot(conn, old)
+            await publish_snapshot(conn, repo, old, expected_snapshot_id=None)
             new = await create(conn, repo)
             attempted = batch
             if failure == "copy":

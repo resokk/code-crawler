@@ -5,6 +5,7 @@ import asyncpg
 import pytest
 
 from code_crawler import db, snapshots
+from code_crawler.publication import publish_snapshot, validate_snapshot
 
 pytestmark = pytest.mark.integration
 
@@ -73,15 +74,8 @@ def test_snapshot_lifecycle_metadata_and_pointer_ownership(database_url: str) ->
                 await conn.execute(
                     "UPDATE public.ucm_snapshots SET state='READY' WHERE id=$1", old
                 )
-            for state in ("VALIDATING", "READY", "PUBLISHED"):
-                await conn.execute(
-                    "UPDATE public.ucm_snapshots SET state=$2 WHERE id=$1", old, state
-                )
-            await conn.execute(
-                "INSERT INTO public.ucm_repository_publications(repository_id,snapshot_id) VALUES ($1,$2)",
-                repo,
-                old,
-            )
+            await validate_snapshot(conn, old)
+            await publish_snapshot(conn, repo, old, expected_snapshot_id=None)
             new = await snapshots.create_snapshot(conn, repo, metadata(True))
             assert (await snapshots.published_snapshot(conn, repo))["id"] == old
             for assignment in (
@@ -113,9 +107,14 @@ def test_snapshot_lifecycle_metadata_and_pointer_ownership(database_url: str) ->
                 )
                 == "BUILDING"
             )
-            await conn.execute(
-                "UPDATE public.ucm_snapshots SET state='RETIRED' WHERE id=$1", old
-            )
+            async with conn.transaction():
+                await conn.execute(
+                    "DELETE FROM ucm_repository_publications WHERE repository_id=$1",
+                    repo,
+                )
+                await conn.execute(
+                    "UPDATE public.ucm_snapshots SET state='RETIRED' WHERE id=$1", old
+                )
             with pytest.raises(asyncpg.CheckViolationError):
                 await conn.execute(
                     "UPDATE public.ucm_snapshots SET state='PUBLISHED' WHERE id=$1", old

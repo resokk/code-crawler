@@ -5,6 +5,7 @@ import asyncpg
 import pytest
 
 from code_crawler import db, snapshots
+from code_crawler.publication import publish_snapshot, validate_snapshot
 from code_crawler.ucm import EntityType, logical_id, relation_registry
 
 pytestmark = pytest.mark.integration
@@ -78,7 +79,24 @@ async def graph(conn: asyncpg.Connection, repo: UUID, snap: UUID) -> dict[str, s
             ("RELATION", "consumes"),
             ("EXTERNAL_REFERENCE", "external"),
         ]:
-            ids[key] = await entity(conn, repo, snap, kind, key)
+            ids[key] = await entity(
+                conn,
+                repo,
+                snap,
+                kind,
+                key,
+                **(
+                    {
+                        "source_file_id": ids["A.java"],
+                        "start_line": 1,
+                        "start_byte_column": 0,
+                        "end_line": 1,
+                        "end_byte_column": 1,
+                    }
+                    if kind == "OCCURRENCE"
+                    else {}
+                ),
+            )
         await insert(
             conn,
             "ucm_source_files",
@@ -369,12 +387,26 @@ def test_frozen_snapshot_rejects_fact_writes(database_url: str, state: str) -> N
         try:
             repo, snap = await setup(conn)
             await graph(conn, repo, snap)
-            for current in ("VALIDATING", "READY", "PUBLISHED", "RETIRED"):
+            if state == "VALIDATING":
                 await conn.execute(
-                    "UPDATE ucm_snapshots SET state=$1 WHERE id=$2", current, snap
+                    "UPDATE ucm_snapshots SET state='VALIDATING' WHERE id=$1", snap
                 )
-                if current == state:
-                    break
+            else:
+                await validate_snapshot(conn, snap)
+                if state in ("PUBLISHED", "RETIRED"):
+                    await publish_snapshot(conn, repo, snap, expected_snapshot_id=None)
+                if state == "RETIRED":
+                    next_snapshot = await snapshots.create_snapshot(
+                        conn,
+                        repo,
+                        snapshots.SnapshotInput(
+                            commit_hash="next", source_fingerprint="b" * 64, dirty=False
+                        ),
+                    )
+                    await validate_snapshot(conn, next_snapshot)
+                    await publish_snapshot(
+                        conn, repo, next_snapshot, expected_snapshot_id=snap
+                    )
             for statement in (
                 "UPDATE ucm_entities SET name='changed'",
                 "DELETE FROM ucm_values",

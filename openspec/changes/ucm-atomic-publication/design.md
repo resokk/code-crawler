@@ -1,0 +1,15 @@
+# Решение
+
+validate_snapshot в короткой транзакции блокирует snapshot и переводит BUILDING в VALIDATING. Fact guards уже запрещают записи с VALIDATING; длинная проверка не удерживает repository lock. Все 15 canonical tables читаются и преобразуются в UcmBatch: проверяются subtype completeness, singleton/ordered TypeRefs, ordered arguments/evidence/reasons, local references и все контрактные инварианты. Неиспользованные auxiliary rows отклоняются. Восстановление/validation выполняются в worker thread. Candidates остаются множеством с детерминированной сортировкой при чтении.
+
+При успехе короткая транзакция сохраняет immutable ucm_snapshot_validations receipt (validator_version, entity_count, validated_at) и READY. Ошибка/обрыв до receipt оставляет VALIDATING без publication; повтор validation допустим. READY возвращает прежний count. Empty snapshot валиден. READY без receipt, оставшийся от ручного использования прежнего schema foundation, не сертифицируется автоматически: требуется новый snapshot через API.
+
+publish_snapshot требует свободное соединение, READY target с receipt и обязательный expected_snapshot_id. Блокировка repository row сериализует публикации одного репозитория. В транзакции сравниваются pointer, repository target и receipt; прежний PUBLISHED становится RETIRED, новый READY — PUBLISHED, pointer обновляется. Структурная validation не повторяется под publication lock. Конкурирующий CAS со старым ожиданием получает ValueError. Разные repository rows независимы.
+
+rollback_publication восстанавливает RETIRED snapshot с receipt по тому же CAS. Migration расширяет lifecycle переходом RETIRED→PUBLISHED; immutable content не разблокируется. Повтор запроса на уже выбранный PUBLISHED target с актуальным ожиданием безопасен. После неопределённого ответа клиент перечитывает pointer.
+
+Migration 0005 добавляет receipt guards, READY/PUBLISHED gate, partial unique index для одного PUBLISHED на repository и deferred constraint triggers, согласующие snapshot states и pointer на commit. Отдельный TRUNCATE guard запрещает обход row triggers для pointer/receipts. Existing 0001–0004 не редактируются. Существующие low-level fixtures адаптированы к новому gate; core-storage occurrence fixture дополнена обязательными source coordinates.
+
+Ошибка SQL или cancellation в publication transaction откатывает одновременно states и pointer. Старые facts не удаляются. При паузе перед pointer UPDATE внешний reader видит прежние states/pointer благодаря MVCC. Для многозапросного чтения клиент закрепляет snapshot_id. Несколько валидаторов могут проверять immutable VALIDATING snapshot одновременно; receipt создаётся один раз после повторной проверки state.
+
+Проверка структурная, не доказывает runtime SQL execution, полноту coverage или границы source ranges по bytes. Owner-level прямой SQL/DDL не является защищённым API: receipt должен выдаваться validator, а не вручную. При наличии неконсистентных данных ручного foundation upgrade не делает их валидными автоматически. Legacy writer продолжает работать.

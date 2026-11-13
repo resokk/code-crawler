@@ -72,8 +72,13 @@ COPY графа и откат загрузки, каскадное удален�
 Миграция `0003_ucm_repository_snapshots.sql` добавляет независимые таблицы
 репозиториев, snapshots и publication pointer в `public`. Legacy-данные
 сохраняются. Контракт metadata, ограничения и границы текущего API описаны в
-[snapshots.md](snapshots.md). Атомарная публикация будет отдельным change.
+[snapshots.md](snapshots.md). Атомарная публикация описана в [ucm-publication.md](ucm-publication.md).
 
 Миграция `0004_ucm_core_storage.sql` добавляет канонические таблицы UCM,
 snapshot-scoped FK и защиту immutable content. Структура и границы SQL validation
 описаны в [ucm-storage.md](ucm-storage.md). Bulk writer вводится следующим change.
+
+Миграция `0005_ucm_atomic_publication.sql` добавляет immutable validation receipts,
+проверку lifecycle и согласованности publication pointer при commit.
+Валидация, CAS-публикация и восстановление прежнего snapshot описаны в
+[ucm-publication.md](ucm-publication.md).
