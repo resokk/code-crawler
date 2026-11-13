@@ -1,0 +1,44 @@
+[project]
+name = "code-crawler"
+version = "0.1.0"
+description = "MCP-сервер с GraphRAG по коду"
+authors = [
+    { name = "Roman Sokk", email = "resokk@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "antlr4-python3-runtime==4.13.2",
+    "asyncpg>=0.32.0",
+    "fastmcp>=4.1.8",
+    "rich>=15.0.0",
+    "sqlglot>=30.31.0",
+    "tree-sitter>=0.26.1",
+    "tree-sitter-java>=0.23.5",
+]
+
+[project.scripts]
+code-crawler = "code_crawler.cli:main"
+code-crawler-server = "code_crawler.server:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+
+[tool.ruff]
+# Сгенерировано ANTLR из grammars/, руками не правится.
+extend-exclude = [
+    "src/code_crawler/plplus",
+    "src/code_crawler/groovy/GroovyLexer.py",
+    "src/code_crawler/groovy/GroovyParser.py",
+    "src/code_crawler/groovy/GroovyParserVisitor.py",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Имена модулей задаёт опция superClass в грамматике Groovy.
+"src/code_crawler/groovy/Groovy*Base.py" = ["N999"]
