@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Окружение (uv.lock коммитится)
+.venv/
+
+# Кэши инструментов
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Секреты
+.env
+.env.*
+!.env.example
+
+# Веса моделей и кэш Hugging Face
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+.cache/
+models/
+
+# IDE и ОС
+.idea/
+.vscode/
+.DS_Store
