@@ -1,0 +1,1387 @@
+{
+  "$defs": {
+    "CallableSignature": {
+      "additionalProperties": false,
+      "properties": {
+        "parameter_types": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TypeRef"
+          },
+          "title": "Parameter Types",
+          "type": "array"
+        },
+        "return_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TypeRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "CallableSignature",
+      "type": "object"
+    },
+    "Certainty": {
+      "enum": [
+        "STATIC_PROVEN",
+        "INFERRED",
+        "UNKNOWN"
+      ],
+      "title": "Certainty",
+      "type": "string"
+    },
+    "CodeEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "enum": [
+            "CLASS",
+            "METHOD",
+            "SQL_CANDIDATE"
+          ],
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "entity_type",
+        "id",
+        "name"
+      ],
+      "title": "CodeEntity",
+      "type": "object"
+    },
+    "Coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "capability": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Capability",
+          "type": "string"
+        },
+        "analyzer_version": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Analyzer Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "UNSUPPORTED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reasons": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "capability",
+        "analyzer_version",
+        "status"
+      ],
+      "title": "Coverage",
+      "type": "object"
+    },
+    "DatabaseSelector": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "DATABASE",
+          "default": "DATABASE",
+          "title": "Kind",
+          "type": "string"
+        },
+        "connection": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Connection",
+          "type": "string"
+        },
+        "schema_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schema Name"
+        },
+        "table": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Table",
+          "type": "string"
+        }
+      },
+      "required": [
+        "connection",
+        "table"
+      ],
+      "title": "DatabaseSelector",
+      "type": "object"
+    },
+    "EntityRef": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "$ref": "#/$defs/EntityType"
+        }
+      },
+      "required": [
+        "id",
+        "entity_type"
+      ],
+      "title": "EntityRef",
+      "type": "object"
+    },
+    "EntityType": {
+      "enum": [
+        "EXTERNAL_REFERENCE",
+        "RELATION",
+        "OPERATION",
+        "VALUE",
+        "SYMBOL",
+        "SCOPE",
+        "OCCURRENCE",
+        "SOURCE_FILE",
+        "CLASS",
+        "METHOD",
+        "SQL_CANDIDATE"
+      ],
+      "title": "EntityType",
+      "type": "string"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "source_range": {
+          "$ref": "#/$defs/SourceRange"
+        },
+        "analyzer": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Analyzer",
+          "type": "string"
+        },
+        "analyzer_version": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Analyzer Version",
+          "type": "string"
+        },
+        "rule": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Rule",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_range",
+        "analyzer",
+        "analyzer_version",
+        "rule",
+        "description"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "ExternalReference": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "EXTERNAL_REFERENCE",
+          "default": "EXTERNAL_REFERENCE",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "selector": {
+          "discriminator": {
+            "mapping": {
+              "DATABASE": "#/$defs/DatabaseSelector",
+              "HTTP": "#/$defs/HttpSelector",
+              "SYMBOL": "#/$defs/SymbolSelector"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SymbolSelector"
+            },
+            {
+              "$ref": "#/$defs/HttpSelector"
+            },
+            {
+              "$ref": "#/$defs/DatabaseSelector"
+            }
+          ],
+          "title": "Selector"
+        },
+        "repository_hint": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Repository Hint"
+        },
+        "version_hint": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version Hint"
+        },
+        "resolution": {
+          "const": "UNRESOLVED",
+          "default": "UNRESOLVED",
+          "title": "Resolution",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Reason",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "certainty": {
+          "$ref": "#/$defs/Certainty"
+        },
+        "coverage": {
+          "$ref": "#/$defs/Coverage"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "source",
+        "selector",
+        "reason",
+        "evidence",
+        "certainty",
+        "coverage"
+      ],
+      "title": "ExternalReference",
+      "type": "object"
+    },
+    "HttpSelector": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "HTTP",
+          "default": "HTTP",
+          "title": "Kind",
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "HEAD",
+            "OPTIONS",
+            "TRACE",
+            "CONNECT"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Path",
+          "type": "string"
+        },
+        "service": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Service"
+        }
+      },
+      "required": [
+        "method",
+        "path"
+      ],
+      "title": "HttpSelector",
+      "type": "object"
+    },
+    "Occurrence": {
+      "additionalProperties": false,
+      "properties": {
+        "resolution": {
+          "default": "UNRESOLVED",
+          "enum": [
+            "UNRESOLVED",
+            "RESOLVED",
+            "AMBIGUOUS"
+          ],
+          "title": "Resolution",
+          "type": "string"
+        },
+        "target_symbol_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Symbol Id"
+        },
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "OCCURRENCE",
+          "default": "OCCURRENCE",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "$ref": "#/$defs/SourceRange"
+        },
+        "occurrence_kind": {
+          "enum": [
+            "DECLARATION",
+            "REFERENCE",
+            "READ",
+            "WRITE",
+            "CALL"
+          ],
+          "title": "Occurrence Kind",
+          "type": "string"
+        },
+        "scope_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Scope Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "source_range",
+        "occurrence_kind",
+        "scope_id"
+      ],
+      "title": "Occurrence",
+      "type": "object"
+    },
+    "Operation": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "OPERATION",
+          "default": "OPERATION",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "operation_kind": {
+          "enum": [
+            "READ",
+            "ASSIGN",
+            "CALL",
+            "RETURN",
+            "CONCAT"
+          ],
+          "title": "Operation Kind",
+          "type": "string"
+        },
+        "scope_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Scope Id",
+          "type": "string"
+        },
+        "input_value_ids": {
+          "default": [],
+          "items": {
+            "pattern": "^ucm:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Input Value Ids",
+          "type": "array"
+        },
+        "output_value_ids": {
+          "default": [],
+          "items": {
+            "pattern": "^ucm:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Output Value Ids",
+          "type": "array"
+        },
+        "callee": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TypeRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "operation_kind",
+        "scope_id"
+      ],
+      "title": "Operation",
+      "type": "object"
+    },
+    "Position": {
+      "additionalProperties": false,
+      "properties": {
+        "line": {
+          "minimum": 1,
+          "title": "Line",
+          "type": "integer"
+        },
+        "byte_column": {
+          "minimum": 0,
+          "title": "Byte Column",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "line",
+        "byte_column"
+      ],
+      "title": "Position",
+      "type": "object"
+    },
+    "Relation": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "RELATION",
+          "default": "RELATION",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "relation_kind": {
+          "$ref": "#/$defs/RelationKind"
+        },
+        "source": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "resolution": {
+          "$ref": "#/$defs/Resolution"
+        },
+        "certainty": {
+          "$ref": "#/$defs/Certainty"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "minItems": 1,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "coverage": {
+          "$ref": "#/$defs/Coverage"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "relation_kind",
+        "source",
+        "resolution",
+        "certainty",
+        "evidence",
+        "coverage"
+      ],
+      "title": "Relation",
+      "type": "object"
+    },
+    "RelationKind": {
+      "enum": [
+        "EXTERNAL_DEPENDENCY",
+        "CONTAINS",
+        "DECLARES",
+        "REFERENCES",
+        "CALLS",
+        "CONSUMES",
+        "PRODUCES",
+        "FLOWS_TO"
+      ],
+      "title": "RelationKind",
+      "type": "string"
+    },
+    "Resolution": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "RESOLVED",
+            "UNRESOLVED",
+            "AMBIGUOUS",
+            "PARTIAL"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "candidates": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "Resolution",
+      "type": "object"
+    },
+    "Scope": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "SCOPE",
+          "default": "SCOPE",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "scope_kind": {
+          "enum": [
+            "FILE",
+            "TYPE",
+            "CALLABLE",
+            "BLOCK"
+          ],
+          "title": "Scope Kind",
+          "type": "string"
+        },
+        "parent_scope_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Scope Id"
+        },
+        "owner_symbol_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner Symbol Id"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "scope_kind"
+      ],
+      "title": "Scope",
+      "type": "object"
+    },
+    "SourceFile": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "SOURCE_FILE",
+          "default": "SOURCE_FILE",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "default": null,
+          "title": "Source Range",
+          "type": "null"
+        },
+        "path": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Path",
+          "type": "string"
+        },
+        "language": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Language",
+          "type": "string"
+        },
+        "content_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "path",
+        "language",
+        "content_sha256"
+      ],
+      "title": "SourceFile",
+      "type": "object"
+    },
+    "SourceRange": {
+      "additionalProperties": false,
+      "properties": {
+        "source_file_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Source File Id",
+          "type": "string"
+        },
+        "start": {
+          "$ref": "#/$defs/Position"
+        },
+        "end": {
+          "$ref": "#/$defs/Position"
+        }
+      },
+      "required": [
+        "source_file_id",
+        "start",
+        "end"
+      ],
+      "title": "SourceRange",
+      "type": "object"
+    },
+    "Symbol": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "SYMBOL",
+          "default": "SYMBOL",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "symbol_kind": {
+          "enum": [
+            "CLASS",
+            "METHOD",
+            "CONSTRUCTOR",
+            "FIELD",
+            "PARAMETER",
+            "LOCAL_VARIABLE"
+          ],
+          "title": "Symbol Kind",
+          "type": "string"
+        },
+        "qualified_name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Qualified Name",
+          "type": "string"
+        },
+        "scope_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope Id"
+        },
+        "type_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TypeRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "owner_key": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner Key"
+        },
+        "signature": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CallableSignature"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "symbol_kind",
+        "qualified_name"
+      ],
+      "title": "Symbol",
+      "type": "object"
+    },
+    "SymbolSelector": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "SYMBOL",
+          "default": "SYMBOL",
+          "title": "Kind",
+          "type": "string"
+        },
+        "qualified_name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Qualified Name",
+          "type": "string"
+        },
+        "parameter_type_names": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameter Type Names"
+        }
+      },
+      "required": [
+        "qualified_name"
+      ],
+      "title": "SymbolSelector",
+      "type": "object"
+    },
+    "TypeRef": {
+      "additionalProperties": false,
+      "properties": {
+        "resolution": {
+          "default": "UNRESOLVED",
+          "enum": [
+            "UNRESOLVED",
+            "RESOLVED",
+            "AMBIGUOUS"
+          ],
+          "title": "Resolution",
+          "type": "string"
+        },
+        "target_symbol_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Symbol Id"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "TypeRef",
+      "type": "object"
+    },
+    "Value": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "VALUE",
+          "default": "VALUE",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "value_kind": {
+          "enum": [
+            "LITERAL",
+            "SYMBOLIC",
+            "UNKNOWN"
+          ],
+          "title": "Value Kind",
+          "type": "string"
+        },
+        "type_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TypeRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "partial": {
+          "default": false,
+          "title": "Partial",
+          "type": "boolean"
+        },
+        "literal": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Literal"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "value_kind"
+      ],
+      "title": "Value",
+      "type": "object"
+    }
+  },
+  "description": "Validated discriminated entity document for JSON interchange.",
+  "discriminator": {
+    "mapping": {
+      "CLASS": "#/$defs/CodeEntity",
+      "EXTERNAL_REFERENCE": "#/$defs/ExternalReference",
+      "METHOD": "#/$defs/CodeEntity",
+      "OCCURRENCE": "#/$defs/Occurrence",
+      "OPERATION": "#/$defs/Operation",
+      "RELATION": "#/$defs/Relation",
+      "SCOPE": "#/$defs/Scope",
+      "SOURCE_FILE": "#/$defs/SourceFile",
+      "SQL_CANDIDATE": "#/$defs/CodeEntity",
+      "SYMBOL": "#/$defs/Symbol",
+      "VALUE": "#/$defs/Value"
+    },
+    "propertyName": "entity_type"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/SourceFile"
+    },
+    {
+      "$ref": "#/$defs/CodeEntity"
+    },
+    {
+      "$ref": "#/$defs/Symbol"
+    },
+    {
+      "$ref": "#/$defs/Scope"
+    },
+    {
+      "$ref": "#/$defs/Occurrence"
+    },
+    {
+      "$ref": "#/$defs/Operation"
+    },
+    {
+      "$ref": "#/$defs/Value"
+    },
+    {
+      "$ref": "#/$defs/Relation"
+    },
+    {
+      "$ref": "#/$defs/ExternalReference"
+    }
+  ],
+  "title": "EntityDocument"
+}

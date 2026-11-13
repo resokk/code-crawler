@@ -10,6 +10,7 @@ dependencies = [
     "antlr4-python3-runtime==4.13.2",
     "asyncpg>=0.32.0",
     "fastmcp>=4.1.8",
+    "pydantic>=2.14.3,<3",
     "rich>=15.0.0",
     "sqlglot>=30.31.0",
     "tree-sitter>=0.26.1",
@@ -42,3 +43,6 @@ extend-exclude = [
 [tool.ruff.lint.per-file-ignores]
 # Имена модулей задаёт опция superClass в грамматике Groovy.
 "src/code_crawler/groovy/Groovy*Base.py" = ["N999"]
+
+[tool.pytest.ini_options]
+markers = ["integration: requires TEST_DATABASE_URL and PostgreSQL 15 with CREATEDB"]

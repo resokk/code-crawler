@@ -42,3 +42,38 @@ export DATABASE_URL=postgresql://user:password@host:5432/dbname
 - Если миграция падает, она откатывается целиком; ранее применённые остаются, команда завершается с кодом 1 и именем упавшей миграции.
 - Если БД не инициализирована или новее кода, команда ничего не применяет и завершается с кодом 1.
 - Одновременный запуск двух миграций безопасен: вторая ждёт первую (advisory-блокировка) и применяет только то, что осталось.
+
+## Интеграционные тесты PostgreSQL 15
+
+Тесты `tests/integration/` используют настоящую БД. Для локального запуска:
+
+```bash
+docker run --rm -d --name code-crawler-test-pg15 \
+  -e POSTGRES_PASSWORD=integration -p 127.0.0.1:55432:5432 postgres:15
+# Дождаться готовности: docker exec code-crawler-test-pg15 pg_isready -U postgres
+TEST_DATABASE_URL=postgresql://postgres:integration@127.0.0.1:55432/postgres \
+  uv run pytest -m integration
+# После проверки:
+docker stop code-crawler-test-pg15
+```
+
+`TEST_DATABASE_URL` должен указывать на отдельный тестовый сервер PostgreSQL 15;
+пользователю требуется CREATEDB. Каждый тест создаёт уникальную временную БД и
+удаляет только её после завершения. Проверяются миграции, откат ошибочного DDL,
+COPY графа и откат загрузки, каскадное удаление связей и реальные процессы CLI.
+Расширения пока не требуются: текущие миграции их не используют.
+
+Без `TEST_DATABASE_URL` интеграционные тесты явно пропускаются. Ошибки доступа и
+несовместимая версия при заданном URL приводят к падению тестов. Обычный набор
+можно запустить через `uv run pytest -m 'not integration'`.
+
+## UCM snapshots
+
+Миграция `0003_ucm_repository_snapshots.sql` добавляет независимые таблицы
+репозиториев, snapshots и publication pointer в `public`. Legacy-данные
+сохраняются. Контракт metadata, ограничения и границы текущего API описаны в
+[snapshots.md](snapshots.md). Атомарная публикация будет отдельным change.
+
+Миграция `0004_ucm_core_storage.sql` добавляет канонические таблицы UCM,
+snapshot-scoped FK и защиту immutable content. Структура и границы SQL validation
+описаны в [ucm-storage.md](ucm-storage.md). Bulk writer вводится следующим change.
