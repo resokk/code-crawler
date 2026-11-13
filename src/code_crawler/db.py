@@ -9,10 +9,10 @@ MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 _MIGRATION_LOCK = 4_217_001
 
 
-async def connect() -> asyncpg.Connection:
-    url = os.environ.get("DATABASE_URL")
+async def connect(variable: str = "DATABASE_URL") -> asyncpg.Connection:
+    url = os.environ.get(variable)
     if not url:
-        raise RuntimeError("не задана переменная окружения DATABASE_URL")
+        raise RuntimeError(f"не задана переменная окружения {variable}")
     return await asyncpg.connect(url)
 
 
