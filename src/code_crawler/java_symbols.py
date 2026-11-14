@@ -109,8 +109,14 @@ def _has_patterns(node: Node) -> bool:
 
 
 class _Extractor:
-    def __init__(self, source: SourceInput, parsed: java.ParseResult) -> None:
+    def __init__(
+        self,
+        source: SourceInput,
+        parsed: java.ParseResult,
+        namespaced_types: frozenset[str] = frozenset(),
+    ) -> None:
         self.source = source
+        self.namespaced_types = namespaced_types
         self.repo = source.file.repository_id
         self.parsed = parsed
         self.entities: list[Entity] = []
@@ -209,6 +215,10 @@ class _Extractor:
                 "."
             )
             key = "java:type:" + qualified
+            if qualified in self.namespaced_types:
+                key = "java:type:" + json.dumps(
+                    [self.source.file.path, qualified], separators=(",", ":")
+                )
             if self.scopes[scope].scope_kind not in ("FILE", "TYPE"):
                 key = json.dumps(
                     ["java:local-type", self.scopes[scope].logical_key, name],
@@ -518,14 +528,16 @@ class _Extractor:
                 )
 
 
-def extract(source: SourceInput) -> JavaSymbolsResult:
+def extract(
+    source: SourceInput, *, namespaced_types: frozenset[str] = frozenset()
+) -> JavaSymbolsResult:
     """Extract conservative UCM declarations/occurrences from captured Java bytes."""
     if source.file.language != "java":
         raise ValueError("Java adapter requires language=java")
     parsed = java.analyze(source.content)
     if parsed.source_sha256 != source.file.content_sha256:
         raise ValueError("source fingerprint does not match captured bytes")
-    extractor = _Extractor(source, parsed)
+    extractor = _Extractor(source, parsed, namespaced_types)
     if parsed._tree is not None:
         root = parsed._tree.root_node
         package = next(

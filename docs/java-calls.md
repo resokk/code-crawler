@@ -44,3 +44,17 @@ java.symbols поддеревьях не становятся подтвержд
 analysis_version; generic orchestrator проверяет этот optional adapter contract.
 Single static imports поддержаны для известных local methods/types; неизвестные
 static member namespaces и local type receivers не получают угаданной type binding.
+
+## Повторяющиеся FQN в многомодульном репозитории
+
+Каталог допускает несколько source definitions одного Java FQN. Их symbols и
+вложенные declarations получают отдельные file-qualified identities; путь не
+считается доказательством Maven/Gradle classpath. Однозначные типы сохраняют
+прежние identities. Unqualified/`this` calls внутри собственного определения
+сохраняют lexical owner. Внешний receiver с повторяющимся FQN не получает
+выбранный по порядку файлов target: CALLS хранит PARTIAL/AMBIGUOUS candidates.
+Conversions между неоднозначными source types не считаются exact proof.
+Catalog fingerprint учитывает все определения; добавление/удаление дубликата
+вызывает rebuild. SQL recovery остаётся file-local. Parser diagnostics по-прежнему
+блокируют canonical call/SQL profiles; поддержка новых Java patterns — отдельное
+ограничение, не устраняемое поддержкой duplicate FQN.

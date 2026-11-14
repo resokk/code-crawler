@@ -274,3 +274,96 @@ def test_generic_method_array_type_variable_does_not_bind_same_named_class() -> 
         }
     )
     assert calls(batch)[0].resolution.status == "PARTIAL"
+
+
+def test_duplicate_fqn_keeps_file_local_symbols_and_ambiguous_external_calls():
+    batch = analyze(
+        {
+            "module-a/p/A.java": "package p; public class A { public static void hit() {} void own(){ hit(); this.hit(); } }",
+            "module-b/p/A.java": "package p; public class A { public static void hit() {} void own(){ hit(); } }",
+            "consumer/p/Use.java": "package p; class Use { void run(A a) { a.hit(); A.hit(); } }",
+        }
+    )
+    types = [
+        e
+        for e in batch.entities
+        if isinstance(e, Symbol)
+        and e.symbol_kind == "CLASS"
+        and e.qualified_name == "p.A"
+    ]
+    assert len(types) == 2 and types[0].id != types[1].id
+    resolved = [r for r in calls(batch) if r.resolution.status == "RESOLVED"]
+    ambiguous = [r for r in calls(batch) if r.resolution.status == "AMBIGUOUS"]
+    assert len(resolved) == 3
+    assert len(ambiguous) == 2
+    assert all(len(r.resolution.candidates) == 2 for r in ambiguous)
+    symbols = {e.id: e for e in batch.entities if isinstance(e, Symbol)}
+    for relation in resolved:
+        caller = symbols[relation.source.id]
+        target = symbols[relation.resolution.target.id]
+        assert caller.owner_key == target.owner_key
+
+
+def test_duplicate_receiver_with_only_one_named_method_is_still_partial():
+    batch = analyze(
+        {
+            "a/A.java": "package p; class A { void f() {} }",
+            "b/A.java": "package p; class A {}",
+            "Use.java": "package p; class Use { void run(A a) { a.f(); } }",
+        }
+    )
+    assert calls(batch)[0].resolution.status == "PARTIAL"
+
+
+def test_duplicate_catalog_fingerprint_is_order_independent_and_changes_on_removal():
+    inputs = (source("a/A.java", "class A {}"), source("b/A.java", "class A {}"))
+    assert (
+        JavaCallAnalyzer(inputs).analysis_version
+        == JavaCallAnalyzer(inputs[::-1]).analysis_version
+    )
+    assert (
+        JavaCallAnalyzer(inputs).analysis_version
+        != JavaCallAnalyzer(inputs[:1]).analysis_version
+    )
+
+
+def test_duplicate_fqn_does_not_block_sql_recovery_or_leak_constants():
+    from code_crawler.java_sql import JavaSqlAnalyzer
+    from code_crawler.ucm import SqlConstruction
+
+    inputs = (
+        source(
+            "a/A.java",
+            'package p; class A { static final String T="users"; void f(){ String q="select id from " + T; } }',
+        ),
+        source(
+            "b/A.java",
+            'package p; class A { static final String T="orders"; void f(){ String q="select id from " + T; } }',
+        ),
+    )
+    analyzer = JavaSqlAnalyzer(inputs)
+    analyses = asyncio.run(analyzer(inputs))
+    batch = UcmBatch(
+        repository_id=REPO,
+        entities=tuple(s.file for s in inputs)
+        + tuple(e for a in analyses for e in a.entities),
+    )
+    recovered = {
+        v.text
+        for e in batch.entities
+        if isinstance(e, SqlConstruction)
+        for v in e.variants
+    }
+    assert "select id from users" in recovered
+    assert "select id from orders" in recovered
+
+
+def test_multidimensional_array_of_duplicate_type_does_not_prove_conversion():
+    batch = analyze(
+        {
+            "a/A.java": "package p; class A {}",
+            "b/A.java": "package p; class A {}",
+            "Use.java": "package p; class Use { void target(A[][] xs) {} void run(A[][] xs) { target(xs); } }",
+        }
+    )
+    assert calls(batch)[0].resolution.status == "PARTIAL"

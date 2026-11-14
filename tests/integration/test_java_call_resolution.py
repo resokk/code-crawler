@@ -200,3 +200,71 @@ def test_ambiguous_partial_and_external_results_survive_storage(
             await conn.close()
 
     asyncio.run(scenario())
+
+
+def test_duplicate_fqn_sql_snapshot_roundtrip_reuse_and_removal(
+    database_url: str, tmp_path: Path
+) -> None:
+    from code_crawler.java_sql import index_java_sql
+    from code_crawler.ucm import SqlConstruction
+
+    async def scenario() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            for directory in ("module-a", "module-b"):
+                (tmp_path / directory).mkdir()
+            repo = await setup(
+                conn,
+                tmp_path,
+                {
+                    "module-a/A.java": 'package p; class A { static void hit() {} void run(){ hit(); String q="select id from users"; } }',
+                    "module-b/A.java": 'package p; class A { static void hit() {} void run(){ hit(); String q="select id from orders"; } }',
+                    "Use.java": "package p; class Use { void run(A a){ a.hit(); } }",
+                },
+            )
+            first = await index_java_sql(conn, repo, tmp_path)
+            await validate_snapshot(conn, first.snapshot_id)
+            await publish_snapshot(
+                conn, repo, first.snapshot_id, expected_snapshot_id=None
+            )
+            batch = await load_snapshot_batch(conn, first.snapshot_id)
+            assert (
+                len(
+                    [
+                        e
+                        for e in batch.entities
+                        if isinstance(e, Symbol) and e.qualified_name == "p.A"
+                    ]
+                )
+                == 2
+            )
+            assert any(
+                isinstance(e, Relation)
+                and e.relation_kind == RelationKind.CALLS
+                and e.resolution.status == "AMBIGUOUS"
+                for e in batch.entities
+            )
+            assert {
+                v.text
+                for e in batch.entities
+                if isinstance(e, SqlConstruction)
+                for v in e.variants
+            } == {"select id from users", "select id from orders"}
+            reused = await index_java_sql(conn, repo, tmp_path)
+            assert not reused.plan.reanalyze
+            await validate_snapshot(conn, reused.snapshot_id)
+            (tmp_path / "module-b/A.java").unlink()
+            removed = await index_java_sql(conn, repo, tmp_path)
+            assert removed.plan.full_rebuild
+            await validate_snapshot(conn, removed.snapshot_id)
+            restored = await load_snapshot_batch(conn, removed.snapshot_id)
+            assert any(
+                isinstance(e, Relation)
+                and e.relation_kind == RelationKind.CALLS
+                and e.resolution.status == "RESOLVED"
+                for e in restored.entities
+            )
+        finally:
+            await conn.close()
+
+    asyncio.run(scenario())

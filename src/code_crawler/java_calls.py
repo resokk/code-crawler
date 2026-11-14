@@ -154,7 +154,8 @@ class JavaCallAnalyzer:
                 "Java catalog must contain unique files from one repository"
             )
         self.files: dict[str, _File] = {}
-        self.classes: dict[str, _Class] = {}
+        self.classes: dict[str, _Class | None] = {}
+        self.type_candidates: dict[str, list[_Class]] = defaultdict(list)
         self.class_keys: dict[str, _Class] = {}
         self.methods: dict[str, _Method] = {}
         self.named: dict[tuple[str, str], list[_Method]] = defaultdict(list)
@@ -169,8 +170,25 @@ class JavaCallAnalyzer:
                 "boxing, generic inference, varargs expansion and complex reference conversions are incomplete",
             ),
         )
+        extracted = {source.file.path: extract(source) for source in sources}
+        type_paths = defaultdict(set)
+        for path, result in extracted.items():
+            for entity in result.analysis.entities:
+                if (
+                    isinstance(entity, Symbol)
+                    and entity.symbol_kind == "CLASS"
+                    and entity.logical_key.startswith("java:type:")
+                ):
+                    type_paths[entity.qualified_name].add(path)
+        duplicates = frozenset(
+            name for name, paths in type_paths.items() if len(paths) > 1
+        )
         for source in sources:
-            result = extract(source)
+            result = (
+                extract(source, namespaced_types=duplicates)
+                if any(source.file.path in type_paths[name] for name in duplicates)
+                else extracted[source.file.path]
+            )
             if result.diagnostics:
                 raise ValueError(
                     "Java parser diagnostics prevent canonical call resolution: "
@@ -210,8 +228,6 @@ class JavaCallAnalyzer:
             for entity in result.analysis.entities:
                 if isinstance(entity, Symbol) and entity.symbol_kind == "CLASS":
                     global_type = entity.logical_key.startswith("java:type:")
-                    if global_type and entity.qualified_name in self.classes:
-                        raise ValueError("duplicate Java type in repository catalog")
                     node = extractor.symbol_nodes[entity.id]
                     inherits = (
                         node.child_by_field_name("superclass") is not None
@@ -223,7 +239,10 @@ class JavaCallAnalyzer:
                     )
                     info = _Class(entity, file, node, inherits)
                     if global_type:
-                        self.classes[entity.qualified_name] = info
+                        self.type_candidates[entity.qualified_name].append(info)
+                        self.classes[entity.qualified_name] = (
+                            None if entity.qualified_name in duplicates else info
+                        )
                     self.class_keys[entity.logical_key] = info
         for file in self.files.values():
             extractor = file.result._extractor
@@ -288,7 +307,7 @@ class JavaCallAnalyzer:
                 c.inherits,
                 sorted(_modifiers(c.node)),
             )
-            for c in self.classes.values()
+            for c in self.class_keys.values()
         ]
         signatures = [
             (
@@ -306,7 +325,7 @@ class JavaCallAnalyzer:
                 ensure_ascii=False,
             ).encode()
         ).hexdigest()
-        self.analysis_version = "java.calls/1:" + digest
+        self.analysis_version = "java.calls/2:" + digest
 
     def qualify(self, name: str, file: _File, owner: _Class) -> str | None:
         name = _erase(name)
@@ -478,6 +497,13 @@ class JavaCallAnalyzer:
     ) -> int | None | Literal[False]:
         if actual is None or formal is None:
             return None
+        if any(
+            name is not None
+            and name.split("[", 1)[0] in self.classes
+            and self.classes[name.split("[", 1)[0]] is None
+            for name in (actual, formal)
+        ):
+            return None
         if actual == formal:
             return 0
         if actual == "null":
@@ -517,7 +543,10 @@ class JavaCallAnalyzer:
             + name
         )
         owner = self.classes.get(receiver)
-        if receiver == site.caller.owner.symbol.qualified_name:
+        receiver_node = site.node.child_by_field_name("object")
+        if receiver == site.caller.owner.symbol.qualified_name and (
+            receiver_node is None or receiver_node.type == "this"
+        ):
             owner = site.caller.owner
         declared = self.named.get((owner.symbol.id, name), []) if owner else []
         if not declared and site.node.child_by_field_name("object") is None:
@@ -528,6 +557,30 @@ class JavaCallAnalyzer:
                 owner = self.classes.get(receiver)
                 is_class = True
                 declared = self.named.get((owner.symbol.id, name), []) if owner else []
+        if (
+            owner is None
+            and receiver in self.type_candidates
+            and len(self.type_candidates[receiver]) > 1
+        ):
+            possible = [
+                method
+                for candidate in self.type_candidates[receiver]
+                for method in self.named.get((candidate.symbol.id, name), ())
+            ]
+            result = _Result(
+                None,
+                possible,
+                "AMBIGUOUS"
+                if len(possible) > 1
+                else "PARTIAL"
+                if possible
+                else "UNRESOLVED",
+                "receiver FQN has multiple source definitions; module classpath is unknown",
+                selector,
+                not possible,
+            )
+            self.memo[key] = result
+            return result
         possible = []
         ranks = []
         args = site.node.child_by_field_name("arguments")
@@ -703,8 +756,8 @@ class JavaCallAnalyzer:
                 )
             )
             receiver, _ = self.receiver(site)
-            if receiver in self.classes:
-                path = self.classes[receiver].file.source.file.path
+            for candidate in self.type_candidates.get(receiver, ()):
+                path = candidate.file.source.file.path
                 if path != file.source.file.path:
                     dependencies.add(path)
             if result.external:
