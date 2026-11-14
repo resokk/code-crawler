@@ -128,3 +128,7 @@ semantic linking не объявляются этим change.
 
 Стандартный `index SOURCE` использует registry и publish по умолчанию;
 `index-sources` сохраняет BUILDING/--publish варианты: [default-index.md](default-index.md).
+
+BPMN 2.0 XML включён через `BpmnSourceAdapter` (`.bpmn`, `.bpmn20.xml`, `.xml`);
+не-BPMN XML получает UNSUPPORTED. XML facts, typed control-flow links, deferred
+engine selectors и ограничения описаны в [bpmn-schema.md](bpmn-schema.md).

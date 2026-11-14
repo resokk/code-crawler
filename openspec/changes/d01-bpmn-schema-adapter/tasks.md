@@ -1,6 +1,6 @@
 # Tasks: BPMN 2.0 XML to UCM
 
-All tasks are open until implemented and tested.
+Implementation and targeted conformance/PG15 tests are complete; final CI evidence is recorded below.
 
 - [ ] 1. Review existing SourceAdapter registry, UCM types, relation registry and schema migration patterns.
 - [ ] 2. Define typed entities, references and SourceAnalysis diagnostics for this format.
@@ -17,3 +17,18 @@ All tasks are open until implemented and tested.
 - [ ] 13. Add PostgreSQL 15 integration test from fixture through published UCM; do not duplicate Java/SQL analyzers.
 - [ ] 14. Update docs with supported versions, limitations, evidence, coverage and error behavior.
 - [ ] 15. Run ruff check/format, pytest and mandatory CI before checking tasks.
+
+## Acceptance evidence
+
+- `tests/test_bpmn_adapter.py`: 20 passing tests for gateway/guards, metadata,
+  worker/process selectors, namespace and UTF-8 ranges, malformed/duplicate IDs,
+  DTD/XXE and resource limits; filesystem/network access is explicitly blocked
+  in the XXE conformance test.
+- `tests/integration/test_bpmn_storage.py`: PostgreSQL 15 publish/read/reuse,
+  file-local invalidation, deletion, separate repository with the remote process,
+  producer failure and immutable published facts; targeted test passes.
+- `docs/bpmn-schema.md` defines mapping, versions, limitations and error behavior.
+- Full local `pytest --require-postgres --strict-markers -q`: 876 passed on
+  PostgreSQL 15; the final 20 unit + 1 integration BPMN tests also pass separately
+  after adding edge cases. `ruff check .`, `ruff format --check .` pass.
+- GitHub Actions verification pending; checkboxes remain open until CI passes.

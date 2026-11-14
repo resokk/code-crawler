@@ -24,6 +24,7 @@ from code_crawler import (
     snapshots,
     source_evidence,
 )
+from code_crawler.bpmn_adapter import BpmnSourceAdapter
 from code_crawler.database_resolution import ConnectionAssignment
 from code_crawler.groovy_adapter import GroovySourceAdapter
 from code_crawler.java_adapter import (
@@ -301,6 +302,7 @@ async def list_adapters() -> None:
                     *java_adapter_catalog(),
                     GroovySourceAdapter().descriptor,
                     PlplusSourceAdapter().descriptor,
+                    BpmnSourceAdapter().descriptor,
                 )
             ],
             ensure_ascii=False,
@@ -494,7 +496,12 @@ async def index_registered(
                 naming_policy=naming_policy,
             )
             registry = AdapterRegistry(
-                (adapter, GroovySourceAdapter(dialect=dialect), PlplusSourceAdapter())
+                (
+                    adapter,
+                    GroovySourceAdapter(dialect=dialect),
+                    PlplusSourceAdapter(),
+                    BpmnSourceAdapter(),
+                )
             )
             repository = await snapshots.register_repository(
                 conn,

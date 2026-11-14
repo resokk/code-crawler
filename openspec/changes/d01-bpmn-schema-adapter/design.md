@@ -27,3 +27,21 @@ Treat inputs as untrusted, bound parser size/depth, reject path traversal and pr
 
 ## Source impact
 src/code_crawler/source_adapters.py; src/code_crawler/ucm.py; src/code_crawler/migrations/; src/code_crawler/java_adapter.py (when applicable); tests/; docs/
+
+## Implemented mapping
+
+Reuse `Symbol` with a new `BPMN_ELEMENT` kind instead of a parallel entity graph.
+Expanded XML QName identifies the element type. Existing `Value(LITERAL)` stores
+attributes/text; `BPMN_ATTRIBUTE`, `BPMN_TEXT`, `CONTAINS` preserve their ownership.
+Addressable sequence-flow symbols use `BPMN_FLOW_SOURCE`/`BPMN_FLOW_TARGET`;
+local callActivity uses `BPMN_CALLS_PROCESS`. Migration 0020 extends the existing
+symbol and relation registries, so central ingestion/read/publication remain shared.
+
+Use stdlib Expat with DTD/entity rejection callbacks, UTF-8-only input and explicit
+size/depth/element bounds. A rejected document emits diagnostics and no semantic
+facts. Duplicate IDs are rejected instead of choosing a candidate. Bad flow
+endpoints omit both endpoint links, preserving syntax with explicit diagnostics.
+Known engine selectors use existing deferred SymbolSelector with role prefixes;
+no target repository or Java binding is consulted. All coverage is explicitly
+PARTIAL because runtime expressions/extensions are preserved without evaluation.
+Detailed contract and limits: `docs/bpmn-schema.md`.

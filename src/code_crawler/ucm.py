@@ -169,7 +169,13 @@ def callable_key(owner_key: str, name: str, signature: CallableSignature) -> str
 class Symbol(EntityEnvelope):
     entity_type: Literal[EntityType.SYMBOL] = EntityType.SYMBOL
     symbol_kind: Literal[
-        "CLASS", "METHOD", "CONSTRUCTOR", "FIELD", "PARAMETER", "LOCAL_VARIABLE"
+        "CLASS",
+        "METHOD",
+        "CONSTRUCTOR",
+        "FIELD",
+        "PARAMETER",
+        "LOCAL_VARIABLE",
+        "BPMN_ELEMENT",
     ]
     qualified_name: Text
     scope_id: EntityId | None = None
@@ -312,6 +318,11 @@ class Evidence(ContractModel):
 
 
 class RelationKind(StrEnum):
+    BPMN_FLOW_SOURCE = "BPMN_FLOW_SOURCE"
+    BPMN_FLOW_TARGET = "BPMN_FLOW_TARGET"
+    BPMN_CALLS_PROCESS = "BPMN_CALLS_PROCESS"
+    BPMN_ATTRIBUTE = "BPMN_ATTRIBUTE"
+    BPMN_TEXT = "BPMN_TEXT"
     ORM_DECLARES_MAPPING = "ORM_DECLARES_MAPPING"
     ORM_HAS_ATTRIBUTE = "ORM_HAS_ATTRIBUTE"
     ORM_DECLARES_QUERY = "ORM_DECLARES_QUERY"
@@ -363,6 +374,18 @@ def _pairs(sources: str, targets: str) -> frozenset[tuple[EntityType, EntityType
 
 _RELATION_ENDPOINTS = MappingProxyType(
     {
+        **{
+            kind: _pairs("SYMBOL", "SYMBOL")
+            for kind in (
+                RelationKind.BPMN_FLOW_SOURCE,
+                RelationKind.BPMN_FLOW_TARGET,
+                RelationKind.BPMN_CALLS_PROCESS,
+            )
+        },
+        **{
+            kind: _pairs("SYMBOL", "VALUE")
+            for kind in (RelationKind.BPMN_ATTRIBUTE, RelationKind.BPMN_TEXT)
+        },
         RelationKind.ORM_DECLARES_MAPPING: _pairs("SYMBOL", "ORM_MAPPING"),
         RelationKind.ORM_HAS_ATTRIBUTE: _pairs("ORM_MAPPING", "ORM_MAPPING"),
         RelationKind.ORM_DECLARES_QUERY: _pairs("SYMBOL", "ORM_QUERY"),

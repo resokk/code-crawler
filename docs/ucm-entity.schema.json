@@ -1781,6 +1781,11 @@
     },
     "RelationKind": {
       "enum": [
+        "BPMN_FLOW_SOURCE",
+        "BPMN_FLOW_TARGET",
+        "BPMN_CALLS_PROCESS",
+        "BPMN_ATTRIBUTE",
+        "BPMN_TEXT",
         "ORM_DECLARES_MAPPING",
         "ORM_HAS_ATTRIBUTE",
         "ORM_DECLARES_QUERY",
@@ -2943,7 +2948,8 @@
             "CONSTRUCTOR",
             "FIELD",
             "PARAMETER",
-            "LOCAL_VARIABLE"
+            "LOCAL_VARIABLE",
+            "BPMN_ELEMENT"
           ],
           "title": "Symbol Kind",
           "type": "string"
