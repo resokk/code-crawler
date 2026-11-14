@@ -5,9 +5,9 @@
 - [x] Document in ucm-ingestion.md; unit and integration suites pass (local PostgreSQL 18).
 - [x] Measure where indexing memory goes before switching the indexer (docs/ucm-ingestion.md).
 - [x] Validation restores a snapshot entity by entity: peak 1855 MB -> 922 MB at 124k entities.
-- [ ] Re-measure retained Java catalog/cache memory after on-demand occurrences
-      (`50a71ca`) and the bounded ORM base cache (`be53229`); use the result to
-      choose the next step before switching index_incremental to streaming.
+- [x] Java catalog derives occurrences on demand; ORM base cache bounded (output byte-identical).
+- [x] index_incremental analyzes in slices, stages as it goes and clones reused facts in SQL:
+      indexing peak 653 MB -> 278 MB (first run), 190 MB (incremental) at 124k entities.
 - [ ] Validate without holding all models (port UcmBatch rules to SQL or streamed checks).
 - [ ] Load test at 1M entities; 930k entities did not finish in 50 minutes with the batch loader.
 - [x] Integration suite on PostgreSQL 15.

@@ -1087,6 +1087,7 @@ async def ingest_stream(
             count += len(chunk)
             tick("Запись в БД: загрузка")
         await _transfer(conn, stages)
+        await _check(conn)
     return count
 
 
@@ -1142,6 +1143,9 @@ async def _transfer(
             f"INSERT INTO public.{table} ({columns}) SELECT {columns} FROM pg_temp.{stage}"
         )
         tick("Запись в БД: перенос", len(stages))
+
+
+async def _check(conn: asyncpg.Connection) -> None:
     # По одному ограничению — только ради прогресса; итог тот же, что у ALL IMMEDIATE.
     constraints = await conn.fetch(
         "SELECT format('%I.%I', n.nspname, c.conname) AS name FROM pg_constraint c "
@@ -1168,3 +1172,4 @@ async def _ingest_records(
     while (rows := await asyncio.to_thread(next, chunks, None)) is not None:
         await _stage(conn, prefix, stages, rows)
     await _transfer(conn, stages)
+    await _check(conn)

@@ -13,14 +13,23 @@ from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
-from uuid import UUID
+from typing import NamedTuple
+from uuid import UUID, uuid4
 
 import asyncpg
 from pydantic import model_validator
 
 from code_crawler import repos, snapshots
-from code_crawler.ingestion import UcmBatch, _ingest_records, recheck, tick
-from code_crawler.publication import load_snapshot_batch
+from code_crawler.ingestion import (
+    _check,
+    _lock_empty,
+    _rows,
+    _stage,
+    _transfer,
+    recheck,
+    tick,
+)
+from code_crawler.publication import _AUXILIARY, _SUBTYPES
 from code_crawler.source_evidence import archive_sources
 from code_crawler.source_routing import source_language, valid_suffix
 from code_crawler.ucm import (
@@ -297,50 +306,101 @@ def _references(value: object, field: str = "") -> set[str]:
     return result
 
 
-def _assemble(
+# Files per analyzer call: bounds how many freshly analyzed facts are in memory at once.
+_SLICE = 64
+
+
+class _FileState(NamedTuple):
+    content_sha256: str
+    language: str
+
+
+def _inspect(
+    snapshot_id: UUID,
     repository_id: UUID,
-    captured: _Worktree,
-    baseline: UcmBatch | None,
-    ownership: dict[str, str],
-    dependencies: set[tuple[str, str]],
-    plan: IncrementalPlan,
+    sources: tuple[SourceInput, ...],
     analyses: tuple[FileAnalysis, ...],
-) -> tuple[UcmBatch, dict[str, str], set[tuple[str, str]]]:
-    for analysis in analyses:
-        recheck(analysis)
-        tick("Сборка снимка", len(analyses))
+) -> tuple[dict, list[tuple[str, str]], list[tuple[str, str]], set[tuple[str, str]]]:
+    """Check one slice of analyses; return its rows, ownership, references and dependencies."""
     if len({a.path for a in analyses}) != len(analyses) or {
         a.path for a in analyses
-    } != set(plan.reanalyze):
+    } != {s.file.path for s in sources}:
         raise ValueError("analyzer must return each requested file exactly once")
-    current = {s.file.path: s.file for s in captured.sources}
-    entities = list(current.values())
-    owners = {file.id: path for path, file in current.items()}
-    reused = set(plan.reused)
-    if baseline is not None and not plan.full_rebuild:
-        for entity in baseline.entities:
-            if not isinstance(entity, SourceFile) and ownership[entity.id] in reused:
-                entities.append(entity)
-                owners[entity.id] = ownership[entity.id]
-    explicit = {(a, b) for a, b in dependencies if a in reused and a != b}
+    owned, references, explicit = [], [], set()
     for analysis in analyses:
-        entities.extend(analysis.entities)
+        recheck(analysis)
+        targets: set[str] = set()
         for entity in analysis.entities:
-            if entity.id in owners:
-                raise ValueError("entity has multiple file owners")
-            owners[entity.id] = analysis.path
-        explicit.update(
+            if entity.repository_id != str(repository_id):
+                raise ValueError("batch entity belongs to a different repository")
+            owned.append((analysis.path, entity.id))
+            targets |= _references(entity.model_dump(mode="json"))
+        references += [(analysis.path, target) for target in targets]
+        explicit |= {
             (analysis.path, path)
             for path in analysis.dependencies
             if path != analysis.path
+        }
+    rows = _rows(
+        snapshot_id, repository_id, tuple(e for a in analyses for e in a.entities)
+    )
+    return rows, owned, references, explicit
+
+
+async def _clone(
+    conn: asyncpg.Connection, base: UUID, snapshot_id: UUID, paths: list[str]
+) -> None:
+    """Copy the facts and manifests of reused files from the baseline inside the database."""
+    await conn.execute(
+        "CREATE TEMP TABLE ingest_reuse (entity_id text PRIMARY KEY) ON COMMIT DROP"
+    )
+    # SourceFile всегда создаётся заново из текущих bytes, из baseline он не берётся.
+    await conn.execute(
+        "INSERT INTO pg_temp.ingest_reuse SELECT m.entity_id "
+        "FROM public.ingest_file_entities m JOIN public.ucm_entities e "
+        "USING (snapshot_id, entity_id) WHERE m.snapshot_id=$1 AND m.path=ANY($2) "
+        "AND e.entity_type<>'SOURCE_FILE'",
+        base,
+        paths,
+    )
+    await conn.execute("ANALYZE pg_temp.ingest_reuse")
+    owners = {
+        "ucm_entities": "entity_id",
+        **{t: "entity_id" for t in _SUBTYPES.values() if t != "ucm_source_files"},
+        **_AUXILIARY,
+        "ingest_file_entities": "entity_id",
+    }
+    columns = {
+        row["name"]: row["columns"]
+        for row in await conn.fetch(
+            "SELECT c.relname AS name, string_agg(format('%I', a.attname), ',' "
+            "ORDER BY a.attnum) AS columns FROM pg_attribute a "
+            "JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace "
+            "WHERE n.nspname='public' AND c.relname=ANY($1) AND a.attnum>0 "
+            "AND NOT a.attisdropped AND a.attgenerated='' AND a.attname<>'snapshot_id' "
+            "GROUP BY c.relname",
+            list(owners),
         )
-    tick("Проверка снимка")
-    batch = UcmBatch(repository_id=repository_id, entities=tuple(entities))
-    for entity in batch.entities:
-        for target in _references(entity.model_dump(mode="json")):
-            if target in owners and owners[target] != owners[entity.id]:
-                explicit.add((owners[entity.id], owners[target]))
-    return batch, owners, explicit
+    }
+    for table, owner in owners.items():
+        await conn.execute(
+            f"INSERT INTO public.{table} (snapshot_id,{columns[table]}) "
+            f"SELECT $2,{','.join('t.' + c for c in columns[table].split(','))} "
+            f"FROM public.{table} t JOIN pg_temp.ingest_reuse r ON r.entity_id=t.{owner} "
+            "WHERE t.snapshot_id=$1",
+            base,
+            snapshot_id,
+        )
+        tick("Запись в БД: переиспользование", len(owners))
+    await conn.execute(
+        "INSERT INTO public.ingest_file_dependencies "
+        "(snapshot_id,dependent_path,dependency_path) "
+        "SELECT $2,dependent_path,dependency_path FROM public.ingest_file_dependencies "
+        "WHERE snapshot_id=$1 AND dependent_path=ANY($3)",
+        base,
+        snapshot_id,
+        paths,
+    )
 
 
 async def index_incremental(
@@ -391,35 +451,43 @@ async def index_incremental(
     profile_hash = _hash([analysis_version, sorted(languages.items())])
     published = await snapshots.published_snapshot(conn, repository_id)
     base_id = published["id"] if published else None
-    baseline = await load_snapshot_batch(conn, base_id) if base_id else None
-    ownership: dict[str, str] = {}
+    previous: dict[str, _FileState] = {}
     dependencies: set[tuple[str, str]] = set()
     profile = None
     git_changed: tuple[str, ...] = ()
     if base_id:
+        # Baseline читается запросами: целиком в память он не загружается.
+        previous = {
+            r["path"]: _FileState(r["content_sha256"], r["language"])
+            for r in await conn.fetch(
+                "SELECT path,content_sha256,language FROM public.ucm_source_files "
+                "WHERE snapshot_id=$1",
+                base_id,
+            )
+        }
         profile = await conn.fetchrow(
             "SELECT * FROM public.ingest_snapshot_profiles WHERE snapshot_id=$1",
             base_id,
         )
         if profile:
-            ownership = {
-                r["entity_id"]: r["path"]
-                for r in await conn.fetch(
-                    "SELECT path,entity_id FROM public.ingest_file_entities WHERE snapshot_id=$1",
-                    base_id,
-                )
-            }
-            if set(ownership) != {e.id for e in baseline.entities}:
+            if await conn.fetchval(
+                "SELECT (SELECT count(*) FROM public.ucm_entities WHERE snapshot_id=$1) "
+                "<> (SELECT count(*) FROM public.ingest_file_entities WHERE snapshot_id=$1)",
+                base_id,
+            ):
                 raise ValueError("baseline ownership manifest is incomplete")
-            files = {e.path: e for e in baseline.entities if isinstance(e, SourceFile)}
-            if any(path not in files for path in ownership.values()) or any(
-                ownership[file.id] != path for path, file in files.items()
+            if await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM public.ucm_source_files f "
+                "LEFT JOIN public.ingest_file_entities m ON m.snapshot_id=f.snapshot_id "
+                "AND m.entity_id=f.entity_id WHERE f.snapshot_id=$1 "
+                "AND m.path IS DISTINCT FROM f.path)",
+                base_id,
             ):
                 raise ValueError("baseline file ownership is invalid")
             baseline_fingerprint = _hash(
                 [
                     [path, file.content_sha256, file.language]
-                    for path, file in sorted(files.items())
+                    for path, file in sorted(previous.items())
                 ]
             )
             if baseline_fingerprint != published["source_fingerprint"]:
@@ -465,11 +533,6 @@ async def index_incremental(
         except RuntimeError:
             # Fingerprints remain authoritative after history rewrite or shallow clone.
             git_changed = ()
-    previous = (
-        {e.path: e for e in baseline.entities if isinstance(e, SourceFile)}
-        if baseline
-        else {}
-    )
     current = {s.file.path: s.file for s in captured.sources}
     parsed = {path for path in current if source_language(path, languages) is not None}
     full_rebuild = (
@@ -512,31 +575,77 @@ async def index_incremental(
     )
     selected_paths = set(plan.reanalyze)
     selected = tuple(s for s in captured.sources if s.file.path in selected_paths)
-    analyses = await analyze(selected) if selected else ()
-    batch, owners, dependency_pairs = await asyncio.to_thread(
-        _assemble,
-        repository_id,
-        captured,
-        baseline,
-        ownership,
-        dependencies,
-        plan,
-        analyses,
-    )
-    if not await _verify(root, repository_id, languages, captured):
-        raise ValueError("worktree changed during analysis")
-    snap = await snapshots.create_snapshot(
-        conn,
-        repository_id,
-        snapshots.SnapshotInput(
-            commit_hash=captured.commit,
-            branch=captured.branch,
-            source_fingerprint=captured.fingerprint,
-            dirty=captured.dirty,
-        ),
-    )
+    files = tuple(s.file for s in captured.sources)
+    explicit: set[tuple[str, str]] = set()
+    # Одна транзакция от создания snapshot до manifests: сбой анализа, записи или
+    # изменение исходников не оставляют ни snapshot, ни фактов.
     async with conn.transaction():
-        await _ingest_records(conn, snap, batch)
+        snap = await snapshots.create_snapshot(
+            conn,
+            repository_id,
+            snapshots.SnapshotInput(
+                commit_hash=captured.commit,
+                branch=captured.branch,
+                source_fingerprint=captured.fingerprint,
+                dirty=captured.dirty,
+            ),
+        )
+        await _lock_empty(conn, snap, repository_id)
+        await conn.execute(
+            "CREATE TEMP TABLE ingest_refs (path text, target_id text) ON COMMIT DROP"
+        )
+        prefix = "ingest_" + uuid4().hex
+        stages: dict[str, tuple[str, str]] = {}
+        await _stage(
+            conn,
+            prefix,
+            stages,
+            await asyncio.to_thread(_rows, snap, repository_id, files),
+        )
+        owned = [(snap, file.path, file.id) for file in files]
+        for start in range(0, len(selected), _SLICE):
+            part = selected[start : start + _SLICE]
+            rows, slice_owned, references, slice_explicit = await asyncio.to_thread(
+                _inspect, snap, repository_id, part, await analyze(part)
+            )
+            await _stage(conn, prefix, stages, rows)
+            owned += [(snap, path, entity_id) for path, entity_id in slice_owned]
+            await conn.copy_records_to_table(
+                "ingest_refs", schema_name="pg_temp", records=references
+            )
+            explicit |= slice_explicit
+            await conn.copy_records_to_table(
+                "ingest_file_entities",
+                schema_name="public",
+                columns=("snapshot_id", "path", "entity_id"),
+                records=owned,
+            )
+            owned = []
+            tick("Сборка снимка", -(-len(selected) // _SLICE))
+        await conn.copy_records_to_table(
+            "ingest_file_entities",
+            schema_name="public",
+            columns=("snapshot_id", "path", "entity_id"),
+            records=owned,
+        )
+        await _transfer(conn, stages)
+        if base_id and plan.reused and not plan.full_rebuild:
+            await _clone(conn, base_id, snap, list(plan.reused))
+        # Структурные зависимости: файл ссылается на сущность, принадлежащую другому файлу.
+        await conn.execute(
+            "INSERT INTO public.ingest_file_dependencies "
+            "(snapshot_id,dependent_path,dependency_path) "
+            "SELECT $1, r.path, m.path FROM pg_temp.ingest_refs r "
+            "JOIN public.ingest_file_entities m ON m.snapshot_id=$1 "
+            "AND m.entity_id=r.target_id WHERE m.path<>r.path "
+            "UNION SELECT $1, a, b FROM unnest($2::text[], $3::text[]) AS x(a, b) "
+            "ON CONFLICT DO NOTHING",
+            snap,
+            [a for a, _ in explicit],
+            [b for _, b in explicit],
+        )
+        if not await _verify(root, repository_id, languages, captured):
+            raise ValueError("worktree changed during analysis")
         tick("Запись в БД: архив исходников")
         await archive_sources(conn, snap, captured.sources, origin="CAPTURED_WORKTREE")
         tick("Запись в БД: манифесты и фиксация")
@@ -550,16 +659,5 @@ async def index_incremental(
             "INSERT INTO public.ingest_snapshot_adapters(snapshot_id,adapter_key,analysis_version,fingerprint) VALUES ($1,$2,$3,$4)",
             [(snap, s.key, s.analysis_version, s.fingerprint) for s in scopes],
         )
-        await conn.copy_records_to_table(
-            "ingest_file_entities",
-            schema_name="public",
-            columns=("snapshot_id", "path", "entity_id"),
-            records=[(snap, path, entity_id) for entity_id, path in owners.items()],
-        )
-        await conn.copy_records_to_table(
-            "ingest_file_dependencies",
-            schema_name="public",
-            columns=("snapshot_id", "dependent_path", "dependency_path"),
-            records=[(snap, a, b) for a, b in sorted(dependency_pairs)],
-        )
+        await _check(conn)
     return IncrementalResult(snap, base_id, plan)
