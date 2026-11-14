@@ -175,3 +175,44 @@ def test_structural_queries_over_published_snapshot(
             await conn.close()
 
     asyncio.run(run())
+
+
+def test_mcp_tool_reads_published_snapshot(
+    database_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from fastmcp import Client
+    from fastmcp.exceptions import ToolError
+
+    from code_crawler.server import mcp
+
+    monkeypatch.setenv("DATABASE_URL", database_url)
+
+    async def run() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            await publish(conn, tmp_path)
+        finally:
+            await conn.close()
+        async with Client(mcp) as client:
+            found = await client.call_tool(
+                "search_symbols", {"repository_key": "app", "name": "app.Repo.save"}
+            )
+            (symbol,) = found.data["items"]
+            writers = await client.call_tool(
+                "find_table_writers", {"repository_key": "app", "table": "users"}
+            )
+            assert {
+                e["owner_symbol_id"]
+                for i in writers.data["items"]
+                for e in i["executions"]
+            } == {symbol["id"]}
+            callers = await client.call_tool(
+                "find_callers", {"repository_key": "app", "symbol_id": symbol["id"]}
+            )
+            assert callers.data["items"][0]["evidence"]
+            with pytest.raises(ToolError, match="no published snapshot"):
+                await client.call_tool(
+                    "search_symbols", {"repository_key": "missing", "name": "x"}
+                )
+
+    asyncio.run(run())
