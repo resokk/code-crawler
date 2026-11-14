@@ -35,7 +35,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - C09 mcp-multirepository-intelligence: global search/trace/impact tools
 
 ## Stream D — source adapters (can run parallel with C after stable core)
-- D01 bpmn-schema-adapter: BPMN 2.0 processes, elements, flows and variables
+- D01 bpmn-schema-adapter: BPMN 2.0 processes, elements, flows and variables — [completed](changes/archive/2026-11-15-d01-bpmn-schema-adapter/completion.md), PG15 CI 882 passed
 - D02 bpmn-java-bindings: Camunda/Flowable delegates/workers
 - D03 reference-data-json-adapter: type-data.json datasets, fields, records
 - D04 reference-data-loader-analysis: loader/field/SQL/column lineage

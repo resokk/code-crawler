@@ -75,6 +75,11 @@ JavaScript, TypeScript и VBScript adapters. Все используют registr
 SourceAnalysis, Evidence, ingestion и lifecycle, без прямой зависимости от PostgreSQL.
 Не требуется завершение R4.
 
+D01 BPMN schema adapter завершён: XML facts, typed control-flow relations,
+отложенные selectors и incremental publication. [Контракт](bpmn-schema.md),
+[PG15 CI: 882 passed](https://github.com/resokk/code-crawler/actions/runs/43646257264).
+Java bindings остаются отдельным D02.
+
 ## R6 — Production readiness (P1/P2)
 
 repository-access-control; snapshot-retention-and-gc; observability-and-metrics;
