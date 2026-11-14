@@ -1781,6 +1781,12 @@
     },
     "RelationKind": {
       "enum": [
+        "BPMN_HANDLER",
+        "BPMN_INPUT_MAPPING",
+        "BPMN_OUTPUT_MAPPING",
+        "BPMN_READS_VARIABLE",
+        "BPMN_WRITES_VARIABLE",
+        "BPMN_VARIABLE_BINDING",
         "BPMN_FLOW_SOURCE",
         "BPMN_FLOW_TARGET",
         "BPMN_CALLS_PROCESS",

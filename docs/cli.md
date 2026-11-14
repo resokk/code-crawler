@@ -87,3 +87,9 @@ Canonical snapshot reports также показывают archive status, archi
 counts и commit/fingerprint/dirty. Новые publications требуют exact source bytes;
 `index-sources` сохраняет их автоматически, включая dirty worktrees. Generic
 producers архивируют bytes до validation: [source-evidence.md](source-evidence.md).
+
+
+BPMN Java bindings включены в canonical `index`/`index-sources`;
+`--bpmn-profile auto|camunda7|camunda8|flowable6|flowable7` выбирает namespace/API
+profile и сохраняется в ingest job. Ограничения и typed facts:
+[bpmn-java-bindings.md](bpmn-java-bindings.md).

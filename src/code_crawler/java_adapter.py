@@ -17,6 +17,7 @@ from code_crawler.java_semantic import JavaSemanticAnalyzer
 from code_crawler.java_sql import JavaSqlAnalyzer
 from code_crawler.java_symbols import extract
 from code_crawler.source_adapters import (
+    AdapterCatalog,
     AdapterDescriptor,
     AdapterError,
     AdapterFileResult,
@@ -170,7 +171,7 @@ class JavaSourceAdapter:
     async def prepare(self, sources: tuple[SourceInput, ...]) -> PreparedAdapter:
         """Build the existing catalog without filesystem/database IO in the adapter."""
         if self.profile == "symbols":
-            return _PreparedJava(self, None)
+            return _PreparedJava(self, None, sources)
 
         def build() -> JavaCallAnalyzer:
             factories = {
@@ -214,18 +215,44 @@ class JavaSourceAdapter:
                     self.descriptor.key, "prepare", tuple(issues)
                 ) from error
             raise
-        return _PreparedJava(self, analyzer)
+        return _PreparedJava(self, analyzer, sources)
 
 
 class _PreparedJava:
     def __init__(
-        self, adapter: JavaSourceAdapter, analyzer: JavaCallAnalyzer | None
+        self,
+        adapter: JavaSourceAdapter,
+        analyzer: JavaCallAnalyzer | None,
+        sources: tuple[SourceInput, ...],
     ) -> None:
         self.adapter = adapter
+        self.sources = sources
+        self._symbol_catalog = {}
         self.analyzer = analyzer
         self.analysis_version = (
             analyzer.analysis_version if analyzer else "java.symbols/1"
         )
+
+    async def export_catalogs(self) -> tuple["AdapterCatalog", ...]:
+        from code_crawler.bpmn_java_catalog import java_binding_catalog
+
+        def collect():
+            if self.analyzer is None:
+                self._symbol_catalog = {
+                    source.file.path: extract(source) for source in self.sources
+                }
+                pairs = tuple(
+                    (source, self._symbol_catalog[source.file.path])
+                    for source in self.sources
+                )
+            else:
+                pairs = tuple(
+                    (source, self.analyzer.files[source.file.path].result)
+                    for source in self.sources
+                )
+            return (java_binding_catalog(pairs, self.adapter.profile),)
+
+        return await asyncio.to_thread(collect)
 
     async def __call__(
         self, sources: tuple[SourceInput, ...]
@@ -235,7 +262,9 @@ class _PreparedJava:
             def collect() -> tuple[AdapterFileResult, ...]:
                 results = []
                 for source in sources:
-                    result = extract(source)
+                    result = self._symbol_catalog.get(source.file.path) or extract(
+                        source
+                    )
                     results.append(
                         AdapterFileResult(
                             analysis=result.analysis,

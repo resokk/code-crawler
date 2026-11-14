@@ -318,6 +318,12 @@ class Evidence(ContractModel):
 
 
 class RelationKind(StrEnum):
+    BPMN_HANDLER = "BPMN_HANDLER"
+    BPMN_INPUT_MAPPING = "BPMN_INPUT_MAPPING"
+    BPMN_OUTPUT_MAPPING = "BPMN_OUTPUT_MAPPING"
+    BPMN_READS_VARIABLE = "BPMN_READS_VARIABLE"
+    BPMN_WRITES_VARIABLE = "BPMN_WRITES_VARIABLE"
+    BPMN_VARIABLE_BINDING = "BPMN_VARIABLE_BINDING"
     BPMN_FLOW_SOURCE = "BPMN_FLOW_SOURCE"
     BPMN_FLOW_TARGET = "BPMN_FLOW_TARGET"
     BPMN_CALLS_PROCESS = "BPMN_CALLS_PROCESS"
@@ -377,6 +383,9 @@ _RELATION_ENDPOINTS = MappingProxyType(
         **{
             kind: _pairs("SYMBOL", "SYMBOL")
             for kind in (
+                RelationKind.BPMN_HANDLER,
+                RelationKind.BPMN_INPUT_MAPPING,
+                RelationKind.BPMN_OUTPUT_MAPPING,
                 RelationKind.BPMN_FLOW_SOURCE,
                 RelationKind.BPMN_FLOW_TARGET,
                 RelationKind.BPMN_CALLS_PROCESS,
@@ -384,7 +393,13 @@ _RELATION_ENDPOINTS = MappingProxyType(
         },
         **{
             kind: _pairs("SYMBOL", "VALUE")
-            for kind in (RelationKind.BPMN_ATTRIBUTE, RelationKind.BPMN_TEXT)
+            for kind in (
+                RelationKind.BPMN_ATTRIBUTE,
+                RelationKind.BPMN_TEXT,
+                RelationKind.BPMN_READS_VARIABLE,
+                RelationKind.BPMN_WRITES_VARIABLE,
+                RelationKind.BPMN_VARIABLE_BINDING,
+            )
         },
         RelationKind.ORM_DECLARES_MAPPING: _pairs("SYMBOL", "ORM_MAPPING"),
         RelationKind.ORM_HAS_ATTRIBUTE: _pairs("ORM_MAPPING", "ORM_MAPPING"),
@@ -501,6 +516,32 @@ def validate_relation_endpoints(
         if entity.repository_id != relation.repository_id:
             raise ValueError("relation endpoints must belong to the same repository")
         actual.append(entity)
+    if (
+        relation.relation_kind
+        in (
+            RelationKind.BPMN_HANDLER,
+            RelationKind.BPMN_INPUT_MAPPING,
+            RelationKind.BPMN_OUTPUT_MAPPING,
+            RelationKind.BPMN_VARIABLE_BINDING,
+        )
+        and actual[0].symbol_kind != "BPMN_ELEMENT"
+    ):
+        raise ValueError("BPMN binding origin must be a BPMN element")
+    if relation.relation_kind == RelationKind.BPMN_HANDLER and any(
+        target.symbol_kind != "METHOD" for target in actual[1:]
+    ):
+        raise ValueError("BPMN handler target must be a Java method")
+    if (
+        relation.relation_kind
+        in (RelationKind.BPMN_READS_VARIABLE, RelationKind.BPMN_WRITES_VARIABLE)
+        and actual[0].symbol_kind != "METHOD"
+    ):
+        raise ValueError("BPMN variable access requires a Java method")
+    if relation.relation_kind in (
+        RelationKind.BPMN_INPUT_MAPPING,
+        RelationKind.BPMN_OUTPUT_MAPPING,
+    ) and any(target.symbol_kind != "BPMN_ELEMENT" for target in actual[1:]):
+        raise ValueError("BPMN mapping target must be a BPMN element")
     if relation.relation_kind == RelationKind.CALLS:
         for entity in actual:
             if isinstance(entity, Symbol) and entity.symbol_kind not in (

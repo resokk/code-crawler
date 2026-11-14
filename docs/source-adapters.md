@@ -141,3 +141,15 @@ JavaScript (`.js/.jsx`) и TypeScript (`.ts/.tsx`, `.json` для captured tscon
 активированы отдельными versioned adapters. Symbols, imports/reexports,
 conservative CALLS и fetch/axios HTTP selectors:
 [javascript-typescript-ucm.md](javascript-typescript-ucm.md).
+
+## Local catalog binding
+
+После независимого prepare optional CatalogProvider экспортирует frozen
+`AdapterCatalog`, а CatalogConsumer запрашивает optional keys через
+`catalog_keys` и получает read-only mapping через `with_catalogs`. Без запросов
+export-фаза не выполняется. Registry проверяет source identity/ownership/ranges, deep
+immutability, duplicate keys и version stability в worker thread. Consumer
+analysis_version обязан учитывать использованный catalog. DB/root и mutable AST
+не передаются. Java → BPMN использует эту фазу для [handler bindings](bpmn-java-bindings.md)
+и invalidation при появлении/удалении Java candidates. Новая lifecycle-фаза не
+меняет контракты остальных producers и центрального UCM loader.

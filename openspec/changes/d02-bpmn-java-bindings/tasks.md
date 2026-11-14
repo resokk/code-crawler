@@ -1,6 +1,6 @@
 # Tasks: BPMN Java handler bindings
 
-All tasks are open until implemented and tested.
+Implementation and local conformance/PG15 verification are complete; checkboxes stay open until required CI passes.
 
 - [ ] 1. Review existing SourceAdapter registry, UCM types, relation registry and schema migration patterns.
 - [ ] 2. Define typed entities, references and SourceAnalysis diagnostics for this format.
@@ -17,3 +17,20 @@ All tasks are open until implemented and tested.
 - [ ] 13. Add PostgreSQL 15 integration test from fixture through published UCM; do not duplicate Java/SQL analyzers.
 - [ ] 14. Update docs with supported versions, limitations, evidence, coverage and error behavior.
 - [ ] 15. Run ruff check/format, pytest and mandatory CI before checking tasks.
+
+## Acceptance evidence (CI pending)
+
+- `tests/test_bpmn_java_bindings.py`: delegate/Spring bean/worker contracts,
+  profile namespace isolation, ambiguous/duplicate registrations, dynamic selectors,
+  incomplete Java catalog, typed variables/mappings, AST reuse, inheritance and
+  existing Java-to-SQL composition; unrelated XML does not build a Java catalog.
+- `tests/test_adapter_catalogs.py`: read-only deterministic binding, duplicate keys,
+  typed/deeply frozen exports, captured source ownership/hash/range validation and
+  prepared-version drift rejection.
+- `tests/integration/test_bpmn_java_storage.py`: PG15 publish/read/trace, CLI profile,
+  reuse, added/removed candidate, bean rename, profile-only invalidation, handler
+  deletion, parser/binding failure and repository isolation with actual remote targets.
+- Full local PG15 suite: 941 passed. Final catalog/variable/root-preflight refinements
+  also pass targeted unit and PG15 tests. Ruff check/format pass.
+- Supported APIs, versioning and explicit partial lineage are documented in
+  `docs/bpmn-java-bindings.md`. Required GitHub Actions verification pending.

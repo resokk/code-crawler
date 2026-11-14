@@ -119,7 +119,7 @@ def test_gateway_guards_extensions_and_external_workers(bpmn_xml: str) -> None:
     }
     assert all(e.resolution == "UNRESOLVED" for e in externals)
     report = next(e for e in entities.values() if isinstance(e, SourceAnalysis))
-    assert not report.diagnostics
+    assert not any(d.severity == "ERROR" for d in report.diagnostics)
     assert report.capabilities[0].status == "PARTIAL"
     # Every claimed span is a UTF-8 slice of the captured XML, including non-ASCII names.
     lines = captured.content.splitlines(keepends=True)

@@ -25,6 +25,7 @@ from code_crawler import (
     source_evidence,
 )
 from code_crawler.bpmn_adapter import BpmnSourceAdapter
+from code_crawler.bpmn_bindings import BINDING_PROFILES
 from code_crawler.database_resolution import ConnectionAssignment
 from code_crawler.groovy_adapter import GroovySourceAdapter
 from code_crawler.java_adapter import (
@@ -111,6 +112,7 @@ async def index(
     dialect: str | None = None,
     naming_policy: str | None = None,
     connections: str | None = None,
+    bpmn_profile: str | None = None,
 ) -> None:
     """Build and publish canonical UCM by default; legacy requires explicit selection."""
     if backend == "legacy":
@@ -119,6 +121,7 @@ async def index(
             for value in (
                 repository_key,
                 java_profile,
+                bpmn_profile,
                 dialect,
                 naming_policy,
                 connections,
@@ -145,6 +148,7 @@ async def index(
         naming_policy if naming_policy is not None else "UNKNOWN",
         connections,
         publish=True,
+        bpmn_profile=bpmn_profile or "auto",
     )
 
 
@@ -453,11 +457,13 @@ async def index_registered(
     connections: str | None = None,
     publish: bool = False,
     job_id: UUID | None = None,
+    bpmn_profile: str = "auto",
 ) -> None:
     parameters = {
         "root": root,
         "repository_key": repository_key,
         "java_profile": java_profile,
+        "bpmn_profile": bpmn_profile,
         "dialect": dialect,
         "naming_policy": naming_policy,
         "connections": connections,
@@ -508,7 +514,7 @@ async def index_registered(
                     adapter,
                     GroovySourceAdapter(dialect=dialect),
                     PlplusSourceAdapter(),
-                    BpmnSourceAdapter(),
+                    BpmnSourceAdapter(profile=bpmn_profile),
                     KotlinSourceAdapter(),
                     JavaScriptSourceAdapter(),
                     TypeScriptSourceAdapter(),
@@ -547,6 +553,9 @@ async def index_registered(
 
 
 def _canonical_options(parser: argparse.ArgumentParser, *, defaults: bool) -> None:
+    parser.add_argument(
+        "--bpmn-profile", choices=BINDING_PROFILES, default="auto" if defaults else None
+    )
     parser.add_argument(
         "--java-profile", choices=JAVA_PROFILES, default="orm" if defaults else None
     )

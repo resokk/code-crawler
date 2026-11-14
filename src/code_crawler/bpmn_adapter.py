@@ -3,11 +3,17 @@
 import asyncio
 import json
 from bisect import bisect_right
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 from xml.parsers import expat
+
+if TYPE_CHECKING:
+    from code_crawler.bpmn_java_catalog import JavaBindingCatalog
 
 from code_crawler.incremental import FileAnalysis, SourceInput
 from code_crawler.source_adapters import (
+    AdapterCatalog,
     AdapterDescriptor,
     AdapterFileResult,
     PreparedAdapter,
@@ -102,7 +108,11 @@ def _tag_end(content: bytes, start: int) -> int:
     raise ValueError("Unterminated XML tag")
 
 
-def _parse(content: bytes) -> list[_Node]:
+class _RootFound(Exception):
+    pass
+
+
+def _parse(content: bytes, *, root_only: bool = False) -> list[_Node]:
     if len(content) > MAX_BYTES:
         raise ValueError("XML exceeds 8 MiB limit")
     content.decode("utf-8-sig")
@@ -135,6 +145,8 @@ def _parse(content: bytes) -> list[_Node]:
             )
         )
         stack.append(len(nodes) - 1)
+        if root_only:
+            raise _RootFound
 
     def end(tag: str) -> None:
         node = nodes[stack.pop()]
@@ -153,7 +165,10 @@ def _parse(content: bytes) -> list[_Node]:
     parser.EntityDeclHandler = reject
     parser.ExternalEntityRefHandler = reject
     parser.SetParamEntityParsing(expat.XML_PARAM_ENTITY_PARSING_NEVER)
-    parser.Parse(content, True)
+    try:
+        parser.Parse(content, True)
+    except _RootFound:
+        pass
     return nodes
 
 
@@ -404,16 +419,26 @@ def analyze_bpmn(source: SourceInput) -> AdapterFileResult:
 
 @dataclass(frozen=True)
 class BpmnSourceAdapter:
+    profile: str = "auto"
+
+    def __post_init__(self) -> None:
+        from code_crawler.bpmn_bindings import BINDING_PROFILES
+
+        if self.profile not in BINDING_PROFILES:
+            raise ValueError("unsupported BPMN binding profile")
+
     @property
     def descriptor(self) -> AdapterDescriptor:
+        from code_crawler.bpmn_bindings import binding_coverage
+
         return AdapterDescriptor(
             key="bpmn",
-            version=VERSION,
+            version="bpmn/2",
             routes=tuple(
                 SourceRoute(suffix=suffix, language="bpmn")
                 for suffix in (".bpmn", ".bpmn20.xml", ".xml")
             ),
-            capabilities=(CAPABILITY,),
+            capabilities=(CAPABILITY, binding_coverage(self.profile)),
             entity_types=(
                 EntityType.SYMBOL,
                 EntityType.VALUE,
@@ -423,16 +448,60 @@ class BpmnSourceAdapter:
         )
 
     async def prepare(self, sources: tuple[SourceInput, ...]) -> PreparedAdapter:
-        return _PreparedBpmn()
+        def needs_java() -> bool:
+            for source in sources:
+                try:
+                    nodes = _parse(source.content, root_only=True)
+                except (ValueError, expat.ExpatError, UnicodeError):
+                    continue
+                if nodes and nodes[0].tag == f"{{{BPMN}}}definitions":
+                    return True
+            return False
+
+        return _PreparedBpmn(
+            self.profile, needs_java=await asyncio.to_thread(needs_java)
+        )
 
 
 @dataclass(frozen=True)
 class _PreparedBpmn:
-    analysis_version: str = VERSION
+    profile: str = "auto"
+    catalog: "JavaBindingCatalog | None" = None
+    needs_java: bool = False
+
+    @property
+    def catalog_keys(self) -> tuple[str, ...]:
+        from code_crawler.bpmn_java_catalog import CATALOG_KEY
+
+        return (CATALOG_KEY,) if self.needs_java else ()
+
+    @property
+    def analysis_version(self) -> str:
+        return (
+            "bpmn/2:"
+            + self.profile
+            + ":"
+            + (self.catalog.version if self.catalog else "no-java-catalog")
+        )
+
+    async def with_catalogs(
+        self, catalogs: Mapping[str, AdapterCatalog]
+    ) -> "_PreparedBpmn":
+        from code_crawler.bpmn_java_catalog import CATALOG_KEY, JavaBindingCatalog
+
+        catalog = catalogs.get(CATALOG_KEY)
+        if catalog is not None and not isinstance(catalog, JavaBindingCatalog):
+            raise TypeError("BPMN requires a typed JavaBindingCatalog")
+        return _PreparedBpmn(self.profile, catalog, self.needs_java)
 
     async def __call__(
         self, sources: tuple[SourceInput, ...]
     ) -> tuple[AdapterFileResult, ...]:
+        from code_crawler.bpmn_bindings import bind_bpmn
+
         return await asyncio.to_thread(
-            lambda: tuple(analyze_bpmn(source) for source in sources)
+            lambda: tuple(
+                bind_bpmn(source, analyze_bpmn(source), self.catalog, self.profile)
+                for source in sources
+            )
         )

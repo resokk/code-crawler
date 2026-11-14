@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 import asyncpg
@@ -97,6 +97,42 @@ class PreparedAdapter(Protocol):
     ) -> tuple[AdapterFileResult, ...]:
         """Analyze exactly the requested routed files; never read ambient source bytes."""
         ...
+
+
+def _immutable_catalog(value: object) -> None:
+    if isinstance(value, ContractModel):
+        if not type(value).model_config.get("frozen"):
+            raise TypeError("catalog models must be frozen")
+        for field in type(value).model_fields:
+            _immutable_catalog(getattr(value, field))
+    elif isinstance(value, tuple):
+        for child in value:
+            _immutable_catalog(child)
+    elif isinstance(value, (Mapping, list, set, bytearray)):
+        raise TypeError("catalog fields must be immutable values and tuples")
+
+
+class AdapterCatalog(ContractModel):
+    """Immutable captured-source catalog exchanged during local preparation."""
+
+    key: Text
+    version: Text
+    source_files: tuple[SourceFile, ...] = ()
+
+
+@runtime_checkable
+class CatalogProvider(Protocol):
+    async def export_catalogs(self) -> tuple[AdapterCatalog, ...]: ...
+
+
+@runtime_checkable
+class CatalogConsumer(Protocol):
+    @property
+    def catalog_keys(self) -> tuple[str, ...]: ...
+
+    async def with_catalogs(
+        self, catalogs: Mapping[str, AdapterCatalog]
+    ) -> PreparedAdapter: ...
 
 
 class SourceAdapter(Protocol):
@@ -250,6 +286,46 @@ class AdapterRegistry:
             else None
         )
 
+    def _validate_catalogs(
+        self,
+        key: str,
+        exported: tuple[AdapterCatalog, ...],
+        captured: Mapping[str, SourceInput],
+    ) -> dict[str, AdapterCatalog]:
+        catalogs: dict[str, AdapterCatalog] = {}
+        if not isinstance(exported, tuple):
+            raise TypeError("catalog exports must be an immutable tuple")
+        for catalog in exported:
+            if not isinstance(catalog, AdapterCatalog):
+                raise TypeError("catalog exports must be typed AdapterCatalog")
+            recheck(catalog)
+            _immutable_catalog(catalog)
+            if catalog.key in catalogs:
+                raise ValueError("duplicate adapter catalog key")
+            if len({f.path for f in catalog.source_files}) != len(catalog.source_files):
+                raise ValueError("duplicate catalog source file")
+            if any(
+                captured.get(f.path) is None or captured[f.path].file != f
+                for f in catalog.source_files
+            ):
+                raise ValueError("catalog source differs from captured inventory")
+            if any(
+                (route := self.route(f.path)) is None or route.key != key
+                for f in catalog.source_files
+            ):
+                raise ValueError("catalog includes sources owned by another adapter")
+            locations = _LineIndex()
+            catalog_files = {f.id: captured[f.path] for f in catalog.source_files}
+            for location in _ranges(catalog):
+                referenced = catalog_files.get(location.source_file_id)
+                if referenced is None:
+                    raise ValueError(
+                        "catalog range points outside its declared source files"
+                    )
+                locations.check(referenced, location)
+            catalogs[catalog.key] = catalog
+        return catalogs
+
     async def prepare(
         self, sources: tuple[SourceInput, ...]
     ) -> "PreparedSourceRegistry":
@@ -294,6 +370,70 @@ class AdapterRegistry:
                 implementation,
                 implementation.analysis_version,
             )
+        consumers = set()
+        for key, (_, implementation, _) in prepared.items():
+            if isinstance(implementation, CatalogConsumer):
+                requested = implementation.catalog_keys
+                if not isinstance(requested, tuple) or any(
+                    not isinstance(k, str) or not k.strip() for k in requested
+                ):
+                    raise _error(
+                        key,
+                        "bindings",
+                        ValueError(
+                            "catalog_keys must be an immutable tuple of nonblank keys"
+                        ),
+                    )
+                if requested:
+                    consumers.add(key)
+        if consumers:
+            catalogs: dict[str, AdapterCatalog] = {}
+            for key, (_, implementation, version) in prepared.items():
+                if not isinstance(implementation, CatalogProvider):
+                    continue
+                try:
+                    exported = await implementation.export_catalogs()
+                    if implementation.analysis_version != version:
+                        raise ValueError(
+                            "catalog export changed the prepared adapter version"
+                        )
+                    validated = await asyncio.to_thread(
+                        self._validate_catalogs, key, exported, captured
+                    )
+                    for catalog_key, catalog in validated.items():
+                        if catalog_key in catalogs:
+                            raise ValueError("duplicate adapter catalog key")
+                        catalogs[catalog_key] = catalog
+                except Exception as error:
+                    raise _error(key, "catalog", error) from error
+            context = MappingProxyType(catalogs)
+            for key, (descriptor, implementation, _) in tuple(prepared.items()):
+                if key not in consumers:
+                    continue
+                try:
+                    bound = await implementation.with_catalogs(context)
+                    if (
+                        not isinstance(bound.analysis_version, str)
+                        or not bound.analysis_version.strip()
+                    ):
+                        raise ValueError(
+                            "bound adapter must expose a nonblank analysis_version"
+                        )
+                    prepared[key] = (descriptor, bound, bound.analysis_version)
+                except Exception as error:
+                    raise _error(key, "bindings", error) from error
+        for key, (descriptor, implementation, version) in prepared.items():
+            if (
+                self._adapters[key].descriptor != descriptor
+                or implementation.analysis_version != version
+            ):
+                raise _error(
+                    key,
+                    "prepare",
+                    ValueError(
+                        "adapter version/descriptor drift during catalog binding"
+                    ),
+                )
         return PreparedSourceRegistry(self, captured, prepared)
 
 

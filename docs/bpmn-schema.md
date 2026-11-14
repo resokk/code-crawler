@@ -4,7 +4,7 @@
 Маршруты: `.bpmn`, `.bpmn20.xml`, `.xml` (case-sensitive). XML распознаётся
 по expanded QName корня `{http://www.omg.org/spec/BPMN/20100524/MODEL}definitions`,
 независимо от namespace prefix. Другой корректный XML получает metadata и
-SourceAnalysis с UNSUPPORTED, без semantic facts. Version: `bpmn/1`.
+SourceAnalysis с UNSUPPORTED, без semantic facts. Schema analyzer: `bpmn/1`, adapter: `bpmn/2`.
 
 ## Факты и Evidence
 
@@ -47,7 +47,8 @@ Engine namespaces: `http://camunda.org/schema/1.0/bpmn` и
 Динамические selectors сохраняются с UNKNOWN certainty. Статический literal
 selector — STATIC_PROVEN факт наличия ссылки, а не доказательство существования
 worker или Java binding. Репозитории извне не читаются; cross-snapshot relations
-не создаются. Java binding относится к отдельному change d02.
+не создаются. Java binding реализован в [bpmn-java-bindings.md](bpmn-java-bindings.md); при наличии
+Java adapter selectors заменяются contextual binding results.
 
 ## Безопасность, Coverage и lifecycle
 
@@ -66,9 +67,11 @@ Malformed XML, DTD, превышение лимита, неподдержанн�
 
 Миграция `0020_bpmn_schema_adapter.sql` расширяет typed symbol/relation registry;
 существующие tables, ingestion, source ownership и atomic publication переиспользуются.
-Analysis version не зависит от содержимого других файлов: изменение BPMN
-переанализирует этот файл, no-change reuse сохраняет facts/diagnostics, удаление
-убирает facts только из нового snapshot. Repository/path входят в identities.
+Без Java catalog изменение BPMN переанализирует этот файл. При подключённом Java
+adapter binding fingerprint включает локальный Java catalog: изменение Java
+консервативно инвалидирует routed BPMN files. No-change reuse сохраняет
+facts/diagnostics, удаление убирает facts только из нового snapshot.
+Repository/path входят в identities.
 
 Проверки: `tests/test_bpmn_adapter.py`,
 `tests/integration/test_bpmn_storage.py` (PG15: publish/read/reuse/edit/delete,
