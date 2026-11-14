@@ -3,7 +3,7 @@
 `code-crawler index SOURCE` теперь выполняет canonical UCM pipeline: resolve/sync →
 registry indexing → exact source archive → validate → atomic publish. Default backend
 `ucm`; default Java profile `orm`, dialect `postgres`, naming policy `UNKNOWN`.
-Java/Groovy/PLPlus facts читаются опубликованным canonical reader/search/MCP.
+Java/Kotlin/Groovy/PLPlus facts читаются опубликованным canonical reader/search/MCP.
 
 ```sh
 uv run code-crawler index /path/to/repository

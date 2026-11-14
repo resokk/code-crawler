@@ -32,6 +32,7 @@ from code_crawler.java_adapter import (
     JavaSourceAdapter,
     java_adapter_catalog,
 )
+from code_crawler.kotlin_adapter import KotlinSourceAdapter
 from code_crawler.plplus_adapter import PlplusSourceAdapter
 from code_crawler.source_adapters import AdapterRegistry, index_sources
 
@@ -301,6 +302,7 @@ async def list_adapters() -> None:
                 for descriptor in (
                     *java_adapter_catalog(),
                     GroovySourceAdapter().descriptor,
+                    KotlinSourceAdapter().descriptor,
                     PlplusSourceAdapter().descriptor,
                     BpmnSourceAdapter().descriptor,
                 )
@@ -501,6 +503,7 @@ async def index_registered(
                     GroovySourceAdapter(dialect=dialect),
                     PlplusSourceAdapter(),
                     BpmnSourceAdapter(),
+                    KotlinSourceAdapter(),
                 )
             )
             repository = await snapshots.register_repository(

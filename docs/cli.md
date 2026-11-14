@@ -14,7 +14,7 @@ uv run code-crawler <команда>
 | `schema import-version --database-key KEY --version-key VERSION` | независимый immutable PostgreSQL import — см. [database-identity.md](database-identity.md) |
 | `schema import-manifest PATH` | импорт typed JSON manifest в versioned inventory |
 | `schema import` | читает структуру прикладной БД в слой данных — см. [data-model.md](data-model.md) |
-| `adapters list` | описывает built-in versioned Java profiles, Groovy и PL/Plus adapters без доступа к БД |
+| `adapters list` | описывает built-in versioned Java profiles, Kotlin, Groovy и PL/Plus adapters без доступа к БД |
 | `snapshot validate UUID` | проверяет canonical snapshot и переводит его в READY |
 | `snapshot publish UUID --expected-current UUID\|none` | validation и атомарная CAS публикация — [контракт](canonical-publication-cli.md) |
 | `index-sources ROOT --repository-key KEY [--publish]` | строит canonical BUILDING snapshot; `--publish` проверяет и публикует через существующий lifecycle API — см. [source-adapters.md](source-adapters.md) |

@@ -272,7 +272,12 @@ class AdapterRegistry:
             ):
                 raise ValueError("captured language does not match registry route")
             try:
-                implementation = await adapter.prepare(assigned)
+                prepare_inventory = getattr(adapter, "prepare_inventory", None)
+                implementation = (
+                    await prepare_inventory(assigned, tuple(captured.values()))
+                    if prepare_inventory is not None
+                    else await adapter.prepare(assigned)
+                )
                 if (
                     not isinstance(implementation.analysis_version, str)
                     or not implementation.analysis_version.strip()

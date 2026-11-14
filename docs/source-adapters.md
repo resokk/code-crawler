@@ -26,7 +26,10 @@ Registration не загружает source bytes и не открывает DB 
 
 `await adapter.prepare(tuple[SourceInput,...]) -> PreparedAdapter` получает все
 routed sources языка/profile, включая пустой tuple. Подготовка строит repository-local
-catalog и expose nonblank stable analysis_version. Sources — frozen SourceFile и
+catalog и expose nonblank stable analysis_version. Для межъязыкового local catalog адаптер может реализовать
+`prepare_inventory(assigned, inventory)`: registry вызывает его вместо prepare и
+передаёт все immutable captured inputs. Это не разрешает ambient I/O.
+Sources — frozen SourceFile и
 immutable bytes; hash/repository/path/language проверяются. CPU work должен быть
 в worker thread, как у JavaSourceAdapter. Ambient filesystem/DB/network source reads
 не входят в контракт; внешняя schema/configuration передаётся typed immutable input.
@@ -77,7 +80,8 @@ uv run code-crawler adapters list
 uv run code-crawler index-sources /path/to/repository --repository-key org/repo --java-profile orm
 ```
 
-CLI активирует также `GroovySourceAdapter`: `.groovy/.gvy/.gy/.gsh/.gradle`,
+CLI активирует `KotlinSourceAdapter` для `.kt/.kts` (см. [kotlin-ucm.md](kotlin-ucm.md)),
+а также `GroovySourceAdapter`: `.groovy/.gvy/.gy/.gsh/.gradle`,
 а также `PlplusSourceAdapter` для `.plp`. PL/Plus сохраняет CFT selectors,
 не подменяя их physical SQL effects: [plplus-ucm.md](plplus-ucm.md).
 SQL dialect общий у Groovy и Java. Подробности: [groovy-ucm.md](groovy-ucm.md).

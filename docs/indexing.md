@@ -6,8 +6,9 @@
 | Сделано | Ещё нет |
 | --- | --- |
 | команда `index`, регистрация и клонирование репозиториев | удаление и просмотр индексов, обновление только изменённых файлов |
-| Java: классы, методы, вложенность | Kotlin, TypeScript, JavaScript, Python, VBScript, BPMN |
+| Java: классы, методы, вложенность | TypeScript, JavaScript, Python, VBScript, BPMN |
 | PL/Plus: классы и операции ЦФТ, функции, запросы, вызовы | PL/Plus: раскрытие макросов, SQL из `execute immediate` |
+| Kotlin: canonical symbols/calls, explicit Java static interop и JDBC/Spring SQL ([kotlin-ucm.md](kotlin-ucm.md)) | Kotlin: compiler inference, virtual dispatch и script host bindings |
 | Groovy: canonical symbols, lexical references, SQL constructions/accesses через `index-sources` | Groovy: runtime dispatch, SQL execution sinks |
 | SQL из строк Java-кода с восстановлением и полным разбором | файлы `.sql`; вызовы, наследование и импорты между символами |
 | native SQL (включая `@Query(nativeQuery = true)`) | Spring Data, Hibernate, JPA; эмбеддинги |
@@ -295,11 +296,11 @@ captured files через immutable descriptors и prepared adapters. Кажды
 проверяет ownership/request/version/range/coverage и добавляет SourceAnalysis.
 Longest suffix routing используется совместно capture и incremental planner.
 
-CLI `adapters list` описывает восемь Java profiles, Groovy и PL/Plus adapters; `index-sources ROOT
+CLI `adapters list` описывает восемь Java profiles, Kotlin, Groovy и PL/Plus adapters; `index-sources ROOT
 --repository-key KEY --java-profile orm` строит BUILDING snapshot.
 Опция `--publish` добавляет validation и atomic publication с expected base pointer;
 ручные команды — [canonical-publication-cli.md](canonical-publication-cli.md). Existing
 index_java_* APIs и legacy `index` сохраняются. Новый adapter подключается без
-изменения PostgreSQL loader. Groovy и PL/Plus подключены к `index-sources` по умолчанию;
+изменения PostgreSQL loader. Kotlin, Groovy и PL/Plus подключены к `index-sources` по умолчанию;
 PL/Plus контракт: [plplus-ucm.md](plplus-ucm.md);
 контракт и ограничения: [groovy-ucm.md](groovy-ucm.md). Общий контракт: [source-adapters.md](source-adapters.md).
