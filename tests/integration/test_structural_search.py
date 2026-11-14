@@ -72,6 +72,17 @@ def test_structural_queries_over_published_snapshot(
         conn = await asyncpg.connect(database_url)
         try:
             await publish(conn, tmp_path)
+            assert {
+                r["indexname"]
+                for r in await conn.fetch(
+                    "SELECT indexname FROM pg_indexes WHERE schemaname='public'"
+                )
+            } >= {
+                "ucm_entities_symbol_name_idx",
+                "ucm_relation_candidates_candidate_idx",
+                "ucm_sql_executions_owner_idx",
+                "ucm_sql_access_names_normalized_idx",
+            }
             with pytest.raises(ValueError, match="no published snapshot"):
                 await search.search_symbols(conn, "missing", "load")
 

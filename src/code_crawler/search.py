@@ -149,9 +149,13 @@ async def search_symbols(
     """Find symbols by exact simple or qualified name, optionally by kind and signature."""
     snapshot_id = await _snapshot(conn, repository_key)
     rows = await conn.fetch(
+        # UNION вместо OR по двум таблицам: каждая ветка идёт по своему индексу.
         "SELECT s.entity_id FROM public.ucm_symbols s "
-        "JOIN public.ucm_entities e USING (snapshot_id, entity_id) "
-        "WHERE s.snapshot_id=$1 AND (e.name=$2 OR s.qualified_name=$2) "
+        "WHERE s.snapshot_id=$1 AND s.entity_id IN ("
+        " SELECT entity_id FROM public.ucm_entities "
+        " WHERE snapshot_id=$1 AND entity_type='SYMBOL' AND name=$2 "
+        " UNION ALL SELECT entity_id FROM public.ucm_symbols "
+        " WHERE snapshot_id=$1 AND qualified_name=$2) "
         "AND ($3::text IS NULL OR s.symbol_kind=$3) "
         "AND ($4::text[] IS NULL OR $4 = COALESCE((SELECT array_agg(t.name ORDER BY t.position) "
         " FROM public.ucm_type_refs t WHERE t.snapshot_id=s.snapshot_id "
@@ -175,17 +179,19 @@ async def _calls(
     limit: int,
 ) -> dict:
     snapshot_id = await _snapshot(conn, repository_key)
-    # Кандидаты AMBIGUOUS/PARTIAL связей — тоже возможные вызовы: их нельзя терять молча.
-    candidate = (
-        " OR EXISTS (SELECT 1 FROM public.ucm_relation_candidates c "
-        "WHERE c.snapshot_id=r.snapshot_id AND c.relation_id=r.entity_id "
-        "AND c.candidate_id=$2)"
-        if own == "target_id"
-        else ""
+    matched = (
+        f"SELECT entity_id FROM public.ucm_relations WHERE snapshot_id=$1 "
+        f"AND relation_kind='CALLS' AND {own}=$2"
     )
+    if own == "target_id":
+        # Кандидаты AMBIGUOUS/PARTIAL связей — тоже возможные вызовы: их нельзя терять молча.
+        matched += (
+            " UNION ALL SELECT relation_id FROM public.ucm_relation_candidates "
+            "WHERE snapshot_id=$1 AND candidate_id=$2"
+        )
     rows = await conn.fetch(
         f"SELECT {_RELATION} FROM public.ucm_relations r WHERE r.snapshot_id=$1 "
-        f"AND r.relation_kind='CALLS' AND (r.{own}=$2{candidate}) "
+        f"AND r.relation_kind='CALLS' AND r.entity_id IN ({matched}) "
         "ORDER BY r.entity_id LIMIT $3",
         snapshot_id,
         symbol_id,
@@ -296,9 +302,12 @@ async def _accesses(
         "st.parse_status FROM public.ucm_data_accesses a "
         "JOIN public.ucm_sql_statements st ON st.snapshot_id=a.snapshot_id "
         " AND st.entity_id=a.statement_id "
+        # JOIN, а не EXISTS: поиск начинается с индекса по нормализованному имени.
+        "JOIN public.ucm_sql_access_names tn ON tn.snapshot_id=a.snapshot_id "
+        " AND tn.access_id=a.entity_id AND tn.part='table_name' "
+        " AND tn.normalized IN ($3, lower($3)) "
         "WHERE a.snapshot_id=$1 AND a.access_kind=ANY($2) "
         "AND a.object_kind=CASE WHEN $4::text IS NULL THEN 'TABLE' ELSE 'COLUMN' END "
-        f"AND {named('table_name', 3)} "
         f"AND ($4::text IS NULL OR {named('column_name', 4)}) "
         f"AND ($5::text IS NULL OR {named('schema_name', 5)}) "
         "ORDER BY a.entity_id LIMIT $6",

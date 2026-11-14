@@ -50,4 +50,4 @@ TABLE, с `column` — уровня COLUMN.
 - Нет фильтра по пути или языку внутри репозитория и нет постраничного курсора:
   только `limit` и `truncated`.
 - У неразрешённого вызова нет имени цели; место вызова есть в `evidence`.
-- Индексы под эти запросы подбирает change `ucm-query-index-optimization`.
+- Планы запросов, индексы и baseline latency: [query-indexes.md](query-indexes.md).

@@ -138,3 +138,6 @@ per-file adapter profiles/capabilities/reasons/diagnostics. Reports immutable в
 immutability/checksums, обязательный архив перед READY/PUBLISHED и явная
 совместимость старых published snapshots. Новые clean/dirty captures архивируются
 в PostgreSQL без внешнего blob store/расширений: [source-evidence.md](source-evidence.md).
+
+Миграция `0018_ucm_query_indexes.sql` добавляет четыре B-tree индекса под запросы
+структурного поиска. См. [query-indexes.md](query-indexes.md).
