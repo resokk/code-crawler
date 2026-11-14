@@ -390,3 +390,21 @@ def test_assignment_alias_targets_are_writes():
     text = "a number; b number; begin a = b := 1; end;"
     refs = [r for r in facts(text, Occurrence) if r.occurrence_kind != "DECLARATION"]
     assert len(refs) == 2 and all(r.occurrence_kind == "WRITE" for r in refs)
+
+
+def test_build_reports_each_file_once_per_stage():
+    from code_crawler import incremental
+
+    seen = []
+    token = incremental.progress.set(lambda stage, total: seen.append((stage, total)))
+    try:
+        # Адаптер считает в рабочем потоке: проверяем, что подписка туда доходит.
+        asyncio.run(
+            PlplusSourceAdapter().prepare(
+                (source("begin null; end;"), source("begin null; end;", "b.plp"))
+            )
+        )
+    finally:
+        incremental.progress.reset(token)
+    stages = ("PL/Plus: разбор", "PL/Plus: символы", "PL/Plus: ссылки")
+    assert seen == [(stage, 2) for stage in stages for _ in range(2)]

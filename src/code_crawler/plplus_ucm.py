@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from antlr4 import ParserRuleContext
 
-from code_crawler.incremental import FileAnalysis, SourceInput
+from code_crawler.incremental import FileAnalysis, SourceInput, tick
 from code_crawler.plplus_parse import PlplusParseResult, parse_plplus
 from code_crawler.source_adapters import AdapterFileResult
 from code_crawler.ucm import (
@@ -764,12 +764,13 @@ def build_plplus(
     sources: tuple[SourceInput, ...],
 ) -> tuple[str, dict[str, AdapterFileResult]]:
     """Build a captured-source catalog and immutable per-file adapter results."""
-    units = [
-        _Unit(source, parse_plplus(source))
-        for source in sorted(sources, key=lambda s: s.file.path)
-    ]
+    units = []
+    for source in sorted(sources, key=lambda s: s.file.path):
+        units.append(_Unit(source, parse_plplus(source)))
+        tick("PL/Plus: разбор", len(sources))
     for unit in units:
         unit.build()
+        tick("PL/Plus: символы", len(units))
     definitions = [
         (
             u.source.file.path,
@@ -787,4 +788,5 @@ def build_plplus(
     for unit in units:
         if unit.valid:
             unit.references(unit.parsed.tree, units)
+        tick("PL/Plus: ссылки", len(units))
     return version, {u.source.file.path: u.result() for u in units}

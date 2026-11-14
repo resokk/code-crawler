@@ -20,6 +20,7 @@ from code_crawler.incremental import (
     SourceInput,
     _capture,
     index_incremental,
+    tick,
 )
 from code_crawler.java_symbols import JavaSymbolsResult, extract
 from code_crawler.ucm import (
@@ -204,6 +205,7 @@ class JavaCallAnalyzer:
                 source, result, package, dict(imports), wildcard, dict(static_imports)
             )
             self.files[source.file.path] = file
+            tick("Java: каталог", len(sources))
             extractor = result._extractor
             for entity in result.analysis.entities:
                 if isinstance(entity, Symbol) and entity.symbol_kind == "CLASS":
@@ -774,6 +776,7 @@ class JavaCallAnalyzer:
                         "Java catalog does not match captured source; rebuild analyzer"
                     )
                 results.append(self.analysis(context))
+                tick("Java: анализ", len(sources))
             return tuple(results)
 
         return await asyncio.to_thread(analyze)

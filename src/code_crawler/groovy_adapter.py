@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from code_crawler.groovy_ucm import capabilities, extract_groovy
-from code_crawler.incremental import SourceInput
+from code_crawler.incremental import SourceInput, tick
 from code_crawler.source_adapters import (
     AdapterDescriptor,
     AdapterFileResult,
@@ -62,6 +62,10 @@ class _PreparedGroovy:
         self, sources: tuple[SourceInput, ...]
     ) -> tuple[AdapterFileResult, ...]:
         def analyze() -> tuple[AdapterFileResult, ...]:
-            return tuple(extract_groovy(source, self.dialect) for source in sources)
+            results = []
+            for source in sources:
+                results.append(extract_groovy(source, self.dialect))
+                tick("Groovy: анализ", len(sources))
+            return tuple(results)
 
         return await asyncio.to_thread(analyze)

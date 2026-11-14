@@ -8,12 +8,13 @@ from pathlib import Path
 from pydantic import TypeAdapter
 from rich.console import Console
 from rich.markup import escape
-from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn
+from rich.progress import Progress, SpinnerColumn, TaskID, TimeElapsedColumn
 
 from code_crawler import (
     database_schema,
     datamodel,
     db,
+    incremental,
     indexer,
     legacy,
     repos,
@@ -263,7 +264,20 @@ async def index_registered(
     naming_policy: str,
     connections: str | None = None,
 ) -> None:
-    with operation("Индексация source adapters"):
+    with operation("Индексация source adapters") as progress:
+        tasks: dict[str, TaskID] = {}
+
+        def advance(stage: str, total: int | None) -> None:
+            if stage not in tasks:
+                # Несчётный этап заканчивается с началом следующего — иначе его часы идут дальше.
+                for task in progress.tasks[1:]:
+                    if task.total is None:
+                        progress.update(task.id, total=1, completed=1)
+                tasks[stage] = progress.add_task(stage, total=total)
+            if total is not None:
+                progress.advance(tasks[stage])
+
+        incremental.progress.set(advance)
         path = await asyncio.to_thread(Path(root).resolve, strict=True)
         assignments = ()
         if connections is not None:

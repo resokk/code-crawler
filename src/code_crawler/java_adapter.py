@@ -7,7 +7,7 @@ from typing import Literal
 from code_crawler import java
 from code_crawler.database_resolution import ConnectionAssignment
 from code_crawler.database_schema import SchemaImport
-from code_crawler.incremental import FileAnalysis, SourceInput
+from code_crawler.incremental import FileAnalysis, SourceInput, tick
 from code_crawler.java_calls import JavaCallAnalyzer
 from code_crawler.java_database import JavaDatabaseAnalyzer
 from code_crawler.java_execution import JavaExecutionAnalyzer
@@ -246,6 +246,7 @@ class _PreparedJava:
                             ),
                         )
                     )
+                    tick("Java: символы", len(sources))
                 return tuple(results)
 
             return await asyncio.to_thread(collect)

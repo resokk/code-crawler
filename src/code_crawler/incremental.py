@@ -10,6 +10,7 @@ import stat
 from collections import defaultdict, deque
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import ExitStack
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from uuid import UUID
@@ -86,6 +87,18 @@ class _Worktree:
     dirty: bool
     sources: tuple[SourceInput, ...]
     fingerprint: str
+
+
+# Прогресс — забота интерфейса: контекст не меняет контракты адаптеров и анализаторов.
+progress: ContextVar[Callable[[str, int | None], None] | None] = ContextVar(
+    "progress", default=None
+)
+
+
+def tick(stage: str, total: int | None = None) -> None:
+    """Report one processed item of a counted stage, or the start of an uncounted one."""
+    if (callback := progress.get()) is not None:
+        callback(stage, total)
 
 
 def _hash(value: object) -> str:
@@ -400,6 +413,7 @@ async def index_incremental(
     selected_paths = set(plan.reanalyze)
     selected = tuple(s for s in captured.sources if s.file.path in selected_paths)
     analyses = await analyze(selected) if selected else ()
+    tick("Сборка снимка")
     batch, owners, dependency_pairs = await asyncio.to_thread(
         _assemble,
         repository_id,
@@ -418,6 +432,7 @@ async def index_incremental(
         checked.fingerprint,
     ):
         raise ValueError("worktree changed during analysis")
+    tick("Запись в БД")
     snap = await snapshots.create_snapshot(
         conn,
         repository_id,
