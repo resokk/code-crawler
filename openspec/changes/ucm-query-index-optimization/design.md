@@ -10,5 +10,21 @@ No separate relation_kind or access_kind index: existing relation indexes alread
 end in relation_kind, and access_kind is a low-selectivity filter applied after the
 name lookup. No GIN: every predicate is an equality. No index without a query.
 
-Baseline, sizes and ingest cost are recorded in docs/query-indexes.md. Measured on
-local PostgreSQL 18; PostgreSQL 15 confirmation is an open task.
+Baseline, sizes and ingest cost are recorded in docs/query-indexes.md. The original
+measurements used local PostgreSQL 18. The follow-up records PostgreSQL 15.20
+results separately, including remaining symbol-hydration scans and unresolved
+controlled-load and >1M-entity acceptance items.
+
+The PG15 follow-up uses an opt-in isolated-database harness with generated JDBC
+sources, including ambiguous call targets. It captures actual search and typed
+reader SQL, warm API latency and EXPLAIN ANALYZE BUFFERS separately. Two committed
+batch copies per schema phase report loader cost independently of parsing.
+Historical PG18 numbers remain separately labelled; they are not a cross-machine
+speed comparison.
+
+Typed incoming lookup repeats the earlier OR/EXISTS pitfall: one incoming CALLS
+result filtered 74,403 other relations in a 141,424-entity snapshot. Use the existing
+target/candidate indexes through an ID union and a membership predicate, preserving
+deduplication and all reader semantics without a schema migration. A selective
+3,000-filler integration fixture checks the plan without disabling sequential scans
+or imposing timing thresholds.

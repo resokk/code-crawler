@@ -193,7 +193,7 @@ class PublishedReader:
         match = (
             "r.source_id=$2"
             if direction == "out"
-            else "(r.target_id=$2 OR EXISTS(SELECT 1 FROM public.ucm_relation_candidates c WHERE c.snapshot_id=r.snapshot_id AND c.relation_id=r.entity_id AND c.candidate_id=$2))"
+            else "r.entity_id IN (SELECT entity_id FROM public.ucm_relations WHERE snapshot_id=$1 AND target_id=$2 UNION ALL SELECT relation_id FROM public.ucm_relation_candidates WHERE snapshot_id=$1 AND candidate_id=$2)"
         )
         rows = await self._conn.fetch(
             f"SELECT r.entity_id FROM public.ucm_relations r WHERE r.snapshot_id=$1 AND {match} AND (cardinality($3::text[])=0 OR r.relation_kind=ANY($3)) ORDER BY r.entity_id LIMIT $4",

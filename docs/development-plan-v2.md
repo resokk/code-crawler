@@ -4,6 +4,29 @@
 проверялся. Приоритет: корректность и воспроизводимость → производительность →
 поиск → расширение покрытия. Новая модель UCM, SQLGlot и JPA не перепроектируются.
 
+## Проверенное состояние на 2026-11-14
+
+R1 реализован: штатный `index` публикует canonical snapshot, typed reader читает
+его в закреплённой транзакции, исходные байты архивируются, mixed-language e2e
+проверяет публикацию, reuse и rollback. [CI / PostgreSQL 15](https://github.com/resokk/code-crawler/actions/runs/43612670068)
+на `e8e5f18` прошёл 842 теста. Обязательность этого check в branch rules ещё не
+подтверждена: API настроек репозитория возвращает HTTP 403.
+
+R2 частично завершён: cache offsets, single capture, per-adapter invalidation,
+query indexes и jobs/recovery реализованы и проверяются в PG15 CI. Streaming
+loader существует, но основной incremental pipeline и validation ещё загружают
+полный batch; проверка одного snapshot свыше 1 млн сущностей остаётся открытой.
+Замеры планов запросов на PG15 фиксируются отдельно в [query-indexes.md](query-indexes.md).
+
+R3 уже содержит structural search, lexical search, document projections и MCP.
+Это не закрывает незавершённые масштабные проверки R2 или оставшиеся сценарии
+отдельных changes. В `50a71ca` occurrences строятся по запросу вместо хранения
+в Java catalog, а `be53229` ограничивает ORM base cache шестнадцатью файлами.
+Следующий приоритет — повторный замер памяти после этих изменений, затем
+подключение streaming к штатному pipeline, ограничение памяти validation
+и нагрузочная проверка. Поэлементное восстановление snapshot в `6afccac` уже
+уменьшает пик validation, но не устраняет полный batch.
+
 ## R1 — Надёжная canonical индексация (P0)
 
 | Change | Результат |

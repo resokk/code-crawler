@@ -5,4 +5,6 @@
 - [x] Replace the final re-capture with stat-based verification and selective re-read.
 - [x] Unit test: no re-read when unchanged, selective re-read, change and delete detected.
 - [x] Document in ucm-incremental.md; unit and integration suites pass (local PostgreSQL 18).
-- [ ] Integration suite on PostgreSQL 15 (pending mandatory-postgres-ci).
+- [x] Integration suite on PostgreSQL 15.
+
+Verified by [CI / PostgreSQL 15](https://github.com/resokk/code-crawler/actions/runs/43612670068) at `e8e5f18` (842 tests passed).

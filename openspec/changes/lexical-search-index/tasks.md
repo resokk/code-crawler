@@ -6,5 +6,9 @@
 - [x] Integration tests: exact/words/similar, filters, pagination, snapshot scope, rejections.
 - [x] Check plan, latency, index sizes and ingest cost on the load set.
 - [x] Unit and integration suites pass (integration run on local PostgreSQL 18).
-- [ ] Confirm on PostgreSQL 15 that the role may create pg_trgm and btree_gin.
+- [x] Confirm on PostgreSQL 15 that the role may create pg_trgm and btree_gin.
 - [ ] Prefix word matching and letter/digit word boundaries, if agents need them.
+
+Verified by [CI / PostgreSQL 15](https://github.com/resokk/code-crawler/actions/runs/43612670068) at `e8e5f18` (842 tests passed).
+
+Extension creation is verified for the CI test role; production-role permissions are deployment-specific.

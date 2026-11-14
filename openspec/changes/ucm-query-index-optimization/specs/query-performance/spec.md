@@ -20,3 +20,18 @@ not measurably increase.
 
 GIVEN the change WHEN it is complete THEN latency before/after, index sizes and the
 measurement conditions are documented.
+
+## Requirement: selective typed incoming lookup
+
+GIVEN a published snapshot with many unrelated relations and a selectively targeted
+entity WHEN the typed reader requests incoming relations THEN it locates resolved
+targets and resolution candidates through their indexed ID sets rather than
+filtering the entire snapshot, while preserving snapshot scope, uncertainty,
+deterministic ordering, kind filters and page truncation.
+
+## Requirement: reproducible PostgreSQL 15 measurements
+
+GIVEN a dedicated PostgreSQL 15 admin server WHEN the benchmark runs THEN it uses
+an isolated disposable database, compares identical API results before and after
+query-index migrations, records actual plans and committed ingestion separately,
+and drops only its own database even if a query fails.

@@ -6,4 +6,6 @@
 - [x] Report status, entity count, current pointer and diagnostic counts.
 - [x] Test positive, invalid, conflict, idempotent and BUILDING-only CLI paths on PostgreSQL 15.
 - [x] Full PostgreSQL 15 suite: 786 passed; Ruff/format/diff and CLI help checks pass; CLI docs updated.
-- [ ] Hosted CI run after push (CI/PostgreSQL 15 workflow added by mandatory-postgres-ci).
+- [x] Hosted CI run after push (CI/PostgreSQL 15 workflow added by mandatory-postgres-ci).
+
+Verified by [CI / PostgreSQL 15](https://github.com/resokk/code-crawler/actions/runs/43612670068) at `e8e5f18` (842 tests passed).

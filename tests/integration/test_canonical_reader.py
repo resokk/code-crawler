@@ -277,3 +277,81 @@ def test_foreign_and_ready_only_entities_are_not_read(database_url, tmp_path):
             await conn.close()
 
     asyncio.run(run())
+
+
+def test_selective_incoming_plan_and_pagination(database_url, ucm_batch_factory):
+    """Unrelated synthetic relations must not cause a snapshot-wide incoming scan."""
+    import json
+
+    from test_publication import create, setup
+
+    from code_crawler.ingestion import UcmBatch
+    from code_crawler.query_benchmark import RecordingConnection, plan_nodes
+    from code_crawler.ucm import EntityType, Resolution, logical_id
+
+    async def run():
+        conn = await asyncpg.connect(database_url)
+        try:
+            repo = await setup(conn)
+            base = ucm_batch_factory(repo)
+            candidate = next(e for e in base.entities if isinstance(e, Relation))
+            target = candidate.resolution.candidates[0]
+            extra = []
+            for i in range(3000):
+                key = f"performance-fixture:{i}"
+                data = candidate.model_dump()
+                data.update(
+                    id=logical_id(str(repo), EntityType.RELATION, key),
+                    logical_key=key,
+                    resolution=Resolution(
+                        status="UNRESOLVED", reason="synthetic filler"
+                    ),
+                )
+                extra.append(Relation.model_validate(data))
+            for i in range(2):
+                key = f"resolved-fixture:{i}"
+                data = candidate.model_dump()
+                data.update(
+                    id=logical_id(str(repo), EntityType.RELATION, key),
+                    logical_key=key,
+                    resolution=Resolution(status="RESOLVED", target=target),
+                )
+                extra.append(Relation.model_validate(data))
+            batch = UcmBatch(repository_id=repo, entities=(*base.entities, *extra))
+            snap = await create(conn, repo, batch)
+            await validate_snapshot(conn, snap)
+            await publish_snapshot(conn, repo, snap, expected_snapshot_id=None)
+            await conn.execute("ANALYZE")
+            proxy = RecordingConnection(conn)
+            async with published_reader(proxy, "repo") as view:
+                expected = sorted([candidate.id, *(e.id for e in extra[-2:])])
+                for _ in range(7):
+                    page = await view.get_relations(
+                        target.id, direction="in", kinds=("CALLS",), limit=2
+                    )
+                    assert [e.id for e in page.items] == expected[:2]
+                    assert page.truncated
+                complete = await view.get_relations(target.id, direction="in")
+                assert [e.id for e in complete.items] == expected
+                assert not complete.truncated
+            query = next(
+                q for q in proxy.queries if q.sql.startswith("SELECT r.entity_id")
+            )
+            plan = json.loads(
+                await conn.fetchval(
+                    "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) " + query.sql,
+                    *query.arguments,
+                )
+            )[0]
+            scans = [
+                n
+                for n in plan_nodes(plan["Plan"])
+                if n.get("Relation Name") == "ucm_relations"
+            ]
+            assert scans
+            assert all(n["Node Type"] != "Seq Scan" for n in scans)
+            assert all(n.get("Rows Removed by Filter", 0) < 100 for n in scans)
+        finally:
+            await conn.close()
+
+    asyncio.run(run())

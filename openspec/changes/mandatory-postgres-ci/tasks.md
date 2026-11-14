@@ -6,7 +6,9 @@
 - [x] Check working-tree drift and upload failure artifacts.
 - [x] Verify policy with isolated positive/negative pytest sessions.
 - [x] Local mandatory suite: 809 passed, zero JUnit skips/failures; Ruff/format, actionlint 1.7.7 and isolated clean/tracked/untracked drift checks pass.
-- [ ] Hosted GitHub Actions run after push.
+- [x] Hosted GitHub Actions run after push.
 - [ ] Enable/verify required check in main branch rules (repository settings).
 
 - [x] Rebased on origin/main with R2/search/MCP: 817 full-suite tests pass; 6 archive/GC integration tests and clean migrations pass. Source archive migration is 0017.
+
+Verified by [CI / PostgreSQL 15](https://github.com/resokk/code-crawler/actions/runs/43612670068) at `e8e5f18` (842 tests passed).

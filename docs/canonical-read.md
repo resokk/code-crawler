@@ -24,7 +24,9 @@ get_relations включает incoming resolved target **и candidates** или
 сохраняет resolution/certainty/Coverage/Evidence без promotion. Фильтр kinds и limit
 1..200, deterministic ID order; RelationPage содержит snapshot_id/items/truncated.
 Одно получение может гидратировать лишь ограниченную страницу normalized facts,
-не загружает UcmBatch всего snapshot и не повторяет анализ исходников.
+не загружает UcmBatch всего snapshot и не повторяет анализ исходников. Incoming
+lookup объединяет IDs из индексов target и candidate; не фильтрует весь snapshot
+через `OR EXISTS`.
 
 get_evidence принимает Relation/ExternalReference ID, возвращает Evidence вместе с
 hash-verified raw source fragment и provenance. Архив старого snapshot может быть
