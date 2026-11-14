@@ -16,3 +16,11 @@ RETIRED snapshots beyond the N most recent per repository. Fact guards stay; the
 allow DELETE for RETIRED only under transaction-local `code_crawler.gc = 'on'`.
 PUBLISHED, READY and VALIDATING are never deleted. No scheduler: retention is an
 explicit operator command. Stages inside INDEX are not tracked separately.
+
+
+GC deletes only the explicit snapshot-owned table registry in `jobs.py`. It does
+not discover deletion targets from public columns or table-name prefixes.
+`ingest_jobs` survives via ON DELETE SET NULL, publication pointers are protected,
+and shared source blobs remain outside snapshot cleanup. A clean-schema integration
+test checks registry coverage when migrations add snapshot-owned tables. Foreign
+UUID/text snapshot_id tables remain untouched while BUILDING/RETIRED GC completes.
