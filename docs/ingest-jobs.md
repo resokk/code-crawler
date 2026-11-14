@@ -49,11 +49,15 @@ validation остаётся для диагностики. Удалённый RE
 переживают удаление snapshot.
 
 GC удаляет строки только из явного реестра `_SNAPSHOT_TABLES` в `jobs.py`:
-факты UCM, snapshot manifests, source links и validation receipts. Наличие колонки
+факты UCM, snapshot manifests, source links, validation receipts и C01 search
+generations/documents/publications. Search generations удаляются перед фактами:
+каскад удаляет sealed documents вместе с generation. Наличие колонки
 `snapshot_id` или префикса `ucm_` не включает постороннюю таблицу в очистку.
-`ingest_jobs` сохраняется через `ON DELETE SET NULL`; publication pointers и общие
+`ingest_jobs` сохраняется через `ON DELETE SET NULL`; canonical publication pointers и общие
 source blobs не входят в реестр. При добавлении snapshot-таблицы миграцией нужно
 явно дополнить реестр; integration test сверяет его с чистой схемой миграций.
+Для benchmark на историческом префиксе миграций отсутствующие таблицы из реестра
+пропускаются; посторонние таблицы от этого не включаются в очистку.
 
 
 ## Защита фактов

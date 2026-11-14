@@ -66,6 +66,11 @@ e2e → default backend. R1 завершён, когда canonical можно п
 3. embedding-generation-pipeline — Qwen3/model registry, hashes/cache/queue, preprocessing versions, pgvector 0.8.0.
 4. hybrid-retrieval — exact + lexical + vector ranking и graph expansion; confirmed/inferred отдельно.
 
+C01 добавляет версионированное хранение поисковых документов и атомарную
+пересборку для immutable snapshot: [контракт](search-documents.md). Это внутренний
+API с обязательными authorization scope и redaction policy; автоматический запуск
+и embeddings ещё не подключены. B02 bounded-memory остаётся открытым.
+
 ## R5 — Источники (P1/P2, после R1)
 
 bpmn-ucm-adapter → bpmn-java-bindings; reference-data-adapter →

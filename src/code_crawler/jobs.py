@@ -11,8 +11,9 @@ _LOCK = "SELECT pg_try_advisory_lock($1, hashtext($2::text))"
 _UNLOCK = "SELECT pg_advisory_unlock($1, hashtext($2::text))"
 
 
-# Only snapshot-owned UCM tables; new migrations must update this registry.
-# Alphabetical order keeps source links ahead of source files (immediate FK).
+# Only snapshot-owned tables; new migrations must update this registry.
+# Search generations go first: cascading deletion removes their sealed documents.
+# Otherwise alphabetical order keeps source links ahead of source files (immediate FK).
 _SNAPSHOT_TABLES = (
     "ingest_file_dependencies",
     "ingest_file_entities",
@@ -22,6 +23,9 @@ _SNAPSHOT_TABLES = (
     "ingest_legacy_snapshots",
     "ingest_snapshot_adapters",
     "ingest_snapshot_profiles",
+    "search_index_generations",
+    "search_documents",
+    "search_index_publications",
     "ucm_coverage_reasons",
     "ucm_data_accesses",
     "ucm_database_accesses",
@@ -151,7 +155,18 @@ async def reap(conn: asyncpg.Connection) -> list[UUID]:
 async def _delete_snapshots(conn: asyncpg.Connection, ids: list[UUID]) -> None:
     # shortcut: row-by-row guarded deletes, slow on huge snapshots; partition by
     # snapshot and drop partitions when GC time starts to matter.
+    # The benchmark also runs GC against historical migration prefixes.
+    existing = {
+        row["name"]
+        for row in await conn.fetch(
+            "SELECT name FROM unnest($1::text[]) AS t(name) "
+            "WHERE to_regclass('public.' || name) IS NOT NULL",
+            list(_SNAPSHOT_TABLES),
+        )
+    }
     for table in _SNAPSHOT_TABLES:
+        if table not in existing:
+            continue
         await conn.execute(f"DELETE FROM public.{table} WHERE snapshot_id=ANY($1)", ids)
     await conn.execute("DELETE FROM public.ucm_snapshots WHERE id=ANY($1)", ids)
 

@@ -11,6 +11,8 @@ from code_crawler.ucm import (
     DatabaseObject,
     Entity,
     EntityId,
+    OrmMapping,
+    OrmQuery,
     Relation,
     RelationKind,
     SourceFile,
@@ -31,7 +33,14 @@ _VERBS = {
 
 class SearchDocument(ContractModel):
     id: str
-    kind: Literal["SYMBOL", "SQL_STATEMENT", "DATABASE_OBJECT", "CALL_SUMMARY"]
+    kind: Literal[
+        "SYMBOL",
+        "SQL_STATEMENT",
+        "DATABASE_OBJECT",
+        "CALL_SUMMARY",
+        "ORM_MAPPING",
+        "ORM_QUERY",
+    ]
     entity_id: EntityId
     title: str
     text: str
@@ -65,7 +74,7 @@ def _label(symbol: Symbol) -> str:
 
 
 def project(entities: Iterable[Entity]) -> Iterator[SearchDocument]:
-    """Yield deterministic documents for symbols, SQL statements, DB objects and calls.
+    """Yield deterministic documents for symbols, SQL, ORM, DB objects and calls.
 
     Parameters and local variables get no document of their own. Every relation
     mentioned carries its certainty; unresolved facts are counted, never guessed.
@@ -147,6 +156,38 @@ def project(entities: Iterable[Entity]) -> Iterator[SearchDocument]:
                 entity,
                 f"{entity.operation} {' '.join(entity.text.split())[:80]}",
                 lines + where(entity),
+                file_of(entity),
+            )
+        elif isinstance(entity, OrmQuery):
+            yield _document(
+                "ORM_QUERY",
+                entity,
+                entity.query_name or entity.name,
+                [
+                    f"{entity.query_kind} query, status {entity.status}",
+                    *([entity.text] if entity.text else []),
+                    *(f"query note: {reason}" for reason in sorted(entity.reasons)),
+                ]
+                + where(entity),
+                file_of(entity),
+            )
+        elif isinstance(entity, OrmMapping):
+            names = [
+                f"{part}: {value.normalized}"
+                for part in ("catalog_name", "schema_name", "table_name", "column_name")
+                if (value := getattr(entity, part)) is not None
+            ]
+            yield _document(
+                "ORM_MAPPING",
+                entity,
+                entity.entity_name,
+                [
+                    f"{entity.mapping_kind} mapping, status {entity.status}",
+                    f"entity: {entity.entity_name}",
+                    *names,
+                    *(f"mapping note: {reason}" for reason in sorted(entity.reasons)),
+                ]
+                + where(entity),
                 file_of(entity),
             )
         elif isinstance(entity, DatabaseObject):
