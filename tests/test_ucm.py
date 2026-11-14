@@ -126,15 +126,22 @@ def test_exported_schema_is_current_and_covers_registry() -> None:
 
 
 def test_shared_values_collapse_equal_instances_only_inside_a_pool() -> None:
-    from code_crawler.ucm import Position, shared_values
+    from code_crawler.ucm import Position, SourceRange, shared_values
 
-    assert Position(line=1, byte_column=2) is not Position(line=1, byte_column=2)
+    def parse(column: int) -> Position:
+        return Position.model_validate_json(f'{{"line":1,"byte_column":{column}}}')
+
+    assert parse(2) is not parse(2)
     token = shared_values.set({})
     try:
-        first = Position(line=1, byte_column=2)
-        assert Position(line=1, byte_column=2) is first
-        assert Position.model_validate_json('{"line":1,"byte_column":2}') is first
-        assert Position(line=1, byte_column=3) is not first
+        first = parse(2)
+        assert parse(2) is first and parse(3) is not first
+        # Nested values are shared too: this is what a restored snapshot relies on.
+        location = SourceRange.model_validate_json(
+            '{"source_file_id":"ucm:' + "a" * 64 + '",'
+            '"start":{"line":1,"byte_column":2},"end":{"line":1,"byte_column":2}}'
+        )
+        assert location.start is first and location.end is first
     finally:
         shared_values.reset(token)
-    assert Position(line=1, byte_column=2) is not first
+    assert parse(2) is not first
