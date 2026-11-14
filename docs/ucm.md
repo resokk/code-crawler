@@ -4,7 +4,7 @@
 Модуль `code_crawler.ucm` определяет Entity Envelope и SourceFile.
 Нормативные поля типизированы; произвольного JSONB-контейнера нет.
 
-EntityType v1: SOURCE_FILE, CLASS, METHOD, SQL_CANDIDATE, SQL_CONSTRUCTION, SYMBOL, SCOPE,
+EntityType v1: SOURCE_FILE, CLASS, METHOD, SQL_CANDIDATE, SQL_CONSTRUCTION, SQL_EXECUTE, SQL_STATEMENT, DATA_ACCESS, SYMBOL, SCOPE,
 OCCURRENCE, OPERATION, VALUE, RELATION, EXTERNAL_REFERENCE. Модели описаны ниже.
 Конвертеры появятся отдельными changes.
 SQL_CANDIDATE означает обнаруженный SQL и не доказывает его выполнение.
@@ -189,3 +189,33 @@ construction и не принадлежат нескольким constructions �
 CONSTRUCTS_SQL связывает SYMBOL → SQL_CONSTRUCTION, HAS_SQL_CANDIDATE —
 SQL_CONSTRUCTION → SQL_CANDIDATE; batch проверяет owner и membership.
 Обнаружение не доказывает execution. Подробнее: [sql-construction.md](sql-construction.md).
+
+## SQL execution
+
+SqlExecute хранит обязательный SourceRange invocation, owner_symbol_id callable,
+operation_id CALL, api и nullable sql_argument_index. EXECUTES_SQL связывает
+SYMBOL → SQL_EXECUTE строго с owner; USES_SQL_CONSTRUCTION связывает
+SQL_EXECUTE → SQL_CONSTRUCTION с Resolution, включая unresolved/partial.
+CALL scope обязан принадлежать owner, callee.name совпадать с api, а argument
+index входить в ordered inputs. Это execution site, а не runtime/data effects.
+См. [sql-execution.md](sql-execution.md).
+
+## SQL semantic facts
+
+SqlStatement принадлежит SQL_CANDIDATE, хранит statement_index, explicit dialect,
+оригинальный decoded text со start/end character offsets, operation, parse_status
+и reasons. Incomplete status требует reasons; range должен совпадать с candidate
+slice. Partial construction не может породить утверждения DataAccess.
+
+DataAccess принадлежит statement и содержит TABLE/COLUMN, access_kind
+READ/INSERT/UPDATE/DELETE/MERGE/DDL, role, отдельные catalog/schema/table/column/
+qualifier SqlIdentifier(text, quoted, normalized). Binding_status BOUND/UNBOUND/
+AMBIGUOUS отражает только syntactic source binding; database resolution остаётся
+UNRESOLVED/AMBIGUOUS с reason. Wildcards не разворачиваются без schema.
+
+HAS_SQL_STATEMENT: SQL_CANDIDATE → SQL_STATEMENT; EXECUTES_STATEMENT:
+SQL_EXECUTE → SQL_STATEMENT. READS_FROM/INSERTS_INTO/UPDATES/DELETES_FROM/
+MERGES_INTO/DDL_ON: SQL_STATEMENT → DATA_ACCESS. Gate проверяет candidate ownership,
+access kind/statement и происхождение execution через USES_SQL_CONSTRUCTION.
+Definite EXECUTES_STATEMENT требует complete statement и один variant у resolved
+construction. Контракт: [sql-semantics.md](sql-semantics.md).

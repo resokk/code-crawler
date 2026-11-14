@@ -49,3 +49,17 @@ Snapshot-scoped deferred FK и immutable guards применяются ко вс
 таблицам. Ingestion/COPY и readiness restore сохраняют порядок и проверяют
 fragment/text, partial/reasons, ownership и registry endpoints. Старые candidate
 envelopes без construction допустимы для compatibility; произвольного JSONB нет.
+
+Миграция 0009 добавляет ucm_sql_executions (owner_symbol_id, operation_id, api,
+nullable sql_argument_index), SQL_EXECUTE discriminator и execution registry pairs.
+Deferred snapshot-scoped FK и immutable write/truncate guards соответствуют
+остальным facts. Readiness restore повторно проверяет CALL kind, callee/api,
+owner scope и argument index; SQL links используют обычные normalized relations.
+
+Миграция 0010 добавляет ucm_sql_statements и ordered ucm_sql_statement_reasons,
+ucm_data_accesses и ucm_sql_access_names (part, text, quoted, normalized).
+SQL AST не сериализуется произвольным JSONB: оригинальный statement и типизированные
+access facts хранятся раздельно. FK snapshot-scoped/deferred; write/truncate guards
+защищают все четыре таблицы. Gate восстанавливает names/reasons и проверяет
+candidate slices, effect relations и execution origin. SQL offsets — decoded
+character positions, а не Java UTF-8 byte columns.

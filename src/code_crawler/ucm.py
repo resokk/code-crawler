@@ -15,6 +15,9 @@ EntityId = Annotated[str, Field(pattern=r"^ucm:[0-9a-f]{64}$")]
 
 class EntityType(StrEnum):
     SQL_CONSTRUCTION = "SQL_CONSTRUCTION"
+    SQL_EXECUTE = "SQL_EXECUTE"
+    SQL_STATEMENT = "SQL_STATEMENT"
+    DATA_ACCESS = "DATA_ACCESS"
     EXTERNAL_REFERENCE = "EXTERNAL_REFERENCE"
     RELATION = "RELATION"
     OPERATION = "OPERATION"
@@ -281,6 +284,16 @@ class Evidence(ContractModel):
 
 
 class RelationKind(StrEnum):
+    HAS_SQL_STATEMENT = "HAS_SQL_STATEMENT"
+    EXECUTES_STATEMENT = "EXECUTES_STATEMENT"
+    READS_FROM = "READS_FROM"
+    INSERTS_INTO = "INSERTS_INTO"
+    UPDATES = "UPDATES"
+    DELETES_FROM = "DELETES_FROM"
+    MERGES_INTO = "MERGES_INTO"
+    DDL_ON = "DDL_ON"
+    EXECUTES_SQL = "EXECUTES_SQL"
+    USES_SQL_CONSTRUCTION = "USES_SQL_CONSTRUCTION"
     CONSTRUCTS_SQL = "CONSTRUCTS_SQL"
     HAS_SQL_CANDIDATE = "HAS_SQL_CANDIDATE"
     EXTERNAL_DEPENDENCY = "EXTERNAL_DEPENDENCY"
@@ -301,6 +314,21 @@ def _pairs(sources: str, targets: str) -> frozenset[tuple[EntityType, EntityType
 
 _RELATION_ENDPOINTS = MappingProxyType(
     {
+        RelationKind.HAS_SQL_STATEMENT: _pairs("SQL_CANDIDATE", "SQL_STATEMENT"),
+        RelationKind.EXECUTES_STATEMENT: _pairs("SQL_EXECUTE", "SQL_STATEMENT"),
+        **{
+            kind: _pairs("SQL_STATEMENT", "DATA_ACCESS")
+            for kind in (
+                RelationKind.READS_FROM,
+                RelationKind.INSERTS_INTO,
+                RelationKind.UPDATES,
+                RelationKind.DELETES_FROM,
+                RelationKind.MERGES_INTO,
+                RelationKind.DDL_ON,
+            )
+        },
+        RelationKind.EXECUTES_SQL: _pairs("SYMBOL", "SQL_EXECUTE"),
+        RelationKind.USES_SQL_CONSTRUCTION: _pairs("SQL_EXECUTE", "SQL_CONSTRUCTION"),
         RelationKind.CONSTRUCTS_SQL: _pairs("SYMBOL", "SQL_CONSTRUCTION"),
         RelationKind.HAS_SQL_CANDIDATE: _pairs("SQL_CONSTRUCTION", "SQL_CANDIDATE"),
         RelationKind.EXTERNAL_DEPENDENCY: _pairs(
@@ -387,6 +415,30 @@ def validate_relation_endpoints(
                 raise ValueError("CALLS requires callable symbols")
             if isinstance(entity, Operation) and entity.operation_kind != "CALL":
                 raise ValueError("CALLS source operation must be CALL")
+    if relation.relation_kind == RelationKind.HAS_SQL_STATEMENT and any(
+        entity.candidate_id != actual[0].id for entity in actual[1:]
+    ):
+        raise ValueError("HAS_SQL_STATEMENT must use the statement candidate")
+    effect_kinds = {
+        RelationKind.READS_FROM: "READ",
+        RelationKind.INSERTS_INTO: "INSERT",
+        RelationKind.UPDATES: "UPDATE",
+        RelationKind.DELETES_FROM: "DELETE",
+        RelationKind.MERGES_INTO: "MERGE",
+        RelationKind.DDL_ON: "DDL",
+    }
+    if relation.relation_kind in effect_kinds and any(
+        entity.statement_id != actual[0].id
+        or entity.access_kind != effect_kinds[relation.relation_kind]
+        for entity in actual[1:]
+    ):
+        raise ValueError("access relation must match its statement and effect")
+    if relation.relation_kind == RelationKind.EXECUTES_SQL and (
+        not isinstance(actual[0], Symbol)
+        or actual[0].symbol_kind not in ("METHOD", "CONSTRUCTOR")
+        or (len(actual) > 1 and actual[1].owner_symbol_id != actual[0].id)
+    ):
+        raise ValueError("EXECUTES_SQL requires the execution callable owner")
     if relation.relation_kind == RelationKind.DECLARES and (
         not isinstance(actual[0], Occurrence)
         or actual[0].occurrence_kind != "DECLARATION"
@@ -543,6 +595,75 @@ class SqlConstruction(EntityEnvelope):
         return self
 
 
+class SqlExecute(EntityEnvelope):
+    source_range: SourceRange
+    entity_type: Literal[EntityType.SQL_EXECUTE] = EntityType.SQL_EXECUTE
+    owner_symbol_id: EntityId
+    operation_id: EntityId
+    api: Text
+    sql_argument_index: int | None = Field(default=None, ge=0)
+
+
+class SqlIdentifier(ContractModel):
+    text: str = Field(min_length=1)
+    quoted: bool
+    normalized: str = Field(min_length=1)
+
+
+class SqlStatement(EntityEnvelope):
+    entity_type: Literal[EntityType.SQL_STATEMENT] = EntityType.SQL_STATEMENT
+    candidate_id: EntityId
+    statement_index: int = Field(ge=0)
+    dialect: Literal["postgres", "mysql", "tsql"]
+    text: Text
+    text_start: int = Field(ge=0)
+    text_end: int = Field(gt=0)
+    operation: Literal[
+        "SELECT", "INSERT", "UPDATE", "DELETE", "MERGE", "DDL", "UNKNOWN"
+    ]
+    parse_status: Literal["COMPLETE", "PARTIAL", "ERROR", "UNSUPPORTED"]
+    reasons: tuple[Text, ...] = ()
+
+    @model_validator(mode="after")
+    def valid_statement(self) -> Self:
+        if self.text_end - self.text_start != len(self.text):
+            raise ValueError("SQL statement text range must match decoded text length")
+        if (self.parse_status != "COMPLETE") != bool(self.reasons):
+            raise ValueError("incomplete SQL statement requires reasons")
+        return self
+
+
+class SqlAccessDetail(ContractModel):
+    object_kind: Literal["TABLE", "COLUMN"]
+    access_kind: Literal["READ", "INSERT", "UPDATE", "DELETE", "MERGE", "DDL"]
+    role: Text
+    catalog_name: SqlIdentifier | None = None
+    schema_name: SqlIdentifier | None = None
+    table_name: SqlIdentifier | None = None
+    column_name: SqlIdentifier | None = None
+    qualifier: SqlIdentifier | None = None
+    binding_status: Literal["BOUND", "UNBOUND", "AMBIGUOUS"]
+    resolution: Literal["UNRESOLVED", "AMBIGUOUS"]
+    reason: Text
+
+    @model_validator(mode="after")
+    def valid_access(self) -> Self:
+        if (self.object_kind == "COLUMN") != (self.column_name is not None):
+            raise ValueError(
+                "column access requires column name; table access cannot have one"
+            )
+        if self.binding_status == "BOUND" and self.table_name is None:
+            raise ValueError("bound SQL access requires a table name")
+        if (self.binding_status == "AMBIGUOUS") != (self.resolution == "AMBIGUOUS"):
+            raise ValueError("ambiguous binding must have ambiguous resolution")
+        return self
+
+
+class DataAccess(EntityEnvelope, SqlAccessDetail):
+    entity_type: Literal[EntityType.DATA_ACCESS] = EntityType.DATA_ACCESS
+    statement_id: EntityId
+
+
 Entity = Annotated[
     SourceFile
     | CodeEntity
@@ -553,7 +674,10 @@ Entity = Annotated[
     | Value
     | Relation
     | ExternalReference
-    | SqlConstruction,
+    | SqlConstruction
+    | SqlExecute
+    | SqlStatement
+    | DataAccess,
     Field(discriminator="entity_type"),
 ]
 

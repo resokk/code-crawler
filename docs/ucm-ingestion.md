@@ -2,7 +2,7 @@
 
 `code_crawler.ingestion.UcmBatch` — полный замкнутый batch одного репозитория:
 repository_id UUID, entities tuple всех SourceFile/CodeEntity/Symbol/Scope/
-Occurrence/Operation/Value/Relation/ExternalReference. repository_id каждого
+Occurrence/Operation/Value/Relation/ExternalReference/SqlConstruction/SqlExecute/SqlStatement/DataAccess. repository_id каждого
 entity должен равняться str(UUID). Порядок entities не важен. Дубликаты ID,
 отсутствующие или неверно типизированные ссылки, циклы parent_scope и несколько
 producer одного Value отклоняются до записи. Внешние зависимости ссылаются
@@ -44,3 +44,8 @@ retry или публикации нет. Readiness gate описан в
 и вновь извлечённых facts и сохраняет его вместе с file manifests одной
 транзакцией. См. [ucm-incremental.md](ucm-incremental.md). Public ingest_batch
 сохраняет прежний контракт полного закрытого batch.
+
+SQL semantic validation дополнительно проверяет уникальную statement position,
+candidate text slice, partial construction isolation, access/statement/effect
+consistency и EXECUTES_STATEMENT origin через execution construction resolution.
+Identifier parts и statement reasons загружаются отдельными ordered/typed rows.

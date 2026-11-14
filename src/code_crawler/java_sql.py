@@ -302,8 +302,10 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
     return flows
 
 
-def _recover(node: Node, constants: dict, method: bool) -> list[java.Query]:
-    flow = _SqlFlow(constants, java._span(node))
+def _recover(
+    node: Node, constants: dict, method: bool, flow: _SqlFlow | None = None
+) -> list[java.Query]:
+    flow = flow if flow is not None else _SqlFlow(constants, java._span(node))
     pending = [node]
     builders = set()
     while pending:

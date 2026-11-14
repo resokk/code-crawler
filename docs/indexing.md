@@ -235,3 +235,18 @@ Opt-in `java_sql.index_java_sql` расширяет Java call graph SQL-конс
 constants по lexical type scope. Native SQL discovery не создаёт EXECUTES_SQL;
 JPQL исключается. API, ограничения recovery и partial описаны в
 [sql-construction.md](sql-construction.md). Legacy CLI writer сохраняется.
+
+## Java SQL execution sites
+
+`java_execution.index_java_execution` добавляет к constructions распознаваемые
+JDBC/Spring sinks и локальные prepared origins. Preparation без execute не
+создаёт execution; unknown origins сохраняются unresolved. API opt-in, legacy
+writer сохраняется. Профиль и ограничения: [sql-execution.md](sql-execution.md).
+
+## SQL semantic accesses
+
+Opt-in `java_semantic.index_java_semantic(conn, repository_id, root, dialect="postgres")`
+добавляет отдельные SQL statements, typed table/column accesses и links от execution
+sites. Допустимы postgres/mysql/tsql; profile включает dialect и SQLGlot version.
+Legacy SQL projection сохраняется. Partial/dynamic SQL не создаёт угаданных access
+facts. Подробнее: [sql-semantics.md](sql-semantics.md).

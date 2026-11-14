@@ -10,6 +10,9 @@ import asyncpg
 from code_crawler.ingestion import UcmBatch
 
 _SUBTYPES = {
+    "SQL_STATEMENT": "ucm_sql_statements",
+    "DATA_ACCESS": "ucm_data_accesses",
+    "SQL_EXECUTE": "ucm_sql_executions",
     "SQL_CONSTRUCTION": "ucm_sql_constructions",
     "SOURCE_FILE": "ucm_source_files",
     "SYMBOL": "ucm_symbols",
@@ -21,6 +24,8 @@ _SUBTYPES = {
     "EXTERNAL_REFERENCE": "ucm_external_references",
 }
 _AUXILIARY = {
+    "ucm_sql_statement_reasons": "statement_id",
+    "ucm_sql_access_names": "access_id",
     "ucm_sql_variants": "construction_id",
     "ucm_sql_fragments": "candidate_id",
     "ucm_sql_partial_reasons": "candidate_id",
@@ -114,6 +119,18 @@ def _restore(repository_id: UUID, tables: dict[str, list[dict]]) -> UcmBatch:
                 detail["signature"] = {
                     "parameter_types": refs("PARAMETER"),
                     "return_type": single("RETURN"),
+                }
+        elif kind == "SQL_STATEMENT":
+            detail["reasons"] = [
+                row["reason"]
+                for row in _ordered(
+                    auxiliary["ucm_sql_statement_reasons"].pop(entity_id, []), "ordinal"
+                )
+            ]
+        elif kind == "DATA_ACCESS":
+            for row in auxiliary["ucm_sql_access_names"].pop(entity_id, []):
+                detail[row["part"]] = {
+                    key: row[key] for key in ("text", "quoted", "normalized")
                 }
         elif kind == "SQL_CONSTRUCTION":
             detail["variants"] = []

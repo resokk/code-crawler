@@ -96,3 +96,12 @@ mapping, persistent read selection и immutable compatibility projections.
 Миграция `0008_sql_candidates_construction.sql` добавляет SQL_CONSTRUCTION,
 две registry relations и нормализованные constructions/variants/fragments/reasons
 с snapshot-scoped FK и immutable guards. См. [sql-construction.md](sql-construction.md).
+
+Миграция `0009_sql_execution_sinks.sql` добавляет SQL_EXECUTE, typed execution
+records и relations EXECUTES_SQL/USES_SQL_CONSTRUCTION. Контракт:
+[sql-execution.md](sql-execution.md).
+
+Миграция `0010_sql_semantic_access_analysis.sql` вводит SQL_STATEMENT/DATA_ACCESS,
+statement/reason/access/name tables и semantic relation registry. Имена и quoted
+flags нормализованы в columns, SQL AST не является opaque JSONB payload.
+См. [sql-semantics.md](sql-semantics.md).

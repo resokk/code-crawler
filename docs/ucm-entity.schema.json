@@ -141,6 +141,181 @@
       "title": "Coverage",
       "type": "object"
     },
+    "DataAccess": {
+      "additionalProperties": false,
+      "properties": {
+        "object_kind": {
+          "enum": [
+            "TABLE",
+            "COLUMN"
+          ],
+          "title": "Object Kind",
+          "type": "string"
+        },
+        "access_kind": {
+          "enum": [
+            "READ",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "MERGE",
+            "DDL"
+          ],
+          "title": "Access Kind",
+          "type": "string"
+        },
+        "role": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Role",
+          "type": "string"
+        },
+        "catalog_name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SqlIdentifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SqlIdentifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "table_name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SqlIdentifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "column_name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SqlIdentifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "qualifier": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SqlIdentifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "binding_status": {
+          "enum": [
+            "BOUND",
+            "UNBOUND",
+            "AMBIGUOUS"
+          ],
+          "title": "Binding Status",
+          "type": "string"
+        },
+        "resolution": {
+          "enum": [
+            "UNRESOLVED",
+            "AMBIGUOUS"
+          ],
+          "title": "Resolution",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Reason",
+          "type": "string"
+        },
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "DATA_ACCESS",
+          "default": "DATA_ACCESS",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "statement_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Statement Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "object_kind",
+        "access_kind",
+        "role",
+        "binding_status",
+        "resolution",
+        "reason",
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "statement_id"
+      ],
+      "title": "DataAccess",
+      "type": "object"
+    },
     "DatabaseSelector": {
       "additionalProperties": false,
       "properties": {
@@ -206,6 +381,9 @@
     "EntityType": {
       "enum": [
         "SQL_CONSTRUCTION",
+        "SQL_EXECUTE",
+        "SQL_STATEMENT",
+        "DATA_ACCESS",
         "EXTERNAL_REFERENCE",
         "RELATION",
         "OPERATION",
@@ -768,6 +946,16 @@
     },
     "RelationKind": {
       "enum": [
+        "HAS_SQL_STATEMENT",
+        "EXECUTES_STATEMENT",
+        "READS_FROM",
+        "INSERTS_INTO",
+        "UPDATES",
+        "DELETES_FROM",
+        "MERGES_INTO",
+        "DDL_ON",
+        "EXECUTES_SQL",
+        "USES_SQL_CONSTRUCTION",
         "CONSTRUCTS_SQL",
         "HAS_SQL_CANDIDATE",
         "EXTERNAL_DEPENDENCY",
@@ -1101,6 +1289,90 @@
       "title": "SqlConstruction",
       "type": "object"
     },
+    "SqlExecute": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "SQL_EXECUTE",
+          "default": "SQL_EXECUTE",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "$ref": "#/$defs/SourceRange"
+        },
+        "owner_symbol_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Owner Symbol Id",
+          "type": "string"
+        },
+        "operation_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "api": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Api",
+          "type": "string"
+        },
+        "sql_argument_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sql Argument Index"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "source_range",
+        "owner_symbol_id",
+        "operation_id",
+        "api"
+      ],
+      "title": "SqlExecute",
+      "type": "object"
+    },
     "SqlFragment": {
       "additionalProperties": false,
       "properties": {
@@ -1133,6 +1405,167 @@
         "text"
       ],
       "title": "SqlFragment",
+      "type": "object"
+    },
+    "SqlIdentifier": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "quoted": {
+          "title": "Quoted",
+          "type": "boolean"
+        },
+        "normalized": {
+          "minLength": 1,
+          "title": "Normalized",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "quoted",
+        "normalized"
+      ],
+      "title": "SqlIdentifier",
+      "type": "object"
+    },
+    "SqlStatement": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "SQL_STATEMENT",
+          "default": "SQL_STATEMENT",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "candidate_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "statement_index": {
+          "minimum": 0,
+          "title": "Statement Index",
+          "type": "integer"
+        },
+        "dialect": {
+          "enum": [
+            "postgres",
+            "mysql",
+            "tsql"
+          ],
+          "title": "Dialect",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        },
+        "text_start": {
+          "minimum": 0,
+          "title": "Text Start",
+          "type": "integer"
+        },
+        "text_end": {
+          "exclusiveMinimum": 0,
+          "title": "Text End",
+          "type": "integer"
+        },
+        "operation": {
+          "enum": [
+            "SELECT",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "MERGE",
+            "DDL",
+            "UNKNOWN"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "parse_status": {
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "ERROR",
+            "UNSUPPORTED"
+          ],
+          "title": "Parse Status",
+          "type": "string"
+        },
+        "reasons": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "candidate_id",
+        "statement_index",
+        "dialect",
+        "text",
+        "text_start",
+        "text_end",
+        "operation",
+        "parse_status"
+      ],
+      "title": "SqlStatement",
       "type": "object"
     },
     "SqlVariant": {
@@ -1498,6 +1931,7 @@
   "discriminator": {
     "mapping": {
       "CLASS": "#/$defs/CodeEntity",
+      "DATA_ACCESS": "#/$defs/DataAccess",
       "EXTERNAL_REFERENCE": "#/$defs/ExternalReference",
       "METHOD": "#/$defs/CodeEntity",
       "OCCURRENCE": "#/$defs/Occurrence",
@@ -1507,6 +1941,8 @@
       "SOURCE_FILE": "#/$defs/SourceFile",
       "SQL_CANDIDATE": "#/$defs/CodeEntity",
       "SQL_CONSTRUCTION": "#/$defs/SqlConstruction",
+      "SQL_EXECUTE": "#/$defs/SqlExecute",
+      "SQL_STATEMENT": "#/$defs/SqlStatement",
       "SYMBOL": "#/$defs/Symbol",
       "VALUE": "#/$defs/Value"
     },
@@ -1542,6 +1978,15 @@
     },
     {
       "$ref": "#/$defs/SqlConstruction"
+    },
+    {
+      "$ref": "#/$defs/SqlExecute"
+    },
+    {
+      "$ref": "#/$defs/SqlStatement"
+    },
+    {
+      "$ref": "#/$defs/DataAccess"
     }
   ],
   "title": "EntityDocument"

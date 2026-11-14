@@ -29,7 +29,7 @@ HAS_SQL_CANDIDATE Relations содержат Evidence/Resolution/Certainty/Cover
 
 Старый legacy executes пока сохраняется для compatibility; новый canonical
 adapter его не переносит. Execution sinks, SQL semantic AST, bindings и lineage —
-следующие changes. Format flags, сложные side effects/aliasing и Java constructs
+отдельные changes. JDBC/Spring execution adapter описан в [sql-execution.md](sql-execution.md). Format flags, сложные side effects/aliasing и Java constructs
 вне текущего coverage не считаются полным восстановлением. Partial содержит
 явные причины. SQL-текст сохраняется даже без найденного sink.
 
@@ -54,4 +54,5 @@ flags/type conversions отмечаются partial.
 SQL literals находятся и внутри expressions, чей итог не является SQL. JPQL
 annotations/calls исключены; nativeQuery определяется AST flag, а не комментарием.
 SQL semantic analysis должен учитывать kind fragments и partial reasons; оно,
-execution sinks, bindings и lineage здесь не реализованы.
+bindings и lineage здесь не реализованы. Execution sinks доступны отдельным
+opt-in `index_java_execution`; construction-only API сохраняет прежнее поведение.
