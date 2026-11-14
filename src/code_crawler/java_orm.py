@@ -114,6 +114,10 @@ class JavaOrmAnalyzer(JavaDatabaseAnalyzer):
     def _base(self, file: _File) -> FileAnalysis:
         path = file.source.file.path
         if path not in self._base_cache:
+            # Полный анализ файла тяжёлый: держим несколько последних, а не все файлы
+            # репозитория; повторный расчёт даёт тот же результат.
+            if len(self._base_cache) >= 16:
+                del self._base_cache[next(iter(self._base_cache))]
             self._base_cache[path] = JavaDatabaseAnalyzer.analysis(self, file)
         return self._base_cache[path]
 
