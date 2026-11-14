@@ -20,7 +20,7 @@ Implementation and targeted conformance/PG15 tests are complete; final CI eviden
 
 ## Acceptance evidence
 
-- `tests/test_bpmn_adapter.py`: 20 passing tests for gateway/guards, metadata,
+- `tests/test_bpmn_adapter.py`: 22 passing tests for gateway/guards, metadata,
   worker/process selectors, namespace and UTF-8 ranges, malformed/duplicate IDs,
   DTD/XXE and resource limits; filesystem/network access is explicitly blocked
   in the XXE conformance test.
@@ -29,6 +29,6 @@ Implementation and targeted conformance/PG15 tests are complete; final CI eviden
   producer failure and immutable published facts; targeted test passes.
 - `docs/bpmn-schema.md` defines mapping, versions, limitations and error behavior.
 - Full local `pytest --require-postgres --strict-markers -q`: 876 passed on
-  PostgreSQL 15; the final 20 unit + 1 integration BPMN tests also pass separately
+  PostgreSQL 15; the final 22 unit + 1 integration BPMN tests also pass separately
   after adding edge cases. `ruff check .`, `ruff format --check .` pass.
 - GitHub Actions verification pending; checkboxes remain open until CI passes.

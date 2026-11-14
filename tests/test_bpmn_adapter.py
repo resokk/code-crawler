@@ -171,6 +171,8 @@ def test_invalid_flows_have_no_false_links(body: str) -> None:
         ),
         document('<b:task id="a"/>')[:-15],
         b"\xff",
+        document("<b:task/>").encode("utf-16-le"),
+        document("<b:task/>").encode("utf-16-be"),
         '<?xml version="1.0" encoding="iso-8859-1"?><definitions/>',
         document("<b:subProcess>" * 129 + "</b:subProcess>" * 129),
         document("<b:task/>" * 20001),

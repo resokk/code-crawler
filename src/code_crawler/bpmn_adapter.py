@@ -106,6 +106,8 @@ def _parse(content: bytes) -> list[_Node]:
     if len(content) > MAX_BYTES:
         raise ValueError("XML exceeds 8 MiB limit")
     content.decode("utf-8-sig")
+    if b"\0" in content:
+        raise ValueError("Only UTF-8 XML without NUL bytes is supported")
     parser = expat.ParserCreate(namespace_separator="}")
     nodes: list[_Node] = []
     stack: list[int] = []
