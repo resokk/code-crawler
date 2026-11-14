@@ -182,7 +182,7 @@ identifiers, синтаксическую ошибку, dirty worktree, один
 динамический SQL.
 
 Известные дефекты legacy-поведения: SQL construction получает `executes` без
-подтверждённого execution sink; константы одного файла конфликтуют по имени;
+подтверждённого execution sink;
 перегрузки имеют одинаковый qualified_name; quoted имена таблиц приводятся к
 нижнему регистру. Parser diagnostics Java реализованы — см.
 [java-diagnostics.md](java-diagnostics.md).
@@ -219,3 +219,19 @@ Adapter `java_symbols` извлекает signatures/overload identity, paramete
 scopes и lexical occurrences в UCM через incremental API. Неоднозначные вызовы
 не превращаются в подтверждённые CALLS. Legacy CLI/SQL extraction остаются
 прежними. Контракт и ограничения: [java-symbols.md](java-symbols.md).
+
+## Локальный Java Call Graph
+
+`java_calls.index_java` строит UCM snapshot с проверяемыми declared-method CALLS,
+ambiguous/partial candidates и ExternalReferences. Resolver использует каталог
+только одного репозитория. Политика conversions, catalog invalidation и ограничения
+описаны в [java-calls.md](java-calls.md). Нормативный snapshot пока не заменяет
+полный legacy CLI и не утверждает выполнение найденного SQL.
+
+## Java SQL construction
+
+Opt-in `java_sql.index_java_sql` расширяет Java call graph SQL-конструкциями,
+вариантами и происхождением fragments. Исправлено разрешение Java final field
+constants по lexical type scope. Native SQL discovery не создаёт EXECUTES_SQL;
+JPQL исключается. API, ограничения recovery и partial описаны в
+[sql-construction.md](sql-construction.md). Legacy CLI writer сохраняется.

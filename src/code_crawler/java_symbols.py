@@ -4,7 +4,7 @@ import asyncio
 import json
 import re
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from tree_sitter import Node
 
@@ -53,6 +53,7 @@ class JavaSymbolsResult:
     analysis: FileAnalysis
     diagnostics: tuple[java.Diagnostic, ...]
     coverage: Coverage
+    _extractor: "_Extractor | None" = field(default=None, repr=False, compare=False)
 
 
 def _name(node: Node | None, erase: bool = False) -> str:
@@ -117,6 +118,7 @@ class _Extractor:
         self.bindings: dict[str, list[tuple[Symbol, int]]] = defaultdict(list)
         self.declarations: dict[int, tuple[Symbol, str]] = {}
         self.nodes: list[tuple[Node, str]] = []
+        self.symbol_nodes: dict[str, Node] = {}
         self.parameters: set[int] = set()
         self.keys: set[str] = set()
         self.blocks: dict[str, int] = defaultdict(int)
@@ -181,6 +183,7 @@ class _Extractor:
             **fields,
         )
         self.entities.append(symbol)
+        self.symbol_nodes[symbol.id] = declaration
         self.declarations[name_node.id] = (symbol, scope)
         visible = name_node.end_byte if kind == "LOCAL_VARIABLE" else -1
         self.bindings[scope].append((symbol, visible))
@@ -542,6 +545,7 @@ def extract(source: SourceInput) -> JavaSymbolsResult:
         FileAnalysis(path=source.file.path, entities=tuple(extractor.entities)),
         parsed.diagnostics,
         extractor.coverage,
+        extractor,
     )
 
 

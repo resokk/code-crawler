@@ -205,6 +205,7 @@
     },
     "EntityType": {
       "enum": [
+        "SQL_CONSTRUCTION",
         "EXTERNAL_REFERENCE",
         "RELATION",
         "OPERATION",
@@ -767,6 +768,8 @@
     },
     "RelationKind": {
       "enum": [
+        "CONSTRUCTS_SQL",
+        "HAS_SQL_CANDIDATE",
         "EXTERNAL_DEPENDENCY",
         "CONTAINS",
         "DECLARES",
@@ -1022,6 +1025,160 @@
         "end"
       ],
       "title": "SourceRange",
+      "type": "object"
+    },
+    "SqlConstruction": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "SQL_CONSTRUCTION",
+          "default": "SQL_CONSTRUCTION",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "owner_symbol_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Owner Symbol Id",
+          "type": "string"
+        },
+        "variants": {
+          "items": {
+            "$ref": "#/$defs/SqlVariant"
+          },
+          "minItems": 1,
+          "title": "Variants",
+          "type": "array"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "owner_symbol_id",
+        "variants"
+      ],
+      "title": "SqlConstruction",
+      "type": "object"
+    },
+    "SqlFragment": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "STATIC",
+            "DYNAMIC"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "kind",
+        "text"
+      ],
+      "title": "SqlFragment",
+      "type": "object"
+    },
+    "SqlVariant": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        },
+        "partial": {
+          "title": "Partial",
+          "type": "boolean"
+        },
+        "partial_reasons": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Partial Reasons",
+          "type": "array"
+        },
+        "fragments": {
+          "items": {
+            "$ref": "#/$defs/SqlFragment"
+          },
+          "minItems": 1,
+          "title": "Fragments",
+          "type": "array"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "text",
+        "partial",
+        "fragments"
+      ],
+      "title": "SqlVariant",
       "type": "object"
     },
     "Symbol": {
@@ -1349,6 +1506,7 @@
       "SCOPE": "#/$defs/Scope",
       "SOURCE_FILE": "#/$defs/SourceFile",
       "SQL_CANDIDATE": "#/$defs/CodeEntity",
+      "SQL_CONSTRUCTION": "#/$defs/SqlConstruction",
       "SYMBOL": "#/$defs/Symbol",
       "VALUE": "#/$defs/Value"
     },
@@ -1381,6 +1539,9 @@
     },
     {
       "$ref": "#/$defs/ExternalReference"
+    },
+    {
+      "$ref": "#/$defs/SqlConstruction"
     }
   ],
   "title": "EntityDocument"

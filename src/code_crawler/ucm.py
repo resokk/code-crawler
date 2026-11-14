@@ -14,6 +14,7 @@ EntityId = Annotated[str, Field(pattern=r"^ucm:[0-9a-f]{64}$")]
 
 
 class EntityType(StrEnum):
+    SQL_CONSTRUCTION = "SQL_CONSTRUCTION"
     EXTERNAL_REFERENCE = "EXTERNAL_REFERENCE"
     RELATION = "RELATION"
     OPERATION = "OPERATION"
@@ -280,6 +281,8 @@ class Evidence(ContractModel):
 
 
 class RelationKind(StrEnum):
+    CONSTRUCTS_SQL = "CONSTRUCTS_SQL"
+    HAS_SQL_CANDIDATE = "HAS_SQL_CANDIDATE"
     EXTERNAL_DEPENDENCY = "EXTERNAL_DEPENDENCY"
     CONTAINS = "CONTAINS"
     DECLARES = "DECLARES"
@@ -298,6 +301,8 @@ def _pairs(sources: str, targets: str) -> frozenset[tuple[EntityType, EntityType
 
 _RELATION_ENDPOINTS = MappingProxyType(
     {
+        RelationKind.CONSTRUCTS_SQL: _pairs("SYMBOL", "SQL_CONSTRUCTION"),
+        RelationKind.HAS_SQL_CANDIDATE: _pairs("SQL_CONSTRUCTION", "SQL_CANDIDATE"),
         RelationKind.EXTERNAL_DEPENDENCY: _pairs(
             "SYMBOL METHOD OCCURRENCE OPERATION VALUE", "EXTERNAL_REFERENCE"
         ),
@@ -387,6 +392,24 @@ def validate_relation_endpoints(
         or actual[0].occurrence_kind != "DECLARATION"
     ):
         raise ValueError("DECLARES requires a declaration occurrence")
+    if (
+        relation.relation_kind == RelationKind.CONSTRUCTS_SQL
+        and len(actual) > 1
+        and (
+            not isinstance(actual[1], SqlConstruction)
+            or actual[1].owner_symbol_id != actual[0].id
+        )
+    ):
+        raise ValueError("CONSTRUCTS_SQL must use the construction owner")
+    if (
+        relation.relation_kind == RelationKind.HAS_SQL_CANDIDATE
+        and len(actual) > 1
+        and (
+            not isinstance(actual[0], SqlConstruction)
+            or actual[1].id not in {v.candidate_id for v in actual[0].variants}
+        )
+    ):
+        raise ValueError("HAS_SQL_CANDIDATE must use a construction variant")
     for evidence in relation.evidence:
         file = entities.get(evidence.source_range.source_file_id)
         if (
@@ -482,6 +505,44 @@ def validate_external_reference(
             raise ValueError("external evidence file must be local")
 
 
+class SqlFragment(ContractModel):
+    kind: Literal["STATIC", "DYNAMIC"]
+    text: str
+    source_range: SourceRange | None = None
+
+
+class SqlVariant(ContractModel):
+    candidate_id: EntityId
+    text: Text
+    partial: bool
+    partial_reasons: tuple[Text, ...] = ()
+    fragments: tuple[SqlFragment, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def valid_variant(self) -> Self:
+        if "".join(fragment.text for fragment in self.fragments) != self.text:
+            raise ValueError("SQL fragments must reconstruct recovered text")
+        if self.partial != bool(self.partial_reasons):
+            raise ValueError(
+                "partial SQL requires reasons; complete SQL cannot have reasons"
+            )
+        if any(f.kind == "DYNAMIC" for f in self.fragments) and not self.partial:
+            raise ValueError("dynamic SQL fragment requires partial=true")
+        return self
+
+
+class SqlConstruction(EntityEnvelope):
+    entity_type: Literal[EntityType.SQL_CONSTRUCTION] = EntityType.SQL_CONSTRUCTION
+    owner_symbol_id: EntityId
+    variants: tuple[SqlVariant, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def unique_candidates(self) -> Self:
+        if len({v.candidate_id for v in self.variants}) != len(self.variants):
+            raise ValueError("SQL construction candidates must be unique")
+        return self
+
+
 Entity = Annotated[
     SourceFile
     | CodeEntity
@@ -491,7 +552,8 @@ Entity = Annotated[
     | Operation
     | Value
     | Relation
-    | ExternalReference,
+    | ExternalReference
+    | SqlConstruction,
     Field(discriminator="entity_type"),
 ]
 

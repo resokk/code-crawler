@@ -10,6 +10,7 @@ import asyncpg
 from code_crawler.ingestion import UcmBatch
 
 _SUBTYPES = {
+    "SQL_CONSTRUCTION": "ucm_sql_constructions",
     "SOURCE_FILE": "ucm_source_files",
     "SYMBOL": "ucm_symbols",
     "SCOPE": "ucm_scopes",
@@ -20,6 +21,9 @@ _SUBTYPES = {
     "EXTERNAL_REFERENCE": "ucm_external_references",
 }
 _AUXILIARY = {
+    "ucm_sql_variants": "construction_id",
+    "ucm_sql_fragments": "candidate_id",
+    "ucm_sql_partial_reasons": "candidate_id",
     "ucm_type_refs": "owner_id",
     "ucm_operation_values": "operation_id",
     "ucm_relation_candidates": "relation_id",
@@ -111,6 +115,34 @@ def _restore(repository_id: UUID, tables: dict[str, list[dict]]) -> UcmBatch:
                     "parameter_types": refs("PARAMETER"),
                     "return_type": single("RETURN"),
                 }
+        elif kind == "SQL_CONSTRUCTION":
+            detail["variants"] = []
+            for row in _ordered(
+                auxiliary["ucm_sql_variants"].pop(entity_id, []), "position"
+            ):
+                candidate = row["candidate_id"]
+                fragments = [
+                    {"kind": f["kind"], "text": f["text"], "source_range": _location(f)}
+                    for f in _ordered(
+                        auxiliary["ucm_sql_fragments"].pop(candidate, []), "ordinal"
+                    )
+                ]
+                reasons = [
+                    r["reason"]
+                    for r in _ordered(
+                        auxiliary["ucm_sql_partial_reasons"].pop(candidate, []),
+                        "ordinal",
+                    )
+                ]
+                detail["variants"].append(
+                    {
+                        "candidate_id": candidate,
+                        "text": row["text"],
+                        "partial": row["partial"],
+                        "partial_reasons": reasons,
+                        "fragments": fragments,
+                    }
+                )
         elif kind == "VALUE":
             detail["type_ref"] = single("TYPE")
             detail["literal"] = (

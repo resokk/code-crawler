@@ -74,6 +74,9 @@ class Query:
     # True, если часть запроса статически неизвестна или собирается по условию.
     partial: bool
     line: int
+    source_span: "SourceSpan | None" = None
+    fragments: tuple["_Fragment", ...] = ()
+    partial_reasons: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -101,6 +104,7 @@ class ParseResult:
     byte_length: int
     coverage: Literal["COMPLETE", "PARTIAL"]
     _tree: Tree | None = field(default=None, repr=False, compare=False)
+    _constant_scopes: dict = field(default_factory=dict, repr=False, compare=False)
 
 
 @dataclass
@@ -116,10 +120,27 @@ class Symbol:
     source_span: SourceSpan | None = None
 
 
+@dataclass(frozen=True)
+class _Fragment:
+    text: str
+    dynamic: bool = False
+    source_span: SourceSpan | None = None
+
+
 @dataclass
 class _Value:
     text: str
     partial: bool = False
+    fragments: tuple[_Fragment, ...] = ()
+    reasons: tuple[str, ...] = ()
+    is_string: bool = True
+    is_integral: bool = False
+
+    def __post_init__(self) -> None:
+        if not self.fragments:
+            self.fragments = (_Fragment(self.text),)
+        if self.partial and not self.reasons:
+            self.reasons = ("partial recovery",)
 
 
 @dataclass
@@ -129,6 +150,7 @@ class _Variable:
     # Значение изменилось и ещё никуда не передано.
     dirty: bool
     line: int
+    source_span: SourceSpan | None = None
 
 
 def parse(source: bytes) -> list[Symbol]:
@@ -204,12 +226,11 @@ def analyze(source: bytes) -> ParseResult:
         ),
         "",
     )
-    constants: dict[str, _Value | None] = {}
-    _collect_constants(root, constants)
+    constant_scopes = _constant_scopes(root, package)
     symbols: list[Symbol] = []
     for child in root.named_children:
         if child.type in _TYPES:
-            _type(child, package, None, symbols, constants)
+            _type(child, package, None, symbols, constant_scopes)
     return ParseResult(
         symbols,
         tuple(diagnostics),
@@ -217,6 +238,7 @@ def analyze(source: bytes) -> ParseResult:
         len(source),
         "PARTIAL" if diagnostics else "COMPLETE",
         tree,
+        constant_scopes,
     )
 
 
@@ -228,19 +250,126 @@ def _line(node: Node) -> int:
     return node.start_point.row + 1
 
 
-def _collect_constants(node: Node, constants: dict[str, _Value | None]) -> None:
-    # shortcut: константы видны только в пределах файла и различаются лишь по имени поля;
-    # для констант из других классов нужен проход по всему репозиторию.
-    if node.type in _FIELDS:
-        flow = _Flow(constants, [])
-        for declarator in node.children_by_field_name("declarator"):
-            value = declarator.child_by_field_name("value")
-            if value is not None:
-                name = _text(declarator.child_by_field_name("name"))
-                constants[name] = flow.evaluate(value)
-        return
-    for child in node.named_children:
-        _collect_constants(child, constants)
+def _constant_scopes(root: Node, package: str) -> dict[str, dict[str, "_Value | None"]]:
+    types: dict[str, tuple[Node, str | None]] = {}
+
+    def collect(node: Node, prefix: str, parent: str | None) -> None:
+        name = _text(node.child_by_field_name("name"))
+        if not name:
+            return
+        qualified = f"{prefix}.{name}" if prefix else name
+        types[qualified] = (node, parent)
+        for child in _members(node.child_by_field_name("body")):
+            if child.type in _TYPES:
+                collect(child, qualified, qualified)
+
+    for node in root.named_children:
+        if node.type in _TYPES:
+            collect(node, package, None)
+    aliases: dict[str, list[str]] = {}
+    fields: dict[str, dict[str, Node | None]] = {}
+    values: dict[tuple[str, str], _Value | None] = {}
+    for qualified, (node, parent) in types.items():
+        type_aliases = {
+            qualified,
+            qualified.removeprefix(package + ".") if package else qualified,
+        }
+        if parent is None:
+            type_aliases.add(qualified.rsplit(".", 1)[-1])
+        for alias in type_aliases:
+            aliases.setdefault(alias, []).append(qualified)
+        fields[qualified] = {}
+        for member in _members(node.child_by_field_name("body")):
+            if member.type not in _FIELDS:
+                continue
+            modifiers = next(
+                (c for c in member.named_children if c.type == "modifiers"), None
+            )
+            final = node.type in (
+                "interface_declaration",
+                "annotation_type_declaration",
+            ) or (
+                modifiers is not None
+                and any(c.type == "final" for c in modifiers.children)
+            )
+            constant_type = _text(member.child_by_field_name("type")) in {
+                "String",
+                "java.lang.String",
+                "byte",
+                "short",
+                "int",
+                "long",
+                "float",
+                "double",
+                "char",
+                "boolean",
+            }
+            final = final and constant_type
+            for declaration in member.children_by_field_name("declarator"):
+                name = _text(declaration.child_by_field_name("name"))
+                fields[qualified][name] = (
+                    declaration.child_by_field_name("value") if final else None
+                )
+                values[qualified, name] = None
+
+    def scope(qualified: str) -> dict[str, _Value | None]:
+        result = {
+            alias + "." + name: values[owner, name]
+            for alias, owners in aliases.items()
+            if len(owners) == 1
+            for owner in owners
+            for name in fields[owner]
+        }
+        chain = []
+        current = qualified
+        while current:
+            chain.append(current)
+            current = types[current][1]
+        for owner in reversed(chain):
+            for target in types:
+                if target == owner:
+                    relative = owner.rsplit(".", 1)[-1]
+                elif target.startswith(owner + "."):
+                    relative = target[len(owner) + 1 :]
+                else:
+                    continue
+                result.update(
+                    {
+                        relative + "." + name: values[target, name]
+                        for name in fields[target]
+                    }
+                )
+            result.update({name: values[owner, name] for name in fields[owner]})
+        result.update(
+            {"this." + name: values[qualified, name] for name in fields[qualified]}
+        )
+        return result
+
+    for _ in range(len(values) + 1):
+        changed = False
+        for qualified in types:
+            for name, initializer in fields[qualified].items():
+                if initializer is None or values[qualified, name] is not None:
+                    continue
+                value = _Flow(scope(qualified), []).evaluate(initializer)
+                if value is not None and not value.partial:
+                    values[qualified, name] = value
+                    changed = True
+        if not changed:
+            break
+    for _ in range(len(values) + 1):
+        changed = False
+        for qualified in types:
+            for name, initializer in fields[qualified].items():
+                if initializer is None or values[qualified, name] is not None:
+                    continue
+                value = _Flow(scope(qualified), []).evaluate(initializer)
+                if value is not None:
+                    values[qualified, name] = value
+                    changed = True
+        if not changed:
+            break
+    return {qualified: scope(qualified) for qualified in types}
 
 
 def _type(
@@ -248,13 +377,14 @@ def _type(
     prefix: str,
     parent: int | None,
     symbols: list[Symbol],
-    constants: dict[str, _Value | None],
+    constant_scopes: dict[str, dict[str, _Value | None]],
 ) -> None:
     name_node = node.child_by_field_name("name")
     if name_node is None or name_node.is_missing:
         return
     name = _text(name_node)
     qualified = f"{prefix}.{name}" if prefix else name
+    constants = constant_scopes.get(qualified, {})
     index = len(symbols)
     symbol = Symbol(
         "class",
@@ -270,7 +400,7 @@ def _type(
     _Flow(constants, symbol.queries).run(node.child_by_field_name("body"), members=True)
     for member in _members(node.child_by_field_name("body")):
         if member.type in _TYPES:
-            _type(member, qualified, index, symbols, constants)
+            _type(member, qualified, index, symbols, constant_scopes)
         elif member.type in _METHODS:
             name_node = member.child_by_field_name("name")
             if name_node is None or name_node.is_missing:
@@ -315,6 +445,29 @@ class _Flow:
     def run(self, node: Node | None, members: bool = False) -> None:
         if node is None:
             return
+        if not members:
+            parameters = node.child_by_field_name("parameters")
+            if parameters is not None:
+                for param in parameters.named_children:
+                    name_node = param.child_by_field_name("name")
+                    if param.type == "spread_parameter":
+                        declarator = next(
+                            (
+                                c
+                                for c in param.named_children
+                                if c.type == "variable_declarator"
+                            ),
+                            None,
+                        )
+                        name_node = (
+                            declarator.child_by_field_name("name")
+                            if declarator
+                            else None
+                        )
+                    if name_node is not None:
+                        self.variables[_text(name_node)] = _Variable(
+                            None, 0, False, _line(name_node)
+                        )
         if members:
             # В теле класса методы и вложенные типы разбираются отдельно.
             for member in _members(node):
@@ -324,16 +477,27 @@ class _Flow:
             self._visit(node, 0)
         for variable in self.variables.values():
             if variable.dirty:
-                self._emit(variable.value, variable.line)
+                self._emit(variable.value, variable.line, variable.source_span)
 
-    def _emit(self, value: _Value | None, line: int) -> None:
+    def _emit(
+        self, value: _Value | None, line: int, source_span: SourceSpan | None = None
+    ) -> None:
         if value is None or not looks_like_sql(value.text):
             return
         text = value.text.strip()
         if all(
             " ".join(q.text.split()) != " ".join(text.split()) for q in self.queries
         ):
-            self.queries.append(Query(text, value.partial, line))
+            self.queries.append(
+                Query(
+                    text,
+                    value.partial,
+                    line,
+                    source_span,
+                    _trim_fragments(value),
+                    value.reasons,
+                )
+            )
 
     def _use(self, node: Node) -> bool:
         """Вычисляет выражение как готовую строку; True, если это удалось."""
@@ -341,7 +505,7 @@ class _Flow:
         value = self.evaluate(node)
         if value is None:
             return False
-        self._emit(value, _line(node))
+        self._emit(value, _line(node), _span(node))
         for name in self.reads:
             self.variables[name].dirty = False
         return True
@@ -389,7 +553,7 @@ class _Flow:
             if value is None:
                 self._visit(initializer, depth)
         self.variables[name] = _Variable(
-            value, depth, value is not None, _line(declarator)
+            value, depth, value is not None, _line(declarator), _span(declarator)
         )
 
     def _assign(self, node: Node, depth: int) -> bool:
@@ -410,11 +574,15 @@ class _Flow:
             value = _concat(variable.value, value)
         elif variable.dirty and _text(left) not in reads:
             # Прежнее значение перезаписывается, так никуда и не попав: это отдельный запрос.
-            self._emit(variable.value, variable.line)
+            self._emit(variable.value, variable.line, variable.source_span)
         for read in reads:
             self.variables[read].dirty = False
         if value is not None and depth > variable.depth:
             value.partial = True
+            value.reasons = tuple(
+                dict.fromkeys((*value.reasons, "conditional assignment"))
+            )
+        variable.source_span = _span(node)
         variable.value, variable.dirty, variable.line = (
             value,
             value is not None,
@@ -449,11 +617,25 @@ class _Flow:
         """Строковое значение выражения или None, если это не собираемая строка."""
         kind = node.type
         if kind == "string_literal":
-            return _Value(_literal(node))
+            return _Value(
+                _literal(node),
+                fragments=(_Fragment(_literal(node), False, _span(node)),),
+            )
         if kind == "character_literal":
-            return _Value(_text(node)[1:-1])
+            text = _literal(node)
+            return _Value(
+                text, fragments=(_Fragment(text, False, _span(node)),), is_string=False
+            )
         if kind in _NUMBERS:
-            return _Value(_text(node))
+            if kind == "decimal_floating_point_literal":
+                return None
+            text = _text(node).replace("_", "").rstrip("lL")
+            return _Value(
+                text,
+                fragments=(_Fragment(text, False, _span(node)),),
+                is_string=False,
+                is_integral=True,
+            )
         if kind == "parenthesized_expression":
             return self.evaluate(node.named_children[0])
         if kind == "cast_expression":
@@ -461,18 +643,62 @@ class _Flow:
         if kind == "binary_expression":
             if node.child_by_field_name("operator").type != "+":
                 return None
+            left = self.evaluate(node.child_by_field_name("left"))
+            right = self.evaluate(node.child_by_field_name("right"))
+            if not (
+                (left is not None and left.is_string)
+                or (right is not None and right.is_string)
+            ):
+                return None
             return _concat(
-                self.evaluate(node.child_by_field_name("left")),
-                self.evaluate(node.child_by_field_name("right")),
+                left,
+                right,
+                _span(node.child_by_field_name("left")),
+                _span(node.child_by_field_name("right")),
             )
         if kind == "identifier":
             name = _text(node)
             if name in self.variables:
                 self.reads.add(name)
                 return self.variables[name].value
-            return self.constants.get(name)
+            value = self.constants.get(name)
+            return (
+                _Value(
+                    value.text,
+                    value.partial,
+                    value.fragments,
+                    value.reasons,
+                    value.is_string,
+                    value.is_integral,
+                )
+                if value is not None
+                else None
+            )
         if kind == "field_access":
-            return self.constants.get(_text(node.child_by_field_name("field")))
+            receiver = _text(node.child_by_field_name("object"))
+            field_name = _text(node.child_by_field_name("field"))
+            if receiver == "this":
+                value = self.constants.get("this." + field_name)
+            elif (
+                receiver.split(".")[0] in self.variables
+                or receiver.split(".")[0] in self.constants
+                or receiver == "super"
+            ):
+                value = None
+            else:
+                value = self.constants.get(receiver + "." + field_name)
+            return (
+                _Value(
+                    value.text,
+                    value.partial,
+                    value.fragments,
+                    value.reasons,
+                    value.is_string,
+                    value.is_integral,
+                )
+                if value is not None
+                else None
+            )
         if kind == "object_creation_expression":
             return self._builder(node)
         if kind == "method_invocation":
@@ -500,32 +726,73 @@ class _Flow:
             target = self.evaluate(receiver)
             if target is None:
                 return None
-            value = _concat(target, self.evaluate(arguments[0]))
+            value = _concat(
+                target,
+                self.evaluate(arguments[0]),
+                _span(receiver),
+                _span(arguments[0]),
+            )
             if name == "append":
                 root = _chain_root(node)
                 variable = self.variables.get(_text(root)) if root is not None else None
                 if variable is not None:
                     value.partial = value.partial or self.depth > variable.depth
+                    if self.depth > variable.depth:
+                        value.reasons = tuple(
+                            dict.fromkeys((*value.reasons, "conditional append"))
+                        )
+                    variable.source_span = _span(node)
                     variable.value, variable.dirty = value, True
             return value
         if on_string and name == "valueOf" and len(arguments) == 1:
-            return self.evaluate(arguments[0])
+            value = self.evaluate(arguments[0])
+            return (
+                _Value(value.text, value.partial, value.fragments, value.reasons)
+                if value is not None
+                else None
+            )
         if on_string and name == "join" and arguments:
             separator = self.evaluate(arguments[0])
             if separator is None:
                 return None
             parts = [self.evaluate(argument) for argument in arguments[1:]]
+            fragments = []
+            reasons = list(separator.reasons)
+            for index, part in enumerate(parts):
+                if index:
+                    fragments.extend(separator.fragments)
+                fragments.extend(
+                    part.fragments
+                    if part is not None
+                    else (_Fragment(UNKNOWN, True, _span(arguments[index + 1])),)
+                )
+                reasons.extend(
+                    part.reasons if part is not None else ("dynamic fragment",)
+                )
             return _Value(
-                separator.text.join(part.text if part else UNKNOWN for part in parts),
-                separator.partial
-                or any(part is None or part.partial for part in parts),
+                "".join(fragment.text for fragment in fragments),
+                bool(reasons),
+                tuple(fragments),
+                tuple(dict.fromkeys(reasons)),
             )
         if (on_string and name == "format" and arguments) or name == "formatted":
             template = self.evaluate(arguments[0] if name == "format" else receiver)
             if template is None:
                 return None
             values = arguments[1:] if name == "format" else arguments
-            return _format(template, [self.evaluate(value) for value in values])
+            return _format(
+                template,
+                [
+                    self.evaluate(value)
+                    or _Value(
+                        UNKNOWN,
+                        True,
+                        (_Fragment(UNKNOWN, True, _span(value)),),
+                        ("dynamic fragment",),
+                    )
+                    for value in values
+                ],
+            )
         return None
 
 
@@ -539,33 +806,102 @@ def _chain_root(node: Node) -> Node | None:
     return node
 
 
-def _concat(left: _Value | None, right: _Value | None) -> _Value | None:
+def _concat(
+    left: _Value | None,
+    right: _Value | None,
+    left_span: SourceSpan | None = None,
+    right_span: SourceSpan | None = None,
+) -> _Value | None:
     if left is None and right is None:
         return None
-    return _Value(
-        (left.text if left else UNKNOWN) + (right.text if right else UNKNOWN),
-        left is None or right is None or left.partial or right.partial,
+    fragments = (
+        left.fragments if left is not None else (_Fragment(UNKNOWN, True, left_span),)
+    ) + (
+        right.fragments
+        if right is not None
+        else (_Fragment(UNKNOWN, True, right_span),)
     )
+    reasons = tuple(
+        dict.fromkeys(
+            (
+                *(left.reasons if left is not None else ("dynamic fragment",)),
+                *(right.reasons if right is not None else ("dynamic fragment",)),
+            )
+        )
+    )
+    partial = left is None or right is None or left.partial or right.partial
+    return _Value("".join(f.text for f in fragments), partial, fragments, reasons)
+
+
+def _trim_fragments(value: _Value) -> tuple[_Fragment, ...]:
+    left = len(value.text) - len(value.text.lstrip())
+    right = len(value.text.rstrip())
+    return _slice_fragments(value, left, right)
+
+
+def _slice_fragments(value: _Value, left: int, right: int) -> tuple[_Fragment, ...]:
+    result = []
+    offset = 0
+    for fragment in value.fragments:
+        start = max(0, left - offset)
+        end = min(len(fragment.text), right - offset)
+        if end > start:
+            result.append(
+                _Fragment(
+                    fragment.text[start:end], fragment.dynamic, fragment.source_span
+                )
+            )
+        offset += len(fragment.text)
+    return tuple(result)
 
 
 def _format(template: _Value, values: list[_Value | None]) -> _Value:
-    partial = template.partial
+    fragments = []
+    reasons = list(template.reasons)
     position = 0
-
-    def substitute(match: re.Match[str]) -> str:
-        nonlocal partial, position
+    offset = 0
+    for match in _FORMAT_SPEC.finditer(template.text):
+        if match.start() > offset:
+            fragments.extend(_slice_fragments(template, offset, match.start()))
         conversion = match.group(3)
-        if conversion == "%":
-            return "%"
-        if conversion == "n":
-            return "\n"
-        index = int(match.group(1)[:-1]) - 1 if match.group(1) else position
-        position += 0 if match.group(1) else 1
-        value = values[index] if 0 <= index < len(values) else None
-        partial = partial or value is None or value.partial
-        return value.text if value else UNKNOWN
+        if conversion in ("%", "n"):
+            fragments.append(_Fragment("%" if conversion == "%" else "\n"))
+        else:
+            index = int(match.group(1)[:-1]) - 1 if match.group(1) else position
+            position += 0 if match.group(1) else 1
+            value = values[index] if 0 <= index < len(values) else None
+            fragments.extend(
+                value.fragments if value is not None else (_Fragment(UNKNOWN, True),)
+            )
+            reasons.extend(
+                value.reasons if value is not None else ("dynamic fragment",)
+            )
+            if (
+                conversion == "d"
+                and value is not None
+                and not value.partial
+                and not value.is_integral
+            ):
+                reasons.append("unsupported format argument type")
+            if not re.fullmatch(r"%(?:\d+\$)?[sd]", match.group(0)):
+                reasons.append("unsupported format conversion or flags")
+        offset = match.end()
+    if offset < len(template.text):
+        fragments.extend(_slice_fragments(template, offset, len(template.text)))
+    return _Value(
+        "".join(f.text for f in fragments),
+        template.partial or bool(reasons),
+        tuple(fragments),
+        tuple(dict.fromkeys(reasons)),
+    )
 
-    return _Value(_FORMAT_SPEC.sub(substitute, template.text), partial)
+
+def _decode_escape(text: str) -> str:
+    if re.fullmatch(r"\\u+[0-9a-fA-F]{4}", text):
+        return chr(int(text[-4:], 16))
+    if re.fullmatch(r"\\[0-7]{1,3}", text):
+        return chr(int(text[1:], 8))
+    return _ESCAPES.get(text[1:], text[1:])
 
 
 def _literal(node: Node) -> str:
@@ -573,15 +909,33 @@ def _literal(node: Node) -> str:
     for child in node.named_children:
         text = _text(child)
         if child.type == "escape_sequence":
-            text = _ESCAPES.get(text[1:], text[1:])
+            text = _decode_escape(text)
         parts.append(text)
+    if node.type == "character_literal":
+        inner = _text(node)[1:-1]
+        parts = [_decode_escape(inner) if inner.startswith("\\") else inner]
     text = "".join(parts)
+    try:
+        text = text.encode("utf-16-le", errors="surrogatepass").decode("utf-16-le")
+    except UnicodeDecodeError as exc:
+        raise ValueError(
+            "unpaired Java surrogate cannot be represented in UTF-8 SQL"
+        ) from exc
     # Текстовый блок: общий отступ строк в значение не входит.
     return textwrap.dedent(text) if _text(node).startswith('"""') else text
 
 
 def _is_jpql_annotation(node: Node) -> bool:
     name = _text(node.child_by_field_name("name")).rsplit(".", 1)[-1]
-    return name in _JPQL_ANNOTATIONS and not re.search(
-        r"nativeQuery\s*=\s*true", _text(node)
-    )
+    if name not in _JPQL_ANNOTATIONS:
+        return False
+    arguments = node.child_by_field_name("arguments")
+    if name == "Query" and arguments is not None:
+        for argument in arguments.named_children:
+            if (
+                argument.type == "element_value_pair"
+                and _text(argument.child_by_field_name("key")) == "nativeQuery"
+            ):
+                value = argument.child_by_field_name("value")
+                return value is None or value.type != "true"
+    return True

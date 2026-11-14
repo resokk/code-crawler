@@ -52,3 +52,7 @@ diagnostics отдельным каналом. Legacy CLI по-прежнему 
 SQL facts пока не извлекаются, существующий legacy index/bridge остаётся доступен.
 Пример UCM вызова: `index_incremental(conn, repo, root, analyze_files,
 languages={'.java':'java'}, analysis_version='java.symbols/1')`.
+
+Поверх этих occurrences доступен opt-in resolver [java-calls.md](java-calls.md).
+Он уточняет CALL/REFERENCES и добавляет CALLS/ExternalReferences, сохраняя данный
+низкоуровневый lexical API совместимым.

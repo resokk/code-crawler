@@ -9,7 +9,8 @@ Composite FK (repository_id, snapshot_id) запрещает смешивать 
 Таблицы расширений: ucm_source_files, ucm_symbols, ucm_scopes, ucm_occurrences,
 ucm_operations, ucm_values, ucm_relations, ucm_external_references. Они имеют
 фиксированный discriminator и FK к типу envelope. CLASS/METHOD/SQL_CANDIDATE
-пока представлены envelope без расширения; детальные Symbol используют SYMBOL.
+представлены envelope; детальные Symbol используют SYMBOL. SQL_CANDIDATE может
+иметь typed variant payload, описанный ниже.
 
 ucm_type_refs хранит типы/параметры/return types и callee с resolution;
 ucm_operation_values — упорядоченные inputs/outputs; ucm_relation_candidates —
@@ -40,3 +41,11 @@ Fact INSERT/UPDATE/DELETE допускаются только для BUILDING sn
 для владельца БД. Политика retention/cleanup будет отдельным изменением.
 Migration не удаляет и не переключает legacy writer. Staging/COPY и ID mapping
 реализованы в [ucm-ingestion.md](ucm-ingestion.md).
+
+Миграция 0008 добавляет ucm_sql_constructions (owner Symbol), ucm_sql_variants
+(candidate, construction, position, text, partial), ucm_sql_fragments (ordinal,
+kind, text, optional range) и ucm_sql_partial_reasons (ordinal, reason).
+Snapshot-scoped deferred FK и immutable guards применяются ко всем четырём
+таблицам. Ingestion/COPY и readiness restore сохраняют порядок и проверяют
+fragment/text, partial/reasons, ownership и registry endpoints. Старые candidate
+envelopes без construction допустимы для compatibility; произвольного JSONB нет.

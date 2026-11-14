@@ -92,3 +92,7 @@ immutable вместе с canonical facts. API описан в
 mapping, persistent read selection и immutable compatibility projections.
 Таблицы repos/nodes/edges/data_* сохраняются. См.
 [ucm-legacy-migration.md](ucm-legacy-migration.md).
+
+Миграция `0008_sql_candidates_construction.sql` добавляет SQL_CONSTRUCTION,
+две registry relations и нормализованные constructions/variants/fragments/reasons
+с snapshot-scoped FK и immutable guards. См. [sql-construction.md](sql-construction.md).

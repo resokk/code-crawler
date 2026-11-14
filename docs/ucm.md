@@ -4,7 +4,7 @@
 Модуль `code_crawler.ucm` определяет Entity Envelope и SourceFile.
 Нормативные поля типизированы; произвольного JSONB-контейнера нет.
 
-EntityType v1: SOURCE_FILE, CLASS, METHOD, SQL_CANDIDATE, SYMBOL, SCOPE,
+EntityType v1: SOURCE_FILE, CLASS, METHOD, SQL_CANDIDATE, SQL_CONSTRUCTION, SYMBOL, SCOPE,
 OCCURRENCE, OPERATION, VALUE, RELATION, EXTERNAL_REFERENCE. Модели описаны ниже.
 Конвертеры появятся отдельными changes.
 SQL_CANDIDATE означает обнаруженный SQL и не доказывает его выполнение.
@@ -178,3 +178,14 @@ source files evidence по переданному каталогу. RelationKind
 Logical key задаётся адаптером (например, стабильный ключ occurrence); selector,
 hints, evidence не входят автоматически в ID. Отдельные callsites могут иметь
 одинаковый selector и разные ID. Совпадение selector не создаёт глобальную связь.
+
+## SQL construction
+
+SqlConstruction принадлежит Symbol (CLASS/METHOD/CONSTRUCTOR) и содержит
+непустые SqlVariant: candidate_id, text, partial, partial_reasons и ordered
+SqlFragment (STATIC/DYNAMIC, text, optional SourceRange). Конкатенация fragments
+равна text; dynamic требует partial и причины. Candidate IDs уникальны внутри
+construction и не принадлежат нескольким constructions в одном batch.
+CONSTRUCTS_SQL связывает SYMBOL → SQL_CONSTRUCTION, HAS_SQL_CANDIDATE —
+SQL_CONSTRUCTION → SQL_CANDIDATE; batch проверяет owner и membership.
+Обнаружение не доказывает execution. Подробнее: [sql-construction.md](sql-construction.md).

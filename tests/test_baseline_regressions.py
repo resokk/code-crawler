@@ -20,7 +20,7 @@ def test_legacy_unused_sql_is_linked_as_execution(tmp_path: Path) -> None:
     ] == ["A.m"]
 
 
-def test_legacy_constants_leak_between_classes() -> None:
+def test_constants_are_scoped_to_declaring_classes() -> None:
     symbols = java.parse(b"""
         class A {
             static final String TABLE = "first_table";
@@ -34,7 +34,7 @@ def test_legacy_constants_leak_between_classes() -> None:
     methods = [symbol for symbol in symbols if symbol.kind == "method"]
     assert [symbol.qualified_name for symbol in methods] == ["A.m", "B.m"]
     assert [[q.text for q in symbol.queries] for symbol in methods] == [
-        ["select id from second_table"],
+        ["select id from first_table"],
         ["select id from second_table"],
     ]
 

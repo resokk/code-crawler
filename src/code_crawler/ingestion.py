@@ -21,6 +21,7 @@ from code_crawler.ucm import (
     Scope,
     SourceFile,
     SourceRange,
+    SqlConstruction,
     Symbol,
     SymbolSelector,
     TypeRef,
@@ -85,10 +86,38 @@ class UcmBatch(ContractModel):
                     producers.add(value_id)
             elif isinstance(entity, Value):
                 type_ref(entity.type_ref)
+            elif isinstance(entity, SqlConstruction):
+                require(entity.owner_symbol_id, Symbol)
+                if catalog[entity.owner_symbol_id].symbol_kind not in (
+                    "CLASS",
+                    "METHOD",
+                    "CONSTRUCTOR",
+                ):
+                    raise ValueError(
+                        "SQL construction owner must be a type or callable"
+                    )
+                for variant in entity.variants:
+                    candidate = catalog.get(variant.candidate_id)
+                    if (
+                        candidate is None
+                        or candidate.entity_type.value != "SQL_CANDIDATE"
+                    ):
+                        raise ValueError("SQL variant requires local SQL_CANDIDATE")
+                    for fragment in variant.fragments:
+                        if fragment.source_range is not None:
+                            require(fragment.source_range.source_file_id, SourceFile)
             elif isinstance(entity, Relation):
                 validate_relation_endpoints(entity, catalog)
             elif isinstance(entity, ExternalReference):
                 validate_external_reference(entity, catalog)
+        sql_candidates = [
+            variant.candidate_id
+            for e in self.entities
+            if isinstance(e, SqlConstruction)
+            for variant in e.variants
+        ]
+        if len(set(sql_candidates)) != len(sql_candidates):
+            raise ValueError("SQL candidate has multiple construction owners")
         checked: set[str] = set()
         for entity in self.entities:
             if not isinstance(entity, Scope):
@@ -224,6 +253,39 @@ def _records(snapshot_id: UUID, batch: UcmBatch) -> dict[str, list[dict]]:
                         direction=direction,
                         position=position,
                         value_id=value_id,
+                    )
+        elif isinstance(entity, SqlConstruction):
+            add("ucm_sql_constructions", **base, owner_symbol_id=entity.owner_symbol_id)
+            for position, variant in enumerate(entity.variants):
+                add(
+                    "ucm_sql_variants",
+                    construction_id=entity.id,
+                    candidate_id=variant.candidate_id,
+                    candidate_type="SQL_CANDIDATE",
+                    position=position,
+                    text=variant.text,
+                    partial=variant.partial,
+                )
+                for ordinal, reason in enumerate(variant.partial_reasons):
+                    add(
+                        "ucm_sql_partial_reasons",
+                        candidate_id=variant.candidate_id,
+                        ordinal=ordinal,
+                        reason=reason,
+                    )
+                for ordinal, fragment in enumerate(variant.fragments):
+                    f, sl, sc, el, ec = _range(fragment.source_range)
+                    add(
+                        "ucm_sql_fragments",
+                        candidate_id=variant.candidate_id,
+                        ordinal=ordinal,
+                        kind=fragment.kind,
+                        text=fragment.text,
+                        source_file_id=f,
+                        start_line=sl,
+                        start_byte_column=sc,
+                        end_line=el,
+                        end_byte_column=ec,
                     )
         elif isinstance(entity, Relation):
             target = entity.resolution.target

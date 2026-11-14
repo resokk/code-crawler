@@ -283,6 +283,9 @@ async def index_incremental(
     """Analyze changed/dependent files, reusing the published UCM facts of other files."""
     if conn.is_in_transaction():
         raise ValueError("incremental indexing requires a free connection")
+    required_version = getattr(analyze, "analysis_version", analysis_version)
+    if required_version != analysis_version:
+        raise ValueError("analysis_version must match the analyzer catalog profile")
     languages = dict(languages)
     if not analysis_version.strip() or any(
         not re.fullmatch(r"\.[A-Za-z0-9_+-]+", key)
