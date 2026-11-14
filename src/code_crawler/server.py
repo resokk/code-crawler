@@ -1,5 +1,6 @@
 """Stateless MCP server: structural queries over published UCM snapshots."""
 
+import json
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Annotated, Literal
@@ -27,9 +28,15 @@ async def _database(server: FastMCP) -> AsyncIterator[dict]:
     url = os.environ.get("DATABASE_URL")
     if not url:
         raise RuntimeError("не задана переменная окружения DATABASE_URL")
+    configured = os.environ.get("DISCOVERY_REPOSITORY_KEYS")
+    discovery_keys = (
+        search._discovery_scope(json.loads(configured))
+        if configured is not None
+        else ()
+    )
     pool = await asyncpg.create_pool(url, min_size=1)
     try:
-        yield {"pool": pool}
+        yield {"pool": pool, "discovery_repository_keys": discovery_keys}
     finally:
         await pool.close()
 
@@ -240,6 +247,51 @@ async def get_evidence(
     """Полные Evidence, Coverage и candidates одной связи по её `relation_id`."""
     return await _query(
         ctx, lambda conn: search.get_evidence(conn, repository_key, relation_id)
+    )
+
+
+@mcp.tool
+async def search_discovery_entries(
+    ctx: Context,
+    kind: Literal[
+        "SYMBOL",
+        "DATABASE",
+        "BPMN_PROCESS",
+        "HTTP",
+        "BPMN_WORKER",
+        "REFERENCE_DATA",
+        "KAFKA",
+    ],
+    lookup_key: Annotated[str, Field(min_length=1, max_length=4096)],
+    repository_keys: list[str] | None = None,
+    qualifier: dict | None = None,
+    limit: Limit = 50,
+    offset: Annotated[int, Field(ge=0, le=search.MAX_OFFSET)] = 0,
+    expected_fingerprint: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    | None = None,
+) -> dict:
+    """Найти потенциальные цели в разрешённых published репозиториях.
+
+    Точный lookup_key — FQN, DB identifier, HTTP path или BPMN process id. qualifier уточняет
+    signature/namespace/context. Совпадение не доказывает dependency. Доступ задаёт
+    server DISCOVERY_REPOSITORY_KEYS; клиент может только сузить scope. Следующая
+    страница требует fingerprint предыдущей, чтобы не смешать поколения.
+    """
+    return await _query(
+        ctx,
+        lambda conn: search.search_discovery_entries(
+            conn,
+            kind,
+            lookup_key,
+            allowed_repository_keys=ctx.lifespan_context.get(
+                "discovery_repository_keys", ()
+            ),
+            repository_keys=repository_keys,
+            qualifier=qualifier,
+            limit=limit,
+            offset=offset,
+            expected_fingerprint=expected_fingerprint,
+        ),
     )
 
 

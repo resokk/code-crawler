@@ -112,7 +112,7 @@ async def _select(
         "SELECT r.repository_key,r.id AS repository_id,s.id AS snapshot_id,s.commit_hash,g.generation "
         "FROM public.ucm_repositories r JOIN public.ucm_snapshots s ON s.repository_id=r.id "
         "LEFT JOIN public.ucm_repository_publications p ON p.repository_id=r.id AND p.snapshot_id=s.id "
-        "LEFT JOIN public.search_discovery_generations g ON g.snapshot_id=s.id AND g.projector_version=$4 "
+        "LEFT JOIN public.search_discovery_generations g ON g.snapshot_id=s.id AND g.projector_version=$4 AND g.state='READY' "
         "WHERE r.repository_key=ANY($1) AND s.state IN ('PUBLISHED','RETIRED') "
         "AND (($2 AND p.snapshot_id IS NOT NULL) OR (NOT $2 AND s.id=ANY($3::uuid[]))) "
         "ORDER BY r.repository_key",

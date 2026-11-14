@@ -15,6 +15,7 @@ from code_crawler import (
     database_schema,
     datamodel,
     db,
+    discovery,
     indexer,
     ingestion,
     jobs,
@@ -575,6 +576,26 @@ def _canonical_options(parser: argparse.ArgumentParser, *, defaults: bool) -> No
     parser.add_argument("--connections", help="JSON list of typed ConnectionAssignment")
 
 
+async def discovery_refresh(repository_key: str) -> None:
+    """Refresh derived discovery keys of one current publication."""
+    conn = await db.connect()
+    try:
+        repository_id = await conn.fetchval(
+            "SELECT id FROM public.ucm_repositories WHERE repository_key=$1",
+            repository_key,
+        )
+        if repository_id is None:
+            raise ValueError("repository does not exist")
+        generation = await discovery.refresh_discovery(conn, repository_key)
+        console.print_json(
+            json.dumps(
+                {"repository_key": repository_key, "generation_id": str(generation)}
+            )
+        )
+    finally:
+        await conn.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="code-crawler", description="Управление индексами code-crawler."
@@ -610,6 +631,14 @@ def main() -> None:
     )
     manifest_parser.add_argument("path")
     manifest_parser.set_defaults(run=schema_import_manifest)
+    discovery_commands = commands.add_parser(
+        "discovery", help="глобальный каталог потенциальных целей"
+    ).add_subparsers(metavar="действие", required=True)
+    refresh_parser = discovery_commands.add_parser(
+        "refresh", help="обновить каталог опубликованного репозитория"
+    )
+    refresh_parser.add_argument("repository_key")
+    refresh_parser.set_defaults(run=discovery_refresh)
     adapter_commands = commands.add_parser(
         "adapters", help="versioned source adapter capabilities"
     ).add_subparsers(metavar="действие", required=True)

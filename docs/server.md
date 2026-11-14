@@ -21,6 +21,7 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 
 | Инструмент | Назначение |
 | --- | --- |
+| `search_discovery_entries` | глобальные кандидаты по точным ключам в разрешённых published generations; [контракт](global-discovery-catalog.md) |
 | `search_symbols` | символы по точному простому или полному имени, виду и типам параметров |
 | `search_text` | нечёткий поиск по именам с ранжированием и страницами, см. [lexical-search.md](lexical-search.md) |
 | `find_callers` | кто вызывает символ |
@@ -33,7 +34,7 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 
 Правила:
 
-- Каждый инструмент принимает `repository_key` и читает только опубликованный
+- Repository-scoped инструменты принимают `repository_key` и читает только опубликованный
   snapshot этого репозитория. Сервер ничего не пишет: запрос идёт в read-only
   REPEATABLE READ транзакции.
 - Аргументы проверяются до запроса: ID сущностей — `ucm:` и 64 hex-символа,
@@ -52,3 +53,9 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 Один tool call читает согласованную MVCC версию, включая concurrent publication/GC.
 Полный типизированный библиотечный reader и source proof retrieval описаны в
 [canonical-read.md](canonical-read.md); формат существующих MCP tools не меняется.
+
+Глобальный discovery выключен по умолчанию. `DISCOVERY_REPOSITORY_KEYS='["org/a","org/b"]'`
+задаёт явный trusted scope сервера. Отсутствующая политика запрещает discovery,
+клиентский `repository_keys` может только сузить scope. Discovery выдаёт кандидатов
+с UNKNOWN certainty, включая единственный match; snapshot/generation manifest,
+PARTIAL availability и pagination fingerprint возвращаются явно.

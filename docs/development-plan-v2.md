@@ -61,7 +61,7 @@ e2e → default backend. R1 завершён, когда canonical можно п
 
 ## R4 — Межрепозиторный поиск и GraphRAG (P1)
 
-1. global-discovery-catalog — published symbols, DB objects, HTTP, BPMN, reference data, Kafka.
+1. global-discovery-catalog — завершён bounded v1: published symbols, DB objects и BPMN processes; OpenAPI HTTP contracts — PARTIAL без runtime service binding; worker/reference/Kafka — UNSUPPORTED до появления typed producers. [Контракт](global-discovery-catalog.md).
 2. query-time-reference-resolver — version contexts, namespace/type constraints, candidates/uncertainty, evidence paths, cache invalidation; без обязательного предварительного linking.
 3. embedding-generation-pipeline — Qwen3/model registry, hashes/cache/queue, preprocessing versions, pgvector 0.8.0.
 4. hybrid-retrieval — exact + lexical + vector ranking и graph expansion; confirmed/inferred отдельно.

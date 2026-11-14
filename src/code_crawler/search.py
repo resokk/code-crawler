@@ -530,3 +530,245 @@ async def get_evidence(
         "snapshot_id": str(snapshot_id),
         **(await _relations(conn, snapshot_id, rows))[0],
     }
+
+
+def _discovery_scope(keys: list[str] | tuple[str, ...]) -> list[str]:
+    if not isinstance(keys, (list, tuple)) or not keys or len(keys) > 32:
+        raise ValueError(
+            "discovery requires an explicit allowed scope of 1–32 repositories"
+        )
+    if any(
+        not isinstance(k, str) or not k.strip() or "\0" in k or len(k) > 1024
+        for k in keys
+    ):
+        raise ValueError("invalid discovery repository key")
+    return sorted(set(keys))
+
+
+def _discovery_qualifier(kind: str, qualifier: dict | None) -> dict:
+    from code_crawler.discovery import KINDS
+
+    if kind not in KINDS:
+        raise ValueError("unknown discovery kind")
+    value = {} if qualifier is None else qualifier
+    fields = {
+        "SYMBOL": {"symbol_kind", "parameter_types"},
+        "DATABASE": {
+            "database_key",
+            "version_key",
+            "catalog_name",
+            "schema_name",
+            "object_kind",
+            "table_name",
+            "column_name",
+        },
+        "BPMN_PROCESS": {"target_namespace"},
+        "HTTP": {"service", "contract_id", "method"},
+        "BPMN_WORKER": {"namespace"},
+        "REFERENCE_DATA": {"namespace"},
+        "KAFKA": {"cluster"},
+    }
+    if not isinstance(value, dict) or not set(value) <= fields[kind]:
+        raise ValueError("invalid discovery qualifier fields")
+    required = {
+        "DATABASE": {"database_key", "version_key", "catalog_name", "schema_name"},
+        "HTTP": {"method"},
+        "KAFKA": {"cluster"},
+        "REFERENCE_DATA": {"namespace"},
+    }
+    if not required.get(kind, set()) <= set(value):
+        raise ValueError("discovery requires explicit namespace/context qualifiers")
+    if kind == "HTTP" and not ({"service", "contract_id"} & set(value)):
+        raise ValueError("HTTP discovery requires an explicit service or contract_id")
+    for key, item in value.items():
+        if key == "parameter_types":
+            if (
+                not isinstance(item, list)
+                or len(item) > 256
+                or any(
+                    not isinstance(t, str)
+                    or not t.strip()
+                    or "\0" in t
+                    or len(t) > 4096
+                    for t in item
+                )
+            ):
+                raise ValueError("invalid ordered parameter_types")
+        elif (
+            not isinstance(item, str)
+            or not item.strip()
+            or "\0" in item
+            or len(item) > 4096
+        ):
+            raise ValueError("discovery qualifier values must be nonblank strings")
+    if "symbol_kind" in value and value["symbol_kind"] not in (
+        "CLASS",
+        "METHOD",
+        "CONSTRUCTOR",
+        "FIELD",
+    ):
+        raise ValueError("invalid discovery symbol_kind")
+    if "object_kind" in value and value["object_kind"] not in (
+        "SCHEMA",
+        "TABLE",
+        "VIEW",
+        "MATERIALIZED_VIEW",
+        "FOREIGN_TABLE",
+        "COLUMN",
+    ):
+        raise ValueError("invalid database object_kind")
+    if "method" in value and value["method"] not in (
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS",
+        "TRACE",
+        "CONNECT",
+        "QUERY",
+    ):
+        raise ValueError("invalid HTTP method")
+    return value
+
+
+async def search_discovery_entries(
+    conn: asyncpg.Connection,
+    kind: str,
+    lookup_key: str,
+    *,
+    allowed_repository_keys: list[str] | tuple[str, ...],
+    repository_keys: list[str] | None = None,
+    qualifier: dict | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    expected_fingerprint: str | None = None,
+) -> dict:
+    """Find potential targets in explicitly allowed current published generations.
+
+    Matches are candidates, including unique matches: no cross-repository relation
+    is established. Missing derivative generations are reported as PARTIAL.
+    """
+    import hashlib
+    import json
+    import re
+
+    from code_crawler.discovery import SUPPORTED, VERSION
+
+    allowed = _discovery_scope(allowed_repository_keys)
+    requested = (
+        allowed if repository_keys is None else _discovery_scope(repository_keys)
+    )
+    if not set(requested) <= set(allowed):
+        raise ValueError("discovery repository access denied")
+    if (
+        not isinstance(lookup_key, str)
+        or not lookup_key.strip()
+        or len(lookup_key) > 4096
+        or "\0" in lookup_key
+    ):
+        raise ValueError("invalid discovery lookup_key")
+    filters = _discovery_qualifier(kind, qualifier)
+    _limit(limit)
+    if not 0 <= offset <= MAX_OFFSET:
+        raise ValueError(f"offset must be between 0 and {MAX_OFFSET}")
+    if expected_fingerprint is not None and not re.fullmatch(
+        r"[0-9a-f]{64}", expected_fingerprint
+    ):
+        raise ValueError("invalid discovery fingerprint")
+    if offset and expected_fingerprint is None:
+        raise ValueError("discovery pagination requires expected_fingerprint")
+    payload = await conn.fetchval(
+        """
+WITH manifest AS MATERIALIZED (
+ SELECT requested.repository_key,r.id AS repository_id,p.snapshot_id,
+ CASE WHEN s.state='PUBLISHED' AND g.state='READY' AND g.projector_version=$5
+ THEN g.generation END AS generation_id
+ FROM unnest($1::text[]) requested(repository_key)
+ LEFT JOIN public.ucm_repositories r USING(repository_key)
+ LEFT JOIN public.ucm_repository_publications p ON p.repository_id=r.id
+ LEFT JOIN public.ucm_snapshots s ON s.id=p.snapshot_id
+ LEFT JOIN public.search_discovery_generations g ON g.snapshot_id=p.snapshot_id
+), matching AS MATERIALIZED (
+ SELECT m.repository_key,e.repository_id,e.snapshot_id,e.generation AS generation_id,
+ e.entity_id,e.kind,
+ CASE WHEN e.kind='DATABASE' THEN COALESCE(e.lookup_key->>6,e.lookup_key->>5,e.lookup_key->>3)
+ WHEN e.kind='HTTP' THEN e.lookup_key->>2 ELSE e.lookup_key->>0 END AS lookup_key,e.qualifier,
+ e.entity_type,e.source_file_id,e.start_line,e.start_byte_column,e.end_line,e.end_byte_column,e.rule
+ FROM manifest m JOIN public.search_discovery_entries e
+ ON e.generation=m.generation_id
+ WHERE e.kind=$2 AND md5(CASE WHEN e.kind='DATABASE'
+ THEN COALESCE(e.lookup_key->>6,e.lookup_key->>5,e.lookup_key->>3) WHEN e.kind='HTTP' THEN e.lookup_key->>2 ELSE e.lookup_key->>0 END)=md5($3)
+ AND (CASE WHEN e.kind='DATABASE' THEN COALESCE(e.lookup_key->>6,e.lookup_key->>5,e.lookup_key->>3)
+ WHEN e.kind='HTTP' THEN e.lookup_key->>2 ELSE e.lookup_key->>0 END)=$3
+ -- JSON containment ignores array order; callable signatures require equality.
+ AND NOT EXISTS (SELECT 1 FROM jsonb_each($4::jsonb) f(key,value)
+  WHERE e.qualifier -> f.key IS DISTINCT FROM f.value)
+ ORDER BY m.repository_key,e.entity_id LIMIT ($6::bigint+$7::bigint)
+), page AS (
+ SELECT * FROM matching ORDER BY repository_key,entity_id LIMIT $6 OFFSET $7
+)
+SELECT jsonb_build_object(
+ 'generation_manifest',(SELECT jsonb_agg(to_jsonb(m) ORDER BY repository_key) FROM manifest m),
+ 'items',COALESCE((SELECT jsonb_agg(to_jsonb(p) ORDER BY repository_key,entity_id) FROM page p),'[]'::jsonb),
+ 'match_count_lower_bound',(SELECT count(*) FROM (SELECT 1 FROM matching LIMIT 2) c)
+)
+""",
+        requested,
+        kind,
+        lookup_key,
+        json.dumps(filters),
+        VERSION,
+        limit + 1,
+        offset,
+    )
+    result = json.loads(payload)
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            [VERSION, result["generation_manifest"]],
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    if expected_fingerprint is not None and fingerprint != expected_fingerprint:
+        raise ValueError("discovery generation changed; restart pagination")
+    available = all(
+        m["generation_id"] is not None for m in result["generation_manifest"]
+    )
+    supported = kind in SUPPORTED
+    result["fingerprint"] = fingerprint
+    result["availability"] = "COMPLETE" if available else "PARTIAL"
+    result["coverage"] = {
+        "capability": "global.discovery." + kind.lower(),
+        "analyzer_version": VERSION,
+        "status": ("COMPLETE" if available else "PARTIAL")
+        if supported
+        else "UNSUPPORTED",
+        "reasons": (
+            []
+            if available
+            else ["some allowed repositories lack a current discovery generation"]
+        )
+        if supported
+        else ["no normative UCM target producer for this kind"],
+    }
+    if kind == "HTTP":
+        result["coverage"]["status"] = "PARTIAL"
+        result["coverage"]["reasons"].append(
+            "OpenAPI contract declarations only; runtime service bindings and callback/webhook targets are unresolved"
+        )
+    result["resolution"] = (
+        "AMBIGUOUS" if result["match_count_lower_bound"] > 1 else "UNRESOLVED"
+    )
+    result["reason"] = (
+        "lookup matches are potential targets; a separate resolver must establish a dependency"
+    )
+    result["truncated"] = len(result["items"]) > limit
+    result["items"] = result["items"][:limit]
+    result["next_offset"] = (
+        offset + limit if result["truncated"] and offset + limit <= MAX_OFFSET else None
+    )
+    for item in result["items"]:
+        item.update(resolution="UNRESOLVED", certainty="UNKNOWN")
+    return result

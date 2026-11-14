@@ -14,9 +14,11 @@ Supported projections: exact case-sensitive Symbol FQN, callable FQN plus ordere
 parameter types (unknown signature differs from zero arguments), full database
 identity (database/schema version/catalog/schema/object kind/table/column), explicit
 BPMN process IDs from canonical BPMN_ATTRIBUTE facts. Connection aliases, HTTP
-clients and worker subscriptions are not declarations of remote targets. HTTP
-endpoint, Kafka topic/worker and dataset producers are not implemented yet; their
-coverage remains UNSUPPORTED and no targets are invented from external references.
+clients and worker subscriptions are not declarations of remote targets. OpenAPI operations under root paths produce PARTIAL HTTP contract candidates with
+explicit contract ID and null service identity. Runtime HTTP bindings are not
+inferred from document titles, servers or repository names. Callback/webhook targets,
+Kafka topic/worker and dataset declarations are not invented from external references.
+Kafka/worker/dataset coverage remains UNSUPPORTED.
 
 `discovery.lookup` accepts an explicit bounded set of authorized repository keys.
 Empty/absent authorization denies access before querying. Limit is 1..200; lookup
@@ -26,3 +28,9 @@ lookup, with full JSON equality protecting against collisions. Reads are statele
 Compound reads require a caller-owned read-only REPEATABLE READ transaction.
 `refresh_discovery` is a CLI/maintenance API for already-published snapshots, including
 backfill after upgrade; it does not load a complete UCM graph or source checkout.
+
+Migration 0026 and projector discovery/2 add sealed-generation guards, full DB
+qualifiers and BPMN targetNamespace precision, preserving the existing JSON-key
+schema and C03 generation contract. The read-only MCP and identifier-oriented API,
+explicit server allowlist, coherent manifests and fingerprint pagination are
+specified in [global-discovery-catalog.md](global-discovery-catalog.md).

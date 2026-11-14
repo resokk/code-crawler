@@ -39,6 +39,7 @@ def pool(monkeypatch: pytest.MonkeyPatch) -> FakePool:
         return fake
 
     monkeypatch.setenv("DATABASE_URL", "postgresql://unused")
+    monkeypatch.delenv("DISCOVERY_REPOSITORY_KEYS", raising=False)
     monkeypatch.setattr(asyncpg, "create_pool", create_pool)
     return fake
 
@@ -50,6 +51,7 @@ def test_server_exposes_structural_tools(pool: FakePool) -> None:
 
     tools = {tool.name: tool for tool in asyncio.run(list_tools())}
     assert set(tools) == {
+        "search_discovery_entries",
         "search_symbols",
         "search_text",
         "find_callers",
@@ -98,3 +100,41 @@ def test_tool_passes_arguments_reads_only_and_reports_errors(
     asyncio.run(run())
     assert calls == [(pool, "app", ID, 7), (pool, "missing", ID, 50)]
     assert pool.transactions == [(True, "repeatable_read"), (True, "repeatable_read")]
+
+
+def test_discovery_fails_closed_without_policy(pool: FakePool) -> None:
+    async def run():
+        async with Client(mcp) as client:
+            with pytest.raises(ToolError, match="explicit allowed scope"):
+                await client.call_tool(
+                    "search_discovery_entries",
+                    {"kind": "SYMBOL", "lookup_key": "app.A"},
+                )
+
+    asyncio.run(run())
+
+
+def test_discovery_passes_server_policy_and_client_narrowing(
+    pool: FakePool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    received = []
+    monkeypatch.setenv("DISCOVERY_REPOSITORY_KEYS", '["one","two"]')
+
+    async def find(conn, kind, lookup_key, **options):
+        received.append((kind, lookup_key, options))
+        return {"items": [], "resolution": "UNRESOLVED"}
+
+    monkeypatch.setattr(search, "search_discovery_entries", find)
+
+    async def run():
+        async with Client(mcp) as client:
+            result = await client.call_tool(
+                "search_discovery_entries",
+                {"kind": "SYMBOL", "lookup_key": "app.A", "repository_keys": ["one"]},
+            )
+            assert result.data["resolution"] == "UNRESOLVED"
+
+    asyncio.run(run())
+    assert received[0][2]["allowed_repository_keys"] == ["one", "two"]
+    assert received[0][2]["repository_keys"] == ["one"]
+    assert pool.transactions == [(True, "repeatable_read")]

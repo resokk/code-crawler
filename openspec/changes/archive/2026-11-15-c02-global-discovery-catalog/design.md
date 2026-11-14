@@ -38,3 +38,16 @@ src/code_crawler/migrations/; src/code_crawler/search.py; src/code_crawler/ucm.p
 
 ## Dependencies
 C01, C03 желательно
+
+## Read API extension after concurrent C02/C03 publication
+
+The existing migration 0022 JSON-key tables and C03 generation/pin contracts are
+preserved. Forward migration 0026 adds sealing guards and a bounded identifier
+lookup index. Projector discovery/2 preserves original lookup kinds and adds full
+DB qualifiers and BPMN targetNamespace from canonical facts. No second catalog
+or replacement baseline migration is introduced.
+
+The read API/MCP requires trusted allowed scope, returns one-statement manifests
+and candidate-only results, and rejects pagination when generation fingerprint
+changes. Existing discovery.lookup and resolver contexts remain compatible.
+Detailed normative contract: docs/global-discovery-catalog.md.

@@ -15,7 +15,12 @@ subtypes, ordered rows, Evidence/Coverage, ссылки и инварианты 
 ожидаемый pointer, переводит прежний PUBLISHED в RETIRED, новый READY в PUBLISHED
 и переключает pointer. При несовпадении ожидания возвращается ValueError.
 Читатель одним запросом published_snapshot видит целиком старую или новую версию.
-Никакие факты при публикации не копируются и не удаляются.
+Канонические факты при публикации не копируются и не удаляются. В этой же
+транзакции строится repository-local [discovery generation](global-discovery-catalog.md).
+Ошибка проекции откатывает и publication pointer. Проекция линейна по symbols/DB/BPMN
+facts нового snapshot; блокировка repository теперь включает эту работу. Остальные
+repositories не блокируются и не переиндексируются. Refresh старых публикаций
+выполняется отдельной CLI-командой; чтение явно сообщает отсутствие поколения.
 
 `rollback_publication` имеет те же аргументы и возвращает ранее RETIRED snapshot
 с receipt. Это единственный дополнительный lifecycle переход RETIRED→PUBLISHED;
