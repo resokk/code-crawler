@@ -128,3 +128,7 @@ per-file adapter profiles/capabilities/reasons/diagnostics. Reports immutable в
 Миграция `0015_per_adapter_invalidation.sql` вводит `ingest_snapshot_adapters`:
 версия и fingerprint каждого адаптера в snapshot, immutable с VALIDATING. См.
 [ucm-incremental.md](ucm-incremental.md).
+
+Миграция `0016_ingest_jobs_recovery.sql` вводит `ingest_jobs` и разрешает очистке
+удалять факты RETIRED snapshots под флагом `code_crawler.gc`. См.
+[ingest-jobs.md](ingest-jobs.md).

@@ -23,6 +23,8 @@ RETIRED snapshot не переиздаётся этой командой: rollba
 Вывод: snapshot_id, repository_id, status, entity_count, current published ID и
 число SourceAnalysis diagnostics по severity. Ошибки выводятся CLI и дают exit 1;
 старый pointer сохраняется при invalid facts, unknown snapshot и CAS conflict.
+Каждый запуск `index-sources` записывает задание; повтор и очистка — в
+[ingest-jobs.md](ingest-jobs.md).
 Неудачная validation может оставить VALIDATING для диагностики; READY после
 CAS conflict сохраняется для явного retry с новым expected-current.
 

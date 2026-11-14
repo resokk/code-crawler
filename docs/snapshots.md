@@ -30,6 +30,7 @@ Migration 0005 требует immutable validation receipt для READY/PUBLISHE
 проверяет соответствие pointer единственному PUBLISHED snapshot при commit.
 Переход RETIRED→PUBLISHED добавлен только для восстановления прежней публикации;
 факты при этом остаются read-only. Новый snapshot не переключает pointer сам.
-Удаление опубликованного snapshot запрещают FK; retention вводится отдельно.
+Удаление опубликованного snapshot запрещают FK; очистка брошенных BUILDING и
+retention RETIRED описаны в [ingest-jobs.md](ingest-jobs.md).
 Канонические факты и их immutable guards описаны в
 [ucm-storage.md](ucm-storage.md), загрузка — в [ucm-ingestion.md](ucm-ingestion.md).

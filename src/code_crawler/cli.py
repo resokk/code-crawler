@@ -2,7 +2,7 @@ import argparse
 import asyncio
 import json
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from uuid import UUID
 
@@ -17,6 +17,7 @@ from code_crawler import (
     db,
     indexer,
     ingestion,
+    jobs,
     legacy,
     publication,
     repos,
@@ -317,6 +318,63 @@ async def snapshot_publish(snapshot_id: UUID, expected_current: UUID | None) -> 
             await conn.close()
 
 
+async def jobs_list() -> None:
+    """Show the most recent ingest jobs with stage, attempt and failure diagnostics."""
+    conn = await db.connect()
+    try:
+        rows = await conn.fetch(
+            "SELECT j.id, r.repository_key, j.state, j.stage, j.attempt, j.snapshot_id, "
+            "j.failure, j.updated_at FROM public.ingest_jobs j "
+            "JOIN public.ucm_repositories r ON r.id=j.repository_id "
+            "ORDER BY j.updated_at DESC LIMIT 50"
+        )
+    finally:
+        await conn.close()
+    console.print_json(
+        json.dumps(
+            [
+                {**row, "failure": row["failure"] and json.loads(row["failure"])}
+                for row in map(dict, rows)
+            ],
+            default=str,
+        )
+    )
+
+
+async def jobs_retry(job_id: UUID) -> None:
+    """Run the next attempt of a failed or abandoned ingest job with its parameters."""
+    conn = await db.connect()
+    try:
+        # Блокировка задания живёт в этом соединении до конца повтора.
+        try:
+            parameters = await jobs.claim(conn, job_id)
+        except ValueError as error:
+            console.print(f"[red]✗[/] Повтор задания: {escape(str(error))}")
+            raise SystemExit(1) from error
+        await index_registered(**parameters, job_id=job_id)
+    finally:
+        await conn.close()
+
+
+async def snapshot_gc(
+    building_older_than: float | None, keep_retired: int | None
+) -> None:
+    """Delete abandoned BUILDING snapshots and RETIRED ones beyond the kept count."""
+    if building_older_than is None and keep_retired is None:
+        raise SystemExit("укажите --building-older-than и/или --keep-retired")
+    with operation("Очистка UCM snapshots"):
+        conn = await db.connect()
+        try:
+            result = await jobs.collect_garbage(
+                conn,
+                building_older_than_hours=building_older_than,
+                keep_retired=keep_retired,
+            )
+        finally:
+            await conn.close()
+        console.print_json(json.dumps(result, default=str))
+
+
 def _expected_pointer(value: str) -> UUID | None:
     if value == "none":
         return None
@@ -334,7 +392,17 @@ async def index_registered(
     naming_policy: str,
     connections: str | None = None,
     publish: bool = False,
+    job_id: UUID | None = None,
 ) -> None:
+    parameters = {
+        "root": root,
+        "repository_key": repository_key,
+        "java_profile": java_profile,
+        "dialect": dialect,
+        "naming_policy": naming_policy,
+        "connections": connections,
+        "publish": publish,
+    }
     with operation("Индексация source adapters") as progress:
         tasks: dict[str, TaskID] = {}
 
@@ -381,12 +449,25 @@ async def index_registered(
                     source=str(path),
                 ),
             )
-            result = await index_sources(conn, repository, path, registry)
-            console.print(f"BUILDING snapshot: {result.snapshot_id}")
-            if publish:
-                await _publish_cli_snapshot(
-                    conn, result.snapshot_id, result.base_snapshot_id
+            if job_id is None:
+                job_id = await jobs.begin(conn, repository, parameters)
+            console.print(f"Ingest job: {job_id}")
+            try:
+                result = await index_sources(conn, repository, path, registry)
+                console.print(f"BUILDING snapshot: {result.snapshot_id}")
+                await jobs.advance(
+                    conn, job_id, "PUBLISH" if publish else "INDEX", result.snapshot_id
                 )
+                if publish:
+                    await _publish_cli_snapshot(
+                        conn, result.snapshot_id, result.base_snapshot_id
+                    )
+            except Exception as error:
+                # Сбой записи статуса не должен скрыть исходную ошибку; reap пометит позже.
+                with suppress(Exception):
+                    await jobs.finish(conn, job_id, error)
+                raise
+            await jobs.finish(conn, job_id)
             await _snapshot_report(conn, result.snapshot_id)
         finally:
             await conn.close()
@@ -472,6 +553,33 @@ def main() -> None:
         "--expected-current", required=True, type=_expected_pointer, metavar="UUID|none"
     )
     publish_parser.set_defaults(run=snapshot_publish)
+    gc_parser = snapshot_commands.add_parser(
+        "gc", help="удалить брошенные BUILDING и старые RETIRED snapshots"
+    )
+    gc_parser.add_argument(
+        "--building-older-than",
+        type=float,
+        metavar="ЧАСЫ",
+        help="удалить BUILDING snapshots старше N часов без работающего задания",
+    )
+    gc_parser.add_argument(
+        "--keep-retired",
+        type=int,
+        metavar="N",
+        help="оставить N последних RETIRED snapshots на репозиторий, остальные удалить",
+    )
+    gc_parser.set_defaults(run=snapshot_gc)
+    job_commands = commands.add_parser(
+        "jobs", help="состояние и повтор заданий индексации"
+    ).add_subparsers(metavar="действие", required=True)
+    job_commands.add_parser("list", help="последние задания").set_defaults(
+        run=jobs_list
+    )
+    retry_parser = job_commands.add_parser(
+        "retry", help="повторить упавшее или брошенное задание"
+    )
+    retry_parser.add_argument("job_id", type=UUID)
+    retry_parser.set_defaults(run=jobs_retry)
     index_parser = commands.add_parser(
         "index", help="построить или обновить индекс репозитория"
     )

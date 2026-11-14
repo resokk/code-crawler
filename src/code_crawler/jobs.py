@@ -1,0 +1,158 @@
+"""Persistent ingest job state, safe retry and snapshot garbage collection."""
+
+import json
+from uuid import UUID, uuid4
+
+import asyncpg
+
+# Первый ключ пары advisory-блокировки; второй — hashtext(id задания).
+_JOB_LOCK = 4_217_002
+_LOCK = "SELECT pg_try_advisory_lock($1, hashtext($2::text))"
+_UNLOCK = "SELECT pg_advisory_unlock($1, hashtext($2::text))"
+
+
+async def begin(
+    conn: asyncpg.Connection, repository_id: UUID, parameters: dict
+) -> UUID:
+    """Record a RUNNING job owned by this session until the connection closes."""
+    job_id = uuid4()
+    # Блокировка сессионная: упавший процесс теряет её сам, и задание можно повторить.
+    await conn.fetchval(_LOCK, _JOB_LOCK, str(job_id))
+    await conn.execute(
+        "INSERT INTO public.ingest_jobs(id,repository_id,parameters) VALUES ($1,$2,$3)",
+        job_id,
+        repository_id,
+        json.dumps(parameters),
+    )
+    return job_id
+
+
+async def claim(conn: asyncpg.Connection, job_id: UUID) -> dict:
+    """Start the next attempt of a failed or abandoned job; return its parameters."""
+    if not await conn.fetchval(_LOCK, _JOB_LOCK, str(job_id)):
+        raise ValueError("ingest job is running in another process")
+    parameters = await conn.fetchval(
+        "UPDATE public.ingest_jobs SET state='RUNNING', stage='INDEX', snapshot_id=NULL, "
+        "attempt=attempt+1, failure=NULL, updated_at=now() "
+        "WHERE id=$1 AND state<>'SUCCEEDED' RETURNING parameters",
+        job_id,
+    )
+    if parameters is None:
+        await conn.fetchval(_UNLOCK, _JOB_LOCK, str(job_id))
+        raise ValueError("ingest job does not exist or has already succeeded")
+    return json.loads(parameters)
+
+
+async def advance(
+    conn: asyncpg.Connection, job_id: UUID, stage: str, snapshot_id: UUID
+) -> None:
+    await conn.execute(
+        "UPDATE public.ingest_jobs SET stage=$2, snapshot_id=$3, updated_at=now() WHERE id=$1",
+        job_id,
+        stage,
+        snapshot_id,
+    )
+
+
+async def finish(
+    conn: asyncpg.Connection, job_id: UUID, error: Exception | None = None
+) -> None:
+    """Close the job as SUCCEEDED, or FAILED with structured failure diagnostics."""
+    failure = None
+    if error is not None:
+        failure = {"type": type(error).__name__, "message": str(error)}
+        for name in ("adapter_key", "stage"):
+            if hasattr(error, name):
+                failure[name] = getattr(error, name)
+        if hasattr(error, "issues"):
+            failure["issues"] = [
+                {"path": issue.path, **issue.diagnostic.model_dump(mode="json")}
+                for issue in error.issues
+            ]
+    await conn.execute(
+        "UPDATE public.ingest_jobs SET state=$2, failure=$3, updated_at=now() WHERE id=$1",
+        job_id,
+        "FAILED" if error is not None else "SUCCEEDED",
+        json.dumps(failure) if failure else None,
+    )
+    await conn.fetchval(_UNLOCK, _JOB_LOCK, str(job_id))
+
+
+async def reap(conn: asyncpg.Connection) -> list[UUID]:
+    """Mark RUNNING jobs whose owning process is gone as FAILED."""
+    reaped = []
+    for row in await conn.fetch(
+        "SELECT id FROM public.ingest_jobs WHERE state='RUNNING'"
+    ):
+        if await conn.fetchval(_LOCK, _JOB_LOCK, str(row["id"])):
+            await finish(
+                conn, row["id"], RuntimeError("process ended without reporting")
+            )
+            reaped.append(row["id"])
+    return reaped
+
+
+async def _delete_snapshots(conn: asyncpg.Connection, ids: list[UUID]) -> None:
+    tables = await conn.fetch(
+        "SELECT format('%I', c.relname) AS name FROM pg_attribute a "
+        "JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace "
+        "WHERE n.nspname='public' AND c.relkind='r' AND a.attname='snapshot_id' "
+        "AND NOT a.attisdropped AND c.relname<>'ingest_jobs' ORDER BY 1"
+    )
+    # shortcut: row-by-row guarded deletes, slow on huge snapshots; partition by
+    # snapshot and drop partitions when GC time starts to matter.
+    for table in tables:
+        await conn.execute(
+            f"DELETE FROM public.{table['name']} WHERE snapshot_id=ANY($1)", ids
+        )
+    await conn.execute("DELETE FROM public.ucm_snapshots WHERE id=ANY($1)", ids)
+
+
+async def collect_garbage(
+    conn: asyncpg.Connection,
+    *,
+    building_older_than_hours: float | None = None,
+    keep_retired: int | None = None,
+) -> dict[str, list[UUID]]:
+    """Delete abandoned BUILDING snapshots and RETIRED ones beyond the kept count.
+
+    PUBLISHED, READY and VALIDATING snapshots are never touched.
+    """
+    result: dict[str, list[UUID]] = {"reaped_jobs": await reap(conn)}
+    async with conn.transaction():
+        await conn.execute("SET CONSTRAINTS ALL DEFERRED")
+        await conn.execute("SET LOCAL code_crawler.gc = 'on'")
+        building = []
+        if building_older_than_hours is not None:
+            if building_older_than_hours < 0:
+                raise ValueError("building age must not be negative")
+            # FOR UPDATE: параллельная validation не успеет увести snapshot из BUILDING.
+            building = [
+                r["id"]
+                for r in await conn.fetch(
+                    "SELECT s.id FROM public.ucm_snapshots s WHERE s.state='BUILDING' "
+                    "AND s.created_at <= now() - make_interval(secs => $1) "
+                    "AND NOT EXISTS (SELECT 1 FROM public.ingest_jobs j WHERE "
+                    "j.repository_id=s.repository_id AND j.state='RUNNING') FOR UPDATE",
+                    building_older_than_hours * 3600,
+                )
+            ]
+        retired = []
+        if keep_retired is not None:
+            if keep_retired < 0:
+                raise ValueError("kept RETIRED count must not be negative")
+            retired = [
+                r["id"]
+                for r in await conn.fetch(
+                    "SELECT id FROM public.ucm_snapshots WHERE id IN (SELECT id FROM ("
+                    "SELECT id, row_number() OVER (PARTITION BY repository_id "
+                    "ORDER BY created_at DESC, id) AS position FROM public.ucm_snapshots "
+                    "WHERE state='RETIRED') ranked WHERE position > $1) FOR UPDATE",
+                    keep_retired,
+                )
+            ]
+        if building or retired:
+            await _delete_snapshots(conn, building + retired)
+    result["building"] = building
+    result["retired"] = retired
+    return result
