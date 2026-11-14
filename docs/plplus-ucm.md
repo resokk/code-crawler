@@ -27,6 +27,8 @@ CALLS relations имеют PARTIAL/AMBIGUOUS candidates и UNKNOWN certainty, н
 proof применимости перегрузки. Missing targets — typed ExternalReferences.
 prepare строит каталог из captured bytes; его fingerprint входит в analysis_version,
 чтобы добавление/удаление/изменение definitions инвалидировало stale candidates.
+Каталог хранит только definitions; parse tree файла живёт лишь на время его
+обработки, поэтому каждый файл разбирается дважды — для каталога и для анализа.
 
 ## CFT accesses
 

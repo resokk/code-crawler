@@ -3,7 +3,8 @@
 import hashlib
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from functools import cache
 
 from antlr4 import ParserRuleContext
 
@@ -45,6 +46,8 @@ _QUERIES = {
 _CALLABLES = ("FunctionDeclaration", "ProcedureDeclaration")
 
 
+# Вызывается на каждый факт: один общий неизменяемый экземпляр вместо копии на факт.
+@cache
 def capabilities(error: bool = False) -> tuple[Coverage, ...]:
     return tuple(
         Coverage(
@@ -760,33 +763,77 @@ class _Unit:
         )
 
 
-def build_plplus(
+@dataclass(frozen=True)
+class _Entry:
+    """What other files see of a unit; its parse tree and frames are not kept."""
+
+    source: SourceInput
+    valid: bool
+    context: tuple | None
+    functions: tuple[_Function, ...]
+    section: Symbol | None
+    section_frame: None = None
+
+
+def _built(source: SourceInput) -> _Unit:
+    unit = _Unit(source, parse_plplus(source))
+    unit.build()
+    return unit
+
+
+def catalog_plplus(
     sources: tuple[SourceInput, ...],
-) -> tuple[str, dict[str, AdapterFileResult]]:
-    """Build a captured-source catalog and immutable per-file adapter results."""
-    units = []
+) -> tuple[str, tuple[_Entry, ...]]:
+    """Build the cross-file catalog of captured sources and its version."""
+    entries, definitions = [], []
     for source in sorted(sources, key=lambda s: s.file.path):
-        units.append(_Unit(source, parse_plplus(source)))
-        tick("PL/Plus: разбор", len(sources))
-    for unit in units:
-        unit.build()
-        tick("PL/Plus: символы", len(units))
-    definitions = [
-        (
-            u.source.file.path,
-            u.valid,
-            [(f.symbol.id, f.symbol.model_dump(mode="json")) for f in u.functions],
+        unit = _built(source)
+        entries.append(
+            _Entry(
+                source,
+                unit.valid,
+                unit.context,
+                tuple(replace(f, frame=None) for f in unit.functions),
+                getattr(unit, "section", None),
+            )
         )
-        for u in units
-    ]
+        definitions.append(
+            (
+                source.file.path,
+                unit.valid,
+                [
+                    (f.symbol.id, f.symbol.model_dump(mode="json"))
+                    for f in unit.functions
+                ],
+            )
+        )
+        tick("PL/Plus: каталог", len(sources))
     version = (
         "plplus/1:antlr/4.13.2:catalog/"
         + hashlib.sha256(
             json.dumps(definitions, sort_keys=True, ensure_ascii=False).encode()
         ).hexdigest()
     )
-    for unit in units:
-        if unit.valid:
-            unit.references(unit.parsed.tree, units)
-        tick("PL/Plus: ссылки", len(units))
-    return version, {u.source.file.path: u.result() for u in units}
+    return version, tuple(entries)
+
+
+def analyze_plplus(
+    source: SourceInput, catalog: tuple[_Entry, ...]
+) -> AdapterFileResult:
+    """Extract one file against the catalog."""
+    # Файл разбирается заново: деревья всего репозитория в память не помещаются.
+    unit = _built(source)
+    if unit.valid:
+        unit.references(unit.parsed.tree, catalog)
+    return unit.result()
+
+
+def build_plplus(
+    sources: tuple[SourceInput, ...],
+) -> tuple[str, dict[str, AdapterFileResult]]:
+    """Build a captured-source catalog and immutable per-file adapter results."""
+    version, catalog = catalog_plplus(sources)
+    return version, {
+        entry.source.file.path: analyze_plplus(entry.source, catalog)
+        for entry in catalog
+    }

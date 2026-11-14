@@ -14,8 +14,8 @@ from code_crawler import (
     database_schema,
     datamodel,
     db,
-    incremental,
     indexer,
+    ingestion,
     legacy,
     repos,
     snapshots,
@@ -277,7 +277,7 @@ async def index_registered(
             if total is not None:
                 progress.advance(tasks[stage])
 
-        incremental.progress.set(advance)
+        ingestion.progress.set(advance)
         path = await asyncio.to_thread(Path(root).resolve, strict=True)
         assignments = ()
         if connections is not None:

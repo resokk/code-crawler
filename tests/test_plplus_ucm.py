@@ -393,10 +393,10 @@ def test_assignment_alias_targets_are_writes():
 
 
 def test_build_reports_each_file_once_per_stage():
-    from code_crawler import incremental
+    from code_crawler import ingestion
 
     seen = []
-    token = incremental.progress.set(lambda stage, total: seen.append((stage, total)))
+    token = ingestion.progress.set(lambda stage, total: seen.append((stage, total)))
     try:
         # Адаптер считает в рабочем потоке: проверяем, что подписка туда доходит.
         asyncio.run(
@@ -405,6 +405,6 @@ def test_build_reports_each_file_once_per_stage():
             )
         )
     finally:
-        incremental.progress.reset(token)
-    stages = ("PL/Plus: разбор", "PL/Plus: символы", "PL/Plus: ссылки")
+        ingestion.progress.reset(token)
+    stages = ("PL/Plus: каталог",)
     assert seen == [(stage, 2) for stage in stages for _ in range(2)]

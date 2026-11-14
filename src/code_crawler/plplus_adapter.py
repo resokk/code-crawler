@@ -1,12 +1,10 @@
 """Captured PL/Plus producer for the canonical source adapter registry."""
 
 import asyncio
-from collections.abc import Mapping
 from dataclasses import dataclass
-from types import MappingProxyType
 
-from code_crawler.incremental import SourceInput
-from code_crawler.plplus_ucm import build_plplus, capabilities
+from code_crawler.incremental import SourceInput, tick
+from code_crawler.plplus_ucm import analyze_plplus, capabilities, catalog_plplus
 from code_crawler.source_adapters import (
     AdapterDescriptor,
     AdapterFileResult,
@@ -35,16 +33,26 @@ class PlplusSourceAdapter:
         )
 
     async def prepare(self, sources: tuple[SourceInput, ...]) -> PreparedAdapter:
-        version, results = await asyncio.to_thread(build_plplus, sources)
-        return _PreparedPlplus(version, MappingProxyType(results))
+        version, catalog = await asyncio.to_thread(catalog_plplus, sources)
+        return _PreparedPlplus(version, catalog)
 
 
 @dataclass(frozen=True)
 class _PreparedPlplus:
     analysis_version: str
-    results: Mapping[str, AdapterFileResult]
+    catalog: tuple
 
     async def __call__(
         self, sources: tuple[SourceInput, ...]
     ) -> tuple[AdapterFileResult, ...]:
-        return tuple(self.results[source.file.path] for source in sources)
+        captured = {entry.source.file.path: entry.source for entry in self.catalog}
+
+        def analyze() -> tuple[AdapterFileResult, ...]:
+            results = []
+            for source in sources:
+                # KeyError, как и раньше: файл вне каталога анализировать нельзя.
+                results.append(analyze_plplus(captured[source.file.path], self.catalog))
+                tick("PL/Plus: анализ", len(sources))
+            return tuple(results)
+
+        return await asyncio.to_thread(analyze)

@@ -10,7 +10,6 @@ import stat
 from collections import defaultdict, deque
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import ExitStack
-from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from uuid import UUID
@@ -19,7 +18,7 @@ import asyncpg
 from pydantic import model_validator
 
 from code_crawler import repos, snapshots
-from code_crawler.ingestion import UcmBatch, _ingest_records, _records
+from code_crawler.ingestion import UcmBatch, _ingest_records, recheck, tick
 from code_crawler.publication import load_snapshot_batch
 from code_crawler.source_routing import source_language, valid_suffix
 from code_crawler.ucm import (
@@ -87,18 +86,6 @@ class _Worktree:
     dirty: bool
     sources: tuple[SourceInput, ...]
     fingerprint: str
-
-
-# Прогресс — забота интерфейса: контекст не меняет контракты адаптеров и анализаторов.
-progress: ContextVar[Callable[[str, int | None], None] | None] = ContextVar(
-    "progress", default=None
-)
-
-
-def tick(stage: str, total: int | None = None) -> None:
-    """Report one processed item of a counted stage, or the start of an uncounted one."""
-    if (callback := progress.get()) is not None:
-        callback(stage, total)
 
 
 def _hash(value: object) -> str:
@@ -249,9 +236,9 @@ def _assemble(
     plan: IncrementalPlan,
     analyses: tuple[FileAnalysis, ...],
 ) -> tuple[UcmBatch, dict[str, str], set[tuple[str, str]]]:
-    analyses = tuple(
-        FileAnalysis.model_validate_json(a.model_dump_json()) for a in analyses
-    )
+    for analysis in analyses:
+        recheck(analysis)
+        tick("Сборка снимка", len(analyses))
     if len({a.path for a in analyses}) != len(analyses) or {
         a.path for a in analyses
     } != set(plan.reanalyze):
@@ -277,6 +264,7 @@ def _assemble(
             for path in analysis.dependencies
             if path != analysis.path
         )
+    tick("Проверка снимка")
     batch = UcmBatch(repository_id=repository_id, entities=tuple(entities))
     for entity in batch.entities:
         for target in _references(entity.model_dump(mode="json")):
@@ -413,7 +401,6 @@ async def index_incremental(
     selected_paths = set(plan.reanalyze)
     selected = tuple(s for s in captured.sources if s.file.path in selected_paths)
     analyses = await analyze(selected) if selected else ()
-    tick("Сборка снимка")
     batch, owners, dependency_pairs = await asyncio.to_thread(
         _assemble,
         repository_id,
@@ -432,7 +419,6 @@ async def index_incremental(
         checked.fingerprint,
     ):
         raise ValueError("worktree changed during analysis")
-    tick("Запись в БД")
     snap = await snapshots.create_snapshot(
         conn,
         repository_id,
@@ -443,9 +429,8 @@ async def index_incremental(
             dirty=captured.dirty,
         ),
     )
-    records = await asyncio.to_thread(_records, snap, batch)
     async with conn.transaction():
-        await _ingest_records(conn, snap, repository_id, records)
+        await _ingest_records(conn, snap, batch)
         await conn.execute(
             "INSERT INTO public.ingest_snapshot_profiles(snapshot_id,analysis_version,profile_sha256) VALUES ($1,$2,$3)",
             snap,

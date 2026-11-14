@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
+from code_crawler import ingestion
 from code_crawler.ingestion import UcmBatch
 from code_crawler.ucm import (
     EntityType,
@@ -91,3 +92,29 @@ def test_batch_roundtrip_and_empty_batch(
     batch = ucm_batch_factory(uuid4())
     assert UcmBatch.model_validate_json(batch.model_dump_json()) == batch
     assert UcmBatch(repository_id=uuid4(), entities=()).entities == ()
+
+
+def test_chunked_records_match_single_pass_and_recheck_unvalidated_models(
+    ucm_batch_factory: Callable[[UUID], UcmBatch], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    batch = ucm_batch_factory(uuid4())
+    snapshot = uuid4()
+    whole = list(ingestion._record_chunks(snapshot, batch))
+    assert len(whole) == 1
+    monkeypatch.setattr(ingestion, "_CHUNK", 1)
+    chunks = list(ingestion._record_chunks(snapshot, batch))
+    assert len(chunks) == len(batch.entities)
+    merged: dict[str, list[dict]] = {}
+    for chunk in chunks:
+        for table, rows in chunk.items():
+            merged.setdefault(table, []).extend(rows)
+    assert merged == whole[0]
+
+    entity = batch.entities[0]
+    assert ingestion.recheck(entity) is entity
+    unchecked = UcmBatch.model_construct(
+        repository_id=batch.repository_id,
+        entities=(type(entity).model_construct(**{**entity.model_dump(), "id": "x"}),),
+    )
+    with pytest.raises(ValidationError):
+        list(ingestion._record_chunks(snapshot, unchecked))

@@ -9,7 +9,7 @@ import asyncpg
 
 from code_crawler import indexer, snapshots
 from code_crawler.incremental import _capture, _Worktree
-from code_crawler.ingestion import UcmBatch, _ingest_records, _records
+from code_crawler.ingestion import UcmBatch, _ingest_records
 from code_crawler.publication import publish_snapshot, validate_snapshot
 from code_crawler.ucm import (
     Certainty,
@@ -303,9 +303,8 @@ async def migrate_index(
             dirty=captured.dirty,
         ),
     )
-    records = await asyncio.to_thread(_records, snap, batch)
     async with conn.transaction():
-        await _ingest_records(conn, snap, repo, records)
+        await _ingest_records(conn, snap, batch)
         await conn.copy_records_to_table(
             "ingest_legacy_nodes",
             schema_name="public",

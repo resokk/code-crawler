@@ -3,6 +3,8 @@
 import asyncio
 import json
 from collections import defaultdict
+from collections.abc import Callable, Iterator
+from contextvars import ContextVar
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -42,6 +44,17 @@ from code_crawler.ucm import (
     validate_external_reference,
     validate_relation_endpoints,
 )
+
+# Прогресс — забота интерфейса: контекст не меняет контракты адаптеров и анализаторов.
+progress: ContextVar[Callable[[str, int | None], None] | None] = ContextVar(
+    "progress", default=None
+)
+
+
+def tick(stage: str, total: int | None = None) -> None:
+    """Report one processed item of a counted stage, or the start of an uncounted one."""
+    if (callback := progress.get()) is not None:
+        callback(stage, total)
 
 
 class UcmBatch(ContractModel):
@@ -508,9 +521,38 @@ def _range(source_range: SourceRange | None) -> tuple:
     )
 
 
-def _records(snapshot_id: UUID, batch: UcmBatch) -> dict[str, list[dict]]:
-    # Reparse JSON so even instances built via model_construct/model_copy are checked.
-    batch = UcmBatch.model_validate_json(batch.model_dump_json())
+# Сущностей на порцию: ограничивает строки, которые одновременно лежат в памяти.
+_CHUNK = 20_000
+
+
+def recheck[M: ContractModel](model: M) -> M:
+    """Reparse JSON so model_construct/model_copy instances are checked, keeping no copy."""
+    if type(model).model_validate_json(model.model_dump_json()) != model:
+        raise ValueError("model changes under strict JSON revalidation")
+    return model
+
+
+def _record_chunks(
+    snapshot_id: UUID, batch: UcmBatch
+) -> Iterator[dict[str, list[dict]]]:
+    """Recheck the whole batch, then yield normalized rows chunk by chunk."""
+    starts = range(0, len(batch.entities), _CHUNK)
+    for start in starts:
+        for entity in batch.entities[start : start + _CHUNK]:
+            recheck(entity)
+        tick("Перепроверка сущностей", len(starts))
+    tick("Проверка снимка")
+    batch = UcmBatch(repository_id=batch.repository_id, entities=batch.entities)
+    for start in starts:
+        yield _rows(
+            snapshot_id, batch.repository_id, batch.entities[start : start + _CHUNK]
+        )
+        tick("Запись в БД: загрузка", len(starts))
+
+
+def _rows(
+    snapshot_id: UUID, repository_id: UUID, entities: tuple[Entity, ...]
+) -> dict[str, list[dict]]:
     rows: dict[str, list[dict]] = defaultdict(list)
 
     def add(table: str, **fields: object) -> None:
@@ -528,14 +570,14 @@ def _records(snapshot_id: UUID, batch: UcmBatch) -> dict[str, list[dict]]:
                 target_symbol_id=ref.target_symbol_id,
             )
 
-    for entity in batch.entities:
+    for entity in entities:
         file_id, start_line, start_column, end_line, end_column = _range(
             entity.source_range
         )
         add(
             "ucm_entities",
             entity_id=entity.id,
-            repository_id=batch.repository_id,
+            repository_id=repository_id,
             contract_version=entity.contract_version,
             entity_type=entity.entity_type.value,
             logical_key=entity.logical_key,
@@ -1002,19 +1044,18 @@ async def ingest_batch(
         raise ValueError(
             "ingest_batch requires a connection without an active transaction"
         )
-    rows = await asyncio.to_thread(_records, snapshot_id, batch)
     async with conn.transaction():
-        await _ingest_records(conn, snapshot_id, batch.repository_id, rows)
+        await _ingest_records(conn, snapshot_id, batch)
     return {entity.id: (snapshot_id, entity.id) for entity in batch.entities}
 
 
 async def _ingest_records(
     conn: asyncpg.Connection,
     snapshot_id: UUID,
-    repository_id: UUID,
-    rows: dict[str, list[dict]],
+    batch: UcmBatch,
 ) -> None:
-    """Write normalized records inside the caller's transaction."""
+    """Validate the batch and write its records inside the caller's transaction."""
+    repository_id = batch.repository_id
     snapshot = await conn.fetchrow(
         "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1 FOR UPDATE",
         snapshot_id,
@@ -1029,26 +1070,32 @@ async def _ingest_records(
     ):
         raise ValueError("ingestion requires an empty snapshot")
     prefix = "ingest_" + uuid4().hex
-    stages = {}
-    for table, records in rows.items():
-        stage = prefix + "_" + table.removeprefix("ucm_")
-        stages[table] = stage
-        await conn.execute(
-            f"CREATE TEMP TABLE {stage} (LIKE public.{table} INCLUDING DEFAULTS) ON COMMIT DROP"
-        )
-        columns = tuple(records[0])
-        await conn.copy_records_to_table(
-            stage,
-            schema_name="pg_temp",
-            columns=columns,
-            records=[tuple(row[column] for column in columns) for row in records],
-        )
+    stages: dict[str, tuple[str, str]] = {}
+    chunks = _record_chunks(snapshot_id, batch)
+    # Подготовка порции нагружает процессор; в потоке она не блокирует цикл событий.
+    while (rows := await asyncio.to_thread(next, chunks, None)) is not None:
+        for table, records in rows.items():
+            columns = tuple(records[0])
+            if table not in stages:
+                stage = prefix + "_" + table.removeprefix("ucm_")
+                stages[table] = (stage, ",".join(columns))
+                await conn.execute(
+                    f"CREATE TEMP TABLE {stage} (LIKE public.{table} INCLUDING DEFAULTS) ON COMMIT DROP"
+                )
+            await conn.copy_records_to_table(
+                stages[table][0],
+                schema_name="pg_temp",
+                columns=columns,
+                records=[tuple(row[column] for column in columns) for row in records],
+            )
     # Envelope IDs first; deferred FKs allow cyclic subtype references in pass two.
-    for table in ["ucm_entities", *(t for t in rows if t != "ucm_entities")]:
-        if table not in rows:
+    for table in ["ucm_entities", *(t for t in stages if t != "ucm_entities")]:
+        if table not in stages:
             continue
-        columns = ",".join(rows[table][0])
+        stage, columns = stages[table]
         await conn.execute(
-            f"INSERT INTO public.{table} ({columns}) SELECT {columns} FROM pg_temp.{stages[table]}"
+            f"INSERT INTO public.{table} ({columns}) SELECT {columns} FROM pg_temp.{stage}"
         )
+        tick("Запись в БД: перенос", len(stages))
+    tick("Запись в БД: проверка связей")
     await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")

@@ -20,7 +20,9 @@ from code_crawler.incremental import (
     _capture,
     _path,
     index_incremental,
+    tick,
 )
+from code_crawler.ingestion import recheck
 from code_crawler.source_routing import source_language, valid_suffix
 from code_crawler.ucm import (
     ContractModel,
@@ -352,10 +354,9 @@ class PreparedSourceRegistry:
             not isinstance(result, AdapterFileResult) for result in results
         ):
             raise ValueError("adapter must return tuple[AdapterFileResult]")
-        results = tuple(
-            AdapterFileResult.model_validate_json(result.model_dump_json())
-            for result in results
-        )
+        for result in results:
+            recheck(result)
+            tick(f"Проверка {descriptor.key}: формат", len(results))
         source_by_path = {source.file.path: source for source in sources}
         paths = [result.analysis.path for result in results]
         if len(set(paths)) != len(paths) or set(paths) != set(source_by_path):
@@ -453,6 +454,7 @@ class PreparedSourceRegistry:
                     dependencies=result.analysis.dependencies,
                 )
             )
+            tick(f"Проверка {descriptor.key}: факты", len(results))
         return tuple(output)
 
 

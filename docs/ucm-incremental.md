@@ -56,7 +56,8 @@ snapshot metadata может остаться после DB failure; части�
 Если baseline pointer успел измениться, CAS не позволит затереть новую публикацию.
 
 Переиспользуется разбор, но итоговый полный batch всё ещё читается/хранится в
-памяти и загружается COPY в новый snapshot целиком. Server-side row cloning,
+памяти одним экземпляром; в новый snapshot он загружается COPY порциями в одной
+транзакции (см. [ucm-ingestion.md](ucm-ingestion.md)). Server-side row cloning,
 streaming, CLI switch и language-specific extraction/resolution — следующие
 changes. Для полной локальной resolution adapter может использовать собственный
 контекст; callback обязан вернуть факты каждого запрошенного файла ровно один раз.
