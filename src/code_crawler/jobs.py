@@ -26,6 +26,8 @@ _SNAPSHOT_TABLES = (
     "search_index_generations",
     "search_documents",
     "search_index_publications",
+    "search_discovery_entries",
+    "search_discovery_generations",
     "ucm_coverage_reasons",
     "ucm_data_accesses",
     "ucm_database_accesses",

@@ -9,6 +9,7 @@ from uuid import UUID
 import asyncpg
 from pydantic import TypeAdapter
 
+from code_crawler.discovery import build_generation
 from code_crawler.ingestion import UcmBatch
 from code_crawler.source_evidence import require_source_archive
 from code_crawler.ucm import Entity, shared_values
@@ -481,6 +482,10 @@ async def _publish(
         if target is None or target["repository_id"] != repository_id:
             raise ValueError("snapshot missing or belongs to another repository")
         if current == snapshot_id and target["state"] == "PUBLISHED":
+            if await conn.fetchval(
+                "SELECT to_regclass('public.search_discovery_generations')"
+            ):
+                await build_generation(conn, snapshot_id)
             return
         required = "RETIRED" if rollback else "READY"
         if target["state"] != required:
@@ -503,6 +508,11 @@ async def _publish(
             repository_id,
             snapshot_id,
         )
+        # Historical migration-prefix benchmarks intentionally predate discovery storage.
+        if await conn.fetchval(
+            "SELECT to_regclass('public.search_discovery_generations')"
+        ):
+            await build_generation(conn, snapshot_id)
 
 
 async def publish_snapshot(
