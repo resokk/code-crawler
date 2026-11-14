@@ -16,3 +16,6 @@ uv run code-crawler-server
 выбранный в БД legacy/UCM backend. Он пока доступен через CLI `show-index` и
 библиотечный API; новых MCP tools этот change не добавляет. Нормативный UCM query
 engine и MCP-инструменты будут отдельными changes.
+
+Структурные запросы по опубликованному UCM snapshot — библиотечный API
+`code_crawler.search`, см. [structural-search.md](structural-search.md).
