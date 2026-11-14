@@ -43,7 +43,7 @@ async def _query(
     async with ctx.lifespan_context["pool"].acquire() as conn:
         try:
             # Сервер индексы только читает: транзакция не даст запросу что-то записать.
-            async with conn.transaction(readonly=True):
+            async with conn.transaction(isolation="repeatable_read", readonly=True):
                 return await run(conn)
         except ValueError as error:
             raise ToolError(str(error)) from error

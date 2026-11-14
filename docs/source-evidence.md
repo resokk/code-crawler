@@ -48,3 +48,7 @@ CLI snapshot reports показывают source_evidence status и число a
 a также commit/fingerprint/dirty. Source bytes retrieval API не публикует секреты
 в логи и пока не является MCP-инструментом. Access control — следующий production
 change; существующая модель доступа PostgreSQL сохраняется.
+
+Отсутствие bytes исторической публикации имеет отдельный exception
+`SourceUnavailableError` (subclass ValueError), чтобы reader мог отличить legacy
+unavailability от integrity/range errors. Typed read API: [canonical-read.md](canonical-read.md).

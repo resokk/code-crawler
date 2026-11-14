@@ -29,7 +29,8 @@ snapshot в память; публикация короткая, не повто
 процесса до receipt snapshot остаётся VALIDATING и может пройти validation снова.
 При потере ответа после commit вызывающий код перечитывает pointer перед новым
 CAS-запросом. Для согласованного чтения фактов нескольких запросов клиент должен
-закреплять выбранный snapshot_id (или использовать read transaction).
+использовать `reader.published_reader` (read-only REPEATABLE READ), закрепляющий
+выбранную publication на весь compound read. Контракт: [canonical-read.md](canonical-read.md).
 
 Migration 0005 добавляет receipts, lifecycle guard и deferred pointer constraints;
 старые migration-файлы не меняются. Legacy writer/CLI продолжают работать.

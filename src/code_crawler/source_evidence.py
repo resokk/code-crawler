@@ -16,6 +16,10 @@ if TYPE_CHECKING:
     from code_crawler.incremental import SourceInput
 
 
+class SourceUnavailableError(ValueError):
+    """A historical publication has no archived bytes; integrity failures are different."""
+
+
 async def archive_sources(
     conn: asyncpg.Connection,
     snapshot_id: UUID,
@@ -145,7 +149,7 @@ async def read_source_file(
     if row["state"] not in ("PUBLISHED", "RETIRED"):
         raise ValueError("source evidence requires a PUBLISHED/RETIRED snapshot")
     if row["content"] is None:
-        raise ValueError("source bytes unavailable for historical snapshot")
+        raise SourceUnavailableError("source bytes unavailable for historical snapshot")
     content = bytes(row["content"])
     digest = await asyncio.to_thread(lambda: hashlib.sha256(content).hexdigest())
     if digest != row["content_sha256"]:

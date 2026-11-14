@@ -51,3 +51,9 @@ TABLE, с `column` — уровня COLUMN.
   только `limit` и `truncated`.
 - У неразрешённого вызова нет имени цели; место вызова есть в `evidence`.
 - Планы запросов, индексы и baseline latency: [query-indexes.md](query-indexes.md).
+
+Для полных typed UCM entities (включая SQL bindings) и compound read закреплённой
+публикации используется [canonical-read.md](canonical-read.md). Проекции этого
+модуля сохраняют прежний контракт; внутри published_reader transaction их запросы
+также видят один MVCC snapshot. get_evidence здесь возвращает метаданные связи;
+точные archived source bytes восстанавливает typed reader.

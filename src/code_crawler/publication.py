@@ -77,7 +77,7 @@ def _reference(row: dict, prefix: str) -> dict | None:
     return {"id": row[prefix + "_id"], "entity_type": row[prefix + "_type"]}
 
 
-def _restore(repository_id: UUID, tables: dict[str, list[dict]]) -> UcmBatch:
+def _restore_documents(tables: dict[str, list[dict]]) -> list[dict]:
     subtypes = {
         kind: {row["entity_id"]: row for row in tables[table]}
         for kind, table in _SUBTYPES.items()
@@ -348,6 +348,11 @@ def _restore(repository_id: UUID, tables: dict[str, list[dict]]) -> UcmBatch:
         rows for rows in auxiliary.values()
     ):
         raise ValueError("unconsumed canonical rows")
+    return documents
+
+
+def _restore(repository_id: UUID, tables: dict[str, list[dict]]) -> UcmBatch:
+    documents = _restore_documents(tables)
     return UcmBatch.model_validate_json(
         json.dumps(
             {"repository_id": str(repository_id), "entities": documents},

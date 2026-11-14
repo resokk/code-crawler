@@ -35,7 +35,7 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 
 - Каждый инструмент принимает `repository_key` и читает только опубликованный
   snapshot этого репозитория. Сервер ничего не пишет: запрос идёт в read-only
-  транзакции.
+  REPEATABLE READ транзакции.
 - Аргументы проверяются до запроса: ID сущностей — `ucm:` и 64 hex-символа,
   `limit` — 1–200, `depth` — 1–6, `offset` — 0–1000. Путей к файлам инструменты не принимают.
 - Неполнота явная: `truncated`, `resolution`/`reason`/`candidates` у связей,
@@ -48,3 +48,7 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 
 Переходный stateless reader `code_crawler.legacy.read_graph` поддерживает
 выбранный в БД legacy/UCM backend и доступен через CLI `show-index`.
+
+Один tool call читает согласованную MVCC версию, включая concurrent publication/GC.
+Полный типизированный библиотечный reader и source proof retrieval описаны в
+[canonical-read.md](canonical-read.md); формат существующих MCP tools не меняется.

@@ -16,15 +16,15 @@ class FakePool:
     """Stands in for asyncpg: tools are wired to search functions patched per test."""
 
     def __init__(self) -> None:
-        self.transactions: list[bool] = []
+        self.transactions: list[tuple[bool, str]] = []
 
     @asynccontextmanager
     async def acquire(self):
         yield self
 
     @asynccontextmanager
-    async def transaction(self, *, readonly: bool):
-        self.transactions.append(readonly)
+    async def transaction(self, *, readonly: bool, isolation: str):
+        self.transactions.append((readonly, isolation))
         yield
 
     async def close(self) -> None:
@@ -97,4 +97,4 @@ def test_tool_passes_arguments_reads_only_and_reports_errors(
 
     asyncio.run(run())
     assert calls == [(pool, "app", ID, 7), (pool, "missing", ID, 50)]
-    assert pool.transactions == [True, True]
+    assert pool.transactions == [(True, "repeatable_read"), (True, "repeatable_read")]
