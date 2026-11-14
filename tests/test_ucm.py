@@ -123,3 +123,18 @@ def test_exported_schema_is_current_and_covers_registry() -> None:
         kind.value for kind in EntityType
     }
     assert schema["$defs"]["SourceFile"]["additionalProperties"] is False
+
+
+def test_shared_values_collapse_equal_instances_only_inside_a_pool() -> None:
+    from code_crawler.ucm import Position, shared_values
+
+    assert Position(line=1, byte_column=2) is not Position(line=1, byte_column=2)
+    token = shared_values.set({})
+    try:
+        first = Position(line=1, byte_column=2)
+        assert Position(line=1, byte_column=2) is first
+        assert Position.model_validate_json('{"line":1,"byte_column":2}') is first
+        assert Position(line=1, byte_column=3) is not first
+    finally:
+        shared_values.reset(token)
+    assert Position(line=1, byte_column=2) is not first

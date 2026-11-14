@@ -11,7 +11,7 @@ from pydantic import TypeAdapter
 
 from code_crawler.ingestion import UcmBatch
 from code_crawler.source_evidence import require_source_archive
-from code_crawler.ucm import Entity
+from code_crawler.ucm import Entity, shared_values
 
 _SUBTYPES = {
     "SOURCE_ANALYSIS": "ucm_source_analyses",
@@ -370,10 +370,14 @@ _ENTITY = TypeAdapter(Entity)
 def _restore(repository_id: UUID, tables: dict[str, list[dict]]) -> UcmBatch:
     # По одной сущности через строгий JSON: один JSON на весь snapshot занимал
     # сотни мегабайт сверх самих моделей.
-    entities = tuple(
-        _ENTITY.validate_json(json.dumps(document, ensure_ascii=False))
-        for document in _documents(tables)
-    )
+    token = shared_values.set({})
+    try:
+        entities = tuple(
+            _ENTITY.validate_json(json.dumps(document, ensure_ascii=False))
+            for document in _documents(tables)
+        )
+    finally:
+        shared_values.reset(token)
     return UcmBatch(repository_id=repository_id, entities=entities)
 
 

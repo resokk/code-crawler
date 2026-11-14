@@ -3,6 +3,7 @@
 import hashlib
 import json
 from collections.abc import Mapping
+from contextvars import ContextVar
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Annotated, Literal, Self
@@ -56,12 +57,30 @@ class ContractModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
 
-class Position(ContractModel):
+# Пул одинаковых значений на время одной операции; None — значения не разделяются.
+shared_values: ContextVar[dict | None] = ContextVar("shared_values", default=None)
+
+
+class SharedValue(ContractModel):
+    """Small frozen value repeated across many entities.
+
+    While `shared_values` holds a pool, equal instances collapse into one object:
+    a restored snapshot has hundreds of thousands of identical positions,
+    references and coverages.
+    """
+
+    @model_validator(mode="after")
+    def _shared(self) -> Self:
+        pool = shared_values.get()
+        return self if pool is None else pool.setdefault(self, self)
+
+
+class Position(SharedValue):
     line: int = Field(ge=1)
     byte_column: int = Field(ge=0)
 
 
-class SourceRange(ContractModel):
+class SourceRange(SharedValue):
     source_file_id: EntityId
     start: Position
     end: Position
@@ -236,12 +255,12 @@ class Operation(EntityEnvelope):
         return self
 
 
-class EntityRef(ContractModel):
+class EntityRef(SharedValue):
     id: EntityId
     entity_type: EntityType
 
 
-class Resolution(ContractModel):
+class Resolution(SharedValue):
     status: Literal["RESOLVED", "UNRESOLVED", "AMBIGUOUS", "PARTIAL"]
     target: EntityRef | None = None
     candidates: tuple[EntityRef, ...] = ()
@@ -271,7 +290,7 @@ class Certainty(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class Coverage(ContractModel):
+class Coverage(SharedValue):
     capability: Text
     analyzer_version: Text
     status: Literal["COMPLETE", "PARTIAL", "UNSUPPORTED"]
