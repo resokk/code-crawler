@@ -17,7 +17,7 @@
 - [x] 12. Если меняется storage — отдельная migration + PostgreSQL 15 integration tests; никакой DDL вне миграций.
 - [x] 13. Обновить docs и Coverage/Resolution/Evidence, проверить отсутствие ложных DEFINITE/STATIC_PROVEN связей.
 - [x] 14. Запустить ruff, pytest/PG15 CI; зафиксировать coverage и benchmark при необходимости.
-- [ ] 15. По завершении перенести change в archive, не удаляя его спецификации.
+- [x] 15. По завершении перенести change в archive, не удаляя его спецификации.
 
 
 ## Verification evidence
@@ -35,3 +35,10 @@ pagination, empty generation, full/incremental reuse and retired snapshot GC.
 Existing query benchmark regression also passes on historical migration prefixes.
 No performance claim or new benchmark is made; B02 remains open. A02/A06 plug in
 through mandatory trusted authorization scope and explicit versioned redactor.
+
+After rebasing onto upstream Kotlin/JavaScript adapters, the complete local suite
+passed **927 tests in 135.01s**. Implementation commit: 712018b668f4c86e68e2712a43eebf764fedf06c.
+GitHub CI / PostgreSQL 15 succeeded:
+https://github.com/resokk/code-crawler/actions/runs/43649003961
+All migrations, lint, formatting, tests and clean-working-tree checks passed.
+Archived on 2026-11-15 (Europe/Moscow); see completion.md.

@@ -24,7 +24,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - B08 multi-repository-load-and-concurrency: >=100 independent repos
 
 ## Stream C — discovery/GraphRAG
-- C01 search-document-persistence: versioned derived document generations
+- C01 search-document-persistence: versioned derived document generations — [completed](changes/archive/2026-11-15-c01-search-document-persistence/completion.md), PG15 CI passed
 - C02 global-discovery-catalog: published lookup keys across repo snapshots
 - C03 repository-version-context: latest, pinned and deployment versions
 - C04 external-reference-candidate-search: bounded query-time resolution with Evidence
