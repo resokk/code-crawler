@@ -21,6 +21,7 @@ from pydantic import model_validator
 from code_crawler import repos, snapshots
 from code_crawler.ingestion import UcmBatch, _ingest_records, recheck, tick
 from code_crawler.publication import load_snapshot_batch
+from code_crawler.source_evidence import archive_sources
 from code_crawler.source_routing import source_language, valid_suffix
 from code_crawler.ucm import (
     ContractModel,
@@ -536,6 +537,8 @@ async def index_incremental(
     )
     async with conn.transaction():
         await _ingest_records(conn, snap, batch)
+        tick("Запись в БД: архив исходников")
+        await archive_sources(conn, snap, captured.sources, origin="CAPTURED_WORKTREE")
         tick("Запись в БД: манифесты и фиксация")
         await conn.execute(
             "INSERT INTO public.ingest_snapshot_profiles(snapshot_id,analysis_version,profile_sha256) VALUES ($1,$2,$3)",

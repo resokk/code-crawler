@@ -6,13 +6,15 @@ import asyncpg
 import pytest
 
 from code_crawler import db, snapshots
+from code_crawler.incremental import SourceInput
 from code_crawler.ingestion import UcmBatch, ingest_batch
 from code_crawler.publication import (
     publish_snapshot,
     rollback_publication,
     validate_snapshot,
 )
-from code_crawler.ucm import EntityType, logical_id
+from code_crawler.source_evidence import archive_sources
+from code_crawler.ucm import EntityType, SourceFile, logical_id
 
 pytestmark = pytest.mark.integration
 
@@ -41,6 +43,16 @@ async def create(
     )
     if batch is not None:
         await ingest_batch(conn, snap, batch)
+        await archive_sources(
+            conn,
+            snap,
+            tuple(
+                SourceInput(e, b"class A { void run() {} }\n")
+                for e in batch.entities
+                if isinstance(e, SourceFile)
+            ),
+            origin="PROVIDED_BYTES",
+        )
     return snap
 
 

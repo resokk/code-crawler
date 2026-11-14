@@ -33,3 +33,6 @@ models/
 .idea/
 .vscode/
 .DS_Store
+
+# CI diagnostics
+.ci-reports/

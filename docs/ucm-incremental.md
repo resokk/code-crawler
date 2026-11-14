@@ -86,3 +86,12 @@ fingerprint — SHA-256 от descriptor manifest и версии prepared catalo
 на все адаптеры.
 SOURCE_ANALYSIS reports являются обычными file-owned facts: no-change reuse
 сохраняет diagnostics/capabilities без повторного callback и без process cache.
+
+## Reproducible bytes
+
+Migration 0017 сохраняет captured source bytes (clean и dirty) как immutable,
+repository-scoped content-addressed blobs. Snapshot/file links с origin
+CAPTURED_WORKTREE записываются атомарно с facts/manifests. Новые snapshots без
+полного архива не становятся READY/PUBLISHED. No-change indexing переиспользует
+blob hashes, а Evidence восстанавливается без checkout. Контракт и API:
+[source-evidence.md](source-evidence.md).

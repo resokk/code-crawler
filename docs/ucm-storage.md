@@ -91,3 +91,13 @@ coverage/status/reasons и optional diagnostic coordinates хранятся type
 Unique snapshot/source_file, deferred FK и immutable write/truncate guards
 применяются ко всем четырём таблицам. Restore/gate проверяет report identity,
 capability uniqueness/reasons и error/complete contradiction.
+
+## Source archive (0017)
+
+ucm_source_blobs хранит immutable repository/SHA-256 → bytea с SQL checksum check;
+ucm_snapshot_sources связывает snapshot SourceFile с blob и origin. FK/checks
+сохраняют repository/file/hash consistency; links используют canonical write guard.
+Lifecycle SQL trigger требует полный архив для READY/PUBLISHED. Migration-only
+ucm_source_evidence_legacy_snapshots сохраняет совместимость ранее опубликованных
+snapshots без ложного утверждения о доступности bytes. Retrieval проверяет hash
+заново. Подробности: [source-evidence.md](source-evidence.md).

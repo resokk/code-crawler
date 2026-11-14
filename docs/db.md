@@ -63,7 +63,9 @@ docker stop code-crawler-test-pg15
 COPY графа и откат загрузки, каскадное удаление связей и реальные процессы CLI.
 Расширения пока не требуются: текущие миграции их не используют.
 
-Без `TEST_DATABASE_URL` интеграционные тесты явно пропускаются. Ошибки доступа и
+Локально без `TEST_DATABASE_URL` интеграционные тесты явно пропускаются. В CI
+и с `--require-postgres` отсутствие URL, выбор без integration tests и их skip
+делают проверку ошибочной: [ci.md](ci.md). Ошибки доступа и
 несовместимая версия при заданном URL приводят к падению тестов. Обычный набор
 можно запустить через `uv run pytest -m 'not integration'`.
 
@@ -132,3 +134,7 @@ per-file adapter profiles/capabilities/reasons/diagnostics. Reports immutable в
 Миграция `0016_ingest_jobs_recovery.sql` вводит `ingest_jobs` и разрешает очистке
 удалять факты RETIRED snapshots под флагом `code_crawler.gc`. См.
 [ingest-jobs.md](ingest-jobs.md).
+Миграция `0017_reproducible_source_evidence.sql`: exact source blobs, snapshot links,
+immutability/checksums, обязательный архив перед READY/PUBLISHED и явная
+совместимость старых published snapshots. Новые clean/dirty captures архивируются
+в PostgreSQL без внешнего blob store/расширений: [source-evidence.md](source-evidence.md).

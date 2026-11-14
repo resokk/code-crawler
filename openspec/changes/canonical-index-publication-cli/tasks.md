@@ -6,4 +6,4 @@
 - [x] Report status, entity count, current pointer and diagnostic counts.
 - [x] Test positive, invalid, conflict, idempotent and BUILDING-only CLI paths on PostgreSQL 15.
 - [x] Full PostgreSQL 15 suite: 786 passed; Ruff/format/diff and CLI help checks pass; CLI docs updated.
-- [ ] Mandatory remote CI run (pending mandatory-postgres-ci; no workflow is configured yet).
+- [ ] Hosted CI run after push (CI/PostgreSQL 15 workflow added by mandatory-postgres-ci).

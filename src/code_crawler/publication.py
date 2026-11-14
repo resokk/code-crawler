@@ -8,6 +8,7 @@ from uuid import UUID
 import asyncpg
 
 from code_crawler.ingestion import UcmBatch
+from code_crawler.source_evidence import require_source_archive
 
 _SUBTYPES = {
     "SOURCE_ANALYSIS": "ucm_source_analyses",
@@ -390,6 +391,7 @@ async def validate_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> int:
         if snapshot is None:
             raise ValueError("snapshot does not exist")
         if snapshot["state"] == "READY":
+            await require_source_archive(conn, snapshot_id)
             count = await conn.fetchval(
                 "SELECT entity_count FROM public.ucm_snapshot_validations WHERE snapshot_id=$1",
                 snapshot_id,
@@ -399,6 +401,7 @@ async def validate_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> int:
             return count
         if snapshot["state"] not in ("BUILDING", "VALIDATING"):
             raise ValueError("validation requires BUILDING or VALIDATING snapshot")
+        await require_source_archive(conn, snapshot_id)
         await conn.execute(
             "UPDATE public.ucm_snapshots SET state='VALIDATING' WHERE id=$1",
             snapshot_id,
@@ -462,6 +465,7 @@ async def _publish(
             snapshot_id,
         ):
             raise ValueError("snapshot has no validation receipt")
+        await require_source_archive(conn, snapshot_id)
         if current is not None:
             await conn.execute(
                 "UPDATE public.ucm_snapshots SET state='RETIRED' WHERE id=$1", current

@@ -22,6 +22,7 @@ from code_crawler import (
     publication,
     repos,
     snapshots,
+    source_evidence,
 )
 from code_crawler.database_resolution import ConnectionAssignment
 from code_crawler.groovy_adapter import GroovySourceAdapter
@@ -261,7 +262,7 @@ async def list_adapters() -> None:
 
 async def _snapshot_report(conn, snapshot_id: UUID) -> None:
     row = await conn.fetchrow(
-        "SELECT s.id AS snapshot_id, s.repository_id, s.state AS status, "
+        "SELECT s.id AS snapshot_id, s.repository_id, s.state AS status, s.commit_hash, s.source_fingerprint, s.dirty, "
         "(SELECT count(*) FROM public.ucm_entities e WHERE e.snapshot_id=s.id) AS entity_count, "
         "p.snapshot_id AS published_snapshot_id FROM public.ucm_snapshots s "
         "LEFT JOIN public.ucm_repository_publications p ON p.repository_id=s.repository_id "
@@ -276,6 +277,7 @@ async def _snapshot_report(conn, snapshot_id: UUID) -> None:
         snapshot_id,
     )
     report = dict(row)
+    report["source_evidence"] = await source_evidence.evidence_status(conn, snapshot_id)
     report["diagnostics"] = {r["severity"]: r["count"] for r in diagnostics}
     console.print_json(json.dumps(report, default=str))
 

@@ -1,3 +1,4 @@
+import hashlib
 from collections.abc import Callable
 from uuid import UUID
 
@@ -32,6 +33,8 @@ from code_crawler.ucm import (
     logical_id,
 )
 
+pytest_plugins = ("ci_postgres",)
+
 
 @pytest.fixture
 def ucm_batch_factory() -> Callable[[UUID], UcmBatch]:
@@ -50,7 +53,7 @@ def ucm_batch_factory() -> Callable[[UUID], UcmBatch]:
             **base(EntityType.SOURCE_FILE, "A.java"),
             path="A.java",
             language="java",
-            content_sha256="a" * 64,
+            content_sha256=hashlib.sha256(b"class A { void run() {} }\n").hexdigest(),
         )
         loc = SourceRange(
             source_file_id=file.id,

@@ -78,3 +78,8 @@ uv run code-crawler use-index org/billing --backend legacy
 Точный контракт и ограничения семантики: [ucm-legacy-migration.md](ucm-legacy-migration.md).
 
 Актуальный порядок разработки: [план 2.0](development-plan-v2.md).
+
+Canonical snapshot reports также показывают archive status, archived/source file
+counts и commit/fingerprint/dirty. Новые publications требуют exact source bytes;
+`index-sources` сохраняет их автоматически, включая dirty worktrees. Generic
+producers архивируют bytes до validation: [source-evidence.md](source-evidence.md).

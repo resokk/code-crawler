@@ -7,8 +7,10 @@ import asyncpg
 import pytest
 
 from code_crawler import db, snapshots
+from code_crawler.incremental import SourceInput
 from code_crawler.ingestion import UcmBatch, ingest_batch
 from code_crawler.publication import publish_snapshot, validate_snapshot
+from code_crawler.source_evidence import archive_sources
 from code_crawler.ucm import EntityType, SourceFile, Value, logical_id
 
 pytestmark = pytest.mark.integration
@@ -156,6 +158,16 @@ def test_failed_load_rolls_back_and_can_retry(
             repo, old = await initialize(conn)
             batch = ucm_batch_factory(repo)
             await ingest_batch(conn, old, batch)
+            await archive_sources(
+                conn,
+                old,
+                tuple(
+                    SourceInput(e, b"class A { void run() {} }\n")
+                    for e in batch.entities
+                    if isinstance(e, SourceFile)
+                ),
+                origin="PROVIDED_BYTES",
+            )
             await validate_snapshot(conn, old)
             await publish_snapshot(conn, repo, old, expected_snapshot_id=None)
             new = await create(conn, repo)

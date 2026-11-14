@@ -29,7 +29,9 @@ RETIRED snapshot не переиздаётся этой командой: rollba
 CAS conflict сохраняется для явного retry с новым expected-current.
 
 Используются существующие validation/publication API и storage; новых миграций
-нет. Это change 01 плана [2.0](development-plan-v2.md). Dirty source evidence policy,
-новый read API, default backend и CI enforcement — следующие changes. Наличие
-PUBLISHED snapshot пока не гарантирует восстановление dirty source bytes; текущие
-ограничения source reproducibility этой CLI не снимаются.
+нет в change 01. Source reproducibility теперь обеспечена migration 0017 и
+архивом exact captured bytes для новых snapshots; validation/publication требуют
+полноту архива. Старые published snapshots имеют явный UNAVAILABLE_LEGACY.
+См. [source-evidence.md](source-evidence.md). Snapshot reports включают archive
+status/counts, commit/fingerprint/dirty. Read API, default backend и CI enforcement
+остаются отдельными changes [плана 2.0](development-plan-v2.md).

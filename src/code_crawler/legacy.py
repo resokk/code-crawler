@@ -11,6 +11,7 @@ from code_crawler import indexer, snapshots
 from code_crawler.incremental import _capture, _verify, _Worktree
 from code_crawler.ingestion import UcmBatch, _ingest_records
 from code_crawler.publication import publish_snapshot, validate_snapshot
+from code_crawler.source_evidence import archive_sources
 from code_crawler.ucm import (
     Certainty,
     CodeEntity,
@@ -299,6 +300,7 @@ async def migrate_index(
     )
     async with conn.transaction():
         await _ingest_records(conn, snap, batch)
+        await archive_sources(conn, snap, captured.sources, origin="CAPTURED_WORKTREE")
         await conn.copy_records_to_table(
             "ingest_legacy_nodes",
             schema_name="public",

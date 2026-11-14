@@ -1,4 +1,4 @@
-"""Opt-in PostgreSQL tests, each in a newly created disposable database."""
+"""Isolated PostgreSQL databases: optional locally, mandatory via the root CI policy."""
 
 import asyncio
 import os

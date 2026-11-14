@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres15:
+    name: PostgreSQL 15
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: integration
+          POSTGRES_DB: code_crawler_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d code_crawler_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      CI: 'true'
+      TEST_DATABASE_URL: postgresql://postgres:integration@127.0.0.1:5432/postgres
+      DATABASE_URL: postgresql://postgres:integration@127.0.0.1:5432/code_crawler_ci
+      NO_COLOR: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare reports
+        run: mkdir -p .ci-reports
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.13.6'
+          python-version: '3.12'
+          enable-cache: true
+      - name: Install locked dependencies
+        shell: bash
+        run: uv sync --locked 2>&1 | tee .ci-reports/dependencies.log
+      - name: Lint
+        shell: bash
+        run: uv run --locked ruff check . 2>&1 | tee .ci-reports/ruff-check.log
+      - name: Check formatting
+        shell: bash
+        run: uv run --locked ruff format --check . 2>&1 | tee .ci-reports/ruff-format.log
+      - name: Apply every migration to a clean database
+        shell: bash
+        run: |
+          uv run --locked code-crawler db init 2>&1 | tee .ci-reports/migrations.log
+          uv run --locked code-crawler db status 2>&1 | tee -a .ci-reports/migrations.log
+      - name: Unit, integration and regression tests
+        shell: bash
+        run: uv run --locked pytest --require-postgres --strict-markers --junitxml=.ci-reports/junit.xml -ra 2>&1 | tee .ci-reports/pytest.log
+      - name: Check generated files and working tree
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p .ci-reports
+          git diff --binary HEAD > .ci-reports/working-tree.diff
+          git status --porcelain --untracked-files=all > .ci-reports/git-status.txt
+          cat .ci-reports/git-status.txt
+          test ! -s .ci-reports/git-status.txt
+      - name: Collect PostgreSQL diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p .ci-reports
+          docker logs '${{ job.services.postgres.id }}' > .ci-reports/postgres.log 2>&1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: postgres15-failure-${{ github.run_id }}
+          path: .ci-reports/
+          retention-days: 7
+          if-no-files-found: warn
+          include-hidden-files: true

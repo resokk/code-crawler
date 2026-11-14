@@ -8,8 +8,11 @@ import asyncpg
 import pytest
 
 from code_crawler import cli, db, repos, snapshots
+from code_crawler.incremental import SourceInput
 from code_crawler.ingestion import ingest_batch
 from code_crawler.publication import publish_snapshot, validate_snapshot
+from code_crawler.source_evidence import archive_sources
+from code_crawler.ucm import SourceFile
 
 pytestmark = pytest.mark.integration
 
@@ -140,7 +143,18 @@ def test_invalid_snapshot_cannot_replace_publication(database_url, ucm_batch_fac
             await validate_snapshot(conn, old)
             await publish_snapshot(conn, repo, old, expected_snapshot_id=None)
             invalid = await create(conn, repo)
-            await ingest_batch(conn, invalid, ucm_batch_factory(repo))
+            batch = ucm_batch_factory(repo)
+            await ingest_batch(conn, invalid, batch)
+            await archive_sources(
+                conn,
+                invalid,
+                tuple(
+                    SourceInput(e, b"class A { void run() {} }\n")
+                    for e in batch.entities
+                    if isinstance(e, SourceFile)
+                ),
+                origin="PROVIDED_BYTES",
+            )
             await conn.execute(
                 "UPDATE ucm_entities SET logical_key='changed' WHERE snapshot_id=$1 AND entity_type='VALUE' AND logical_key='text'",
                 invalid,
@@ -194,6 +208,8 @@ def test_index_sources_optional_publication_and_repeated_index(database_url, tmp
             assert await snapshots.published_snapshot(conn, repo) is None
             code, output = await command(database_url, *arguments, "--publish")
             assert code == 0 and "PUBLISHED" in output and "ERROR" in output
+            assert "ARCHIVED" in output and "source_evidence" in output
+            assert "source_fingerprint" in output and "dirty" in output
             first = (await snapshots.published_snapshot(conn, repo))["id"]
             ids = await conn.fetch(
                 "SELECT entity_id FROM ucm_entities WHERE snapshot_id=$1 ORDER BY entity_id",

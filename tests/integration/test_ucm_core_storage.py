@@ -1,12 +1,15 @@
 import asyncio
+import hashlib
 from uuid import UUID
 
 import asyncpg
 import pytest
 
 from code_crawler import db, snapshots
+from code_crawler.incremental import SourceInput
 from code_crawler.publication import publish_snapshot, validate_snapshot
-from code_crawler.ucm import EntityType, logical_id, relation_registry
+from code_crawler.source_evidence import archive_sources
+from code_crawler.ucm import EntityType, SourceFile, logical_id, relation_registry
 
 pytestmark = pytest.mark.integration
 
@@ -104,7 +107,7 @@ async def graph(conn: asyncpg.Connection, repo: UUID, snap: UUID) -> dict[str, s
             entity_id=ids["A.java"],
             path="A.java",
             language="java",
-            content_sha256="a" * 64,
+            content_sha256=hashlib.sha256(b"class A { void run() {} }\n").hexdigest(),
         )
         await insert(
             conn,
@@ -392,6 +395,19 @@ def test_frozen_snapshot_rejects_fact_writes(database_url: str, state: str) -> N
                     "UPDATE ucm_snapshots SET state='VALIDATING' WHERE id=$1", snap
                 )
             else:
+                content = b"class A { void run() {} }\n"
+                source = SourceFile(
+                    repository_id=str(repo),
+                    logical_key="A.java",
+                    id=eid(repo, "SOURCE_FILE", "A.java"),
+                    name="A.java",
+                    path="A.java",
+                    language="java",
+                    content_sha256=hashlib.sha256(content).hexdigest(),
+                )
+                await archive_sources(
+                    conn, snap, (SourceInput(source, content),), origin="PROVIDED_BYTES"
+                )
                 await validate_snapshot(conn, snap)
                 if state in ("PUBLISHED", "RETIRED"):
                     await publish_snapshot(conn, repo, snap, expected_snapshot_id=None)
