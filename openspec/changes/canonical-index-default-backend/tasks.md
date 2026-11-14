@@ -6,4 +6,4 @@
 - [x] Keep explicit labeled legacy mode without execution promotion.
 - [x] Test local/remote/repeat/failure/compatibility behavior on PostgreSQL 15.
 - [x] Mandatory PostgreSQL 15 suite: 842 passed; Ruff/format/diff checks pass.
-- [ ] Hosted CI verification after commit/push.
+- [x] Hosted CI passed for implementation commit e8e5f18: https://github.com/resokk/code-crawler/actions/runs/43612670068.
