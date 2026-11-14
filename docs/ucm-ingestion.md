@@ -74,3 +74,19 @@ SourceAnalysis reports создаёт orchestrator registry. Batch провер�
 reference и максимум один report на файл; nested capabilities/diagnostics проверяют
 strict UCM validators. Reports/capability reasons/diagnostic ranges загружаются
 нормализованно и восстанавливаются readiness gate без сессионного состояния.
+
+## Потоковая загрузка
+
+Change `streaming-ucm-ingestion`. `ingest_stream(conn, snapshot_id, repository_id,
+chunks)` принимает асинхронный поток порций сущностей и загружает их в пустой
+BUILDING snapshot; `ingest_batch` не заменён и работает как раньше. В памяти
+держится только текущая порция. Порции идут в любом порядке и могут ссылаться на
+сущности следующих порций: всё копируется в staging, а ссылки проверяют отложенные
+FK после переноса. Загрузка — одна транзакция: сбой источника, висячая ссылка,
+дубликат ID, чужой repository_id или отмена оставляют snapshot пустым, повтор в
+тот же snapshot возможен.
+
+Межсущностные семантические правила `UcmBatch` при потоковой загрузке не
+проверяются; их проверяет `validate_snapshot` до READY, поэтому невалидный
+snapshot опубликовать нельзя. Сама validation по-прежнему читает snapshot целиком,
+а `index_incremental` пока использует batch loader.

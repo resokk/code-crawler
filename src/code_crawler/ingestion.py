@@ -3,7 +3,7 @@
 import asyncio
 import json
 from collections import defaultdict
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncIterable, Callable, Iterator, Sequence
 from contextvars import ContextVar
 from uuid import UUID, uuid4
 
@@ -1049,13 +1049,50 @@ async def ingest_batch(
     return {entity.id: (snapshot_id, entity.id) for entity in batch.entities}
 
 
-async def _ingest_records(
+async def ingest_stream(
     conn: asyncpg.Connection,
     snapshot_id: UUID,
-    batch: UcmBatch,
+    repository_id: UUID,
+    chunks: AsyncIterable[Sequence[Entity]],
+) -> int:
+    """Load entities chunk by chunk into an empty BUILDING snapshot; return their count.
+
+    Only the current chunk is held in memory. Chunks may arrive in any order and
+    refer to entities of later chunks: references are checked by deferred foreign
+    keys once everything is staged. The load is one transaction, so a failing
+    producer, a dangling reference or a duplicate ID leaves the snapshot empty.
+
+    Cross-entity semantic rules of UcmBatch are not checked here: validate_snapshot
+    checks them before the snapshot can become READY.
+    """
+    if conn.is_in_transaction():
+        raise ValueError(
+            "ingest_stream requires a connection without an active transaction"
+        )
+
+    def rows(chunk: Sequence[Entity]) -> dict[str, list[dict]]:
+        for entity in chunk:
+            if recheck(entity).repository_id != str(repository_id):
+                raise ValueError("stream entity belongs to a different repository")
+        return _rows(snapshot_id, repository_id, tuple(chunk))
+
+    count = 0
+    async with conn.transaction():
+        await _lock_empty(conn, snapshot_id, repository_id)
+        stages: dict[str, tuple[str, str]] = {}
+        prefix = "ingest_" + uuid4().hex
+        async for chunk in chunks:
+            # Подготовка порции нагружает процессор; в потоке она не блокирует цикл событий.
+            await _stage(conn, prefix, stages, await asyncio.to_thread(rows, chunk))
+            count += len(chunk)
+            tick("Запись в БД: загрузка")
+        await _transfer(conn, stages)
+    return count
+
+
+async def _lock_empty(
+    conn: asyncpg.Connection, snapshot_id: UUID, repository_id: UUID
 ) -> None:
-    """Validate the batch and write its records inside the caller's transaction."""
-    repository_id = batch.repository_id
     snapshot = await conn.fetchrow(
         "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1 FOR UPDATE",
         snapshot_id,
@@ -1069,25 +1106,33 @@ async def _ingest_records(
         snapshot_id,
     ):
         raise ValueError("ingestion requires an empty snapshot")
-    prefix = "ingest_" + uuid4().hex
-    stages: dict[str, tuple[str, str]] = {}
-    chunks = _record_chunks(snapshot_id, batch)
-    # Подготовка порции нагружает процессор; в потоке она не блокирует цикл событий.
-    while (rows := await asyncio.to_thread(next, chunks, None)) is not None:
-        for table, records in rows.items():
-            columns = tuple(records[0])
-            if table not in stages:
-                stage = prefix + "_" + table.removeprefix("ucm_")
-                stages[table] = (stage, ",".join(columns))
-                await conn.execute(
-                    f"CREATE TEMP TABLE {stage} (LIKE public.{table} INCLUDING DEFAULTS) ON COMMIT DROP"
-                )
-            await conn.copy_records_to_table(
-                stages[table][0],
-                schema_name="pg_temp",
-                columns=columns,
-                records=[tuple(row[column] for column in columns) for row in records],
+
+
+async def _stage(
+    conn: asyncpg.Connection,
+    prefix: str,
+    stages: dict[str, tuple[str, str]],
+    rows: dict[str, list[dict]],
+) -> None:
+    for table, records in rows.items():
+        columns = tuple(records[0])
+        if table not in stages:
+            stage = prefix + "_" + table.removeprefix("ucm_")
+            stages[table] = (stage, ",".join(columns))
+            await conn.execute(
+                f"CREATE TEMP TABLE {stage} (LIKE public.{table} INCLUDING DEFAULTS) ON COMMIT DROP"
             )
+        await conn.copy_records_to_table(
+            stages[table][0],
+            schema_name="pg_temp",
+            columns=columns,
+            records=[tuple(row[column] for column in columns) for row in records],
+        )
+
+
+async def _transfer(
+    conn: asyncpg.Connection, stages: dict[str, tuple[str, str]]
+) -> None:
     # Envelope IDs first; deferred FKs allow cyclic subtype references in pass two.
     for table in ["ucm_entities", *(t for t in stages if t != "ucm_entities")]:
         if table not in stages:
@@ -1107,3 +1152,19 @@ async def _ingest_records(
         await conn.execute(f"SET CONSTRAINTS {constraint['name']} IMMEDIATE")
         tick("Запись в БД: проверка связей", len(constraints))
     await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")
+
+
+async def _ingest_records(
+    conn: asyncpg.Connection,
+    snapshot_id: UUID,
+    batch: UcmBatch,
+) -> None:
+    """Validate the batch and write its records inside the caller's transaction."""
+    await _lock_empty(conn, snapshot_id, batch.repository_id)
+    prefix = "ingest_" + uuid4().hex
+    stages: dict[str, tuple[str, str]] = {}
+    chunks = _record_chunks(snapshot_id, batch)
+    # Подготовка порции нагружает процессор; в потоке она не блокирует цикл событий.
+    while (rows := await asyncio.to_thread(next, chunks, None)) is not None:
+        await _stage(conn, prefix, stages, rows)
+    await _transfer(conn, stages)
