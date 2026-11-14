@@ -68,6 +68,7 @@ class _Handle:
     value: java._Value | None
     expression: Node
     receiver_type: str = "java.sql.PreparedStatement"
+    connection_symbol_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -229,6 +230,10 @@ class _ExecutionFlow(_SqlFlow):
                 "java.sql.CallableStatement"
                 if name == "prepareCall"
                 else "java.sql.PreparedStatement",
+                self.analyzer.data_symbol(receiver, site).id
+                if receiver is not None
+                and self.analyzer.data_symbol(receiver, site) is not None
+                else None,
             )
         if (
             trusted
@@ -237,7 +242,14 @@ class _ExecutionFlow(_SqlFlow):
             and len(args) in (0, 2, 3)
         ):
             self.created[node.id] = _Handle(
-                node.start_byte, None, node, "java.sql.Statement"
+                node.start_byte,
+                None,
+                node,
+                "java.sql.Statement",
+                self.analyzer.data_symbol(receiver, site).id
+                if receiver is not None
+                and self.analyzer.data_symbol(receiver, site) is not None
+                else None,
             )
         sql_index = None
         recognized = False
@@ -280,6 +292,12 @@ class _ExecutionFlow(_SqlFlow):
                     node.start_byte,
                     copy.deepcopy(self.preview(args[sql_index])),
                     args[sql_index],
+                    connection_symbol_id=handle.connection_symbol_id
+                    if handle
+                    else self.analyzer.data_symbol(receiver, site).id
+                    if receiver is not None
+                    and self.analyzer.data_symbol(receiver, site) is not None
+                    else None,
                 )
             self.events.append(
                 _Execution(

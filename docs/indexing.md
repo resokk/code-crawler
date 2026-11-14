@@ -7,7 +7,7 @@
 | команда `index`, регистрация и клонирование репозиториев | удаление и просмотр индексов, обновление только изменённых файлов |
 | Java: классы, методы, вложенность | Kotlin, TypeScript, JavaScript, Python, VBScript, BPMN |
 | PL/Plus: классы и операции ЦФТ, функции, запросы, вызовы | PL/Plus: раскрытие макросов, SQL из `execute immediate` |
-| Groovy: сгенерирован парсер | Groovy: извлечение символов и запросов |
+| Groovy: canonical symbols, lexical references, SQL constructions/accesses через `index-sources` | Groovy: runtime dispatch, SQL execution sinks |
 | SQL из строк Java-кода с восстановлением и полным разбором | файлы `.sql`; вызовы, наследование и импорты между символами |
 | native SQL (включая `@Query(nativeQuery = true)`) | Spring Data, Hibernate, JPA; эмбеддинги |
 
@@ -53,7 +53,13 @@ rm src/code_crawler/{plplus,groovy}/*.interp src/code_crawler/{plplus,groovy}/*.
 
 ### PL/Plus
 
-Что извлекается из файлов `.plp`:
+Canonical `index-sources` использует `PlplusSourceAdapter`: symbols/scopes/occurrences,
+CFT class/attribute selectors, bounded call candidates и structured diagnostics.
+Контракт и ограничения: [plplus-ucm.md](plplus-ucm.md). Описание ниже относится
+к существующему legacy `index`; canonical adapter не угадывает physical таблицы
+по имени класса и не делает runtime proof из восстановленного дерева с ошибками.
+
+Что извлекается legacy pipeline из файлов `.plp`:
 
 - **Класс ЦФТ и его операция** — из пути файла: `…/<класс>/methods/<операция>/src/<секция>.plp` и `…/<класс>/criteria/<представление>/src/condition.plp`. Все секции (`public`, `private`, `execute`, `validate`) принадлежат одной операции.
 - **Функции и процедуры**, объявленные в файле, включая вложенные.
@@ -175,8 +181,7 @@ SQL внутри PL/Plus уже адаптирован под PostgreSQL и ра
 
 ## Регрессионная база перед UCM
 
-Change `openspec/changes/baseline-regression-tests/` и тесты
-`tests/test_baseline_regressions.py` фиксируют восемь исходных случаев:
+Тесты `tests/test_baseline_regressions.py` фиксируют восемь исходных случаев:
 неиспользованный SQL, конфликт констант между классами, перегрузки, quoted SQL
 identifiers, синтаксическую ошибку, dirty worktree, одинаковый basename и
 динамический SQL.
@@ -250,3 +255,47 @@ Opt-in `java_semantic.index_java_semantic(conn, repository_id, root, dialect="po
 sites. Допустимы postgres/mysql/tsql; profile включает dialect и SQLGlot version.
 Legacy SQL projection сохраняется. Partial/dynamic SQL не создаёт угаданных access
 facts. Подробнее: [sql-semantics.md](sql-semantics.md).
+
+## Java → SQL parameter lineage
+
+`java_lineage.index_java_lineage(conn, repository_id, root, dialect="postgres")`
+добавляет execution-specific bindings, AST placeholders, Java value origins и
+syntactic column associations. Setter state и local containers ограничены callable;
+неизвестные случаи partial/unresolved. Профиль `java.sql.lineage/1:` включает
+предыдущие semantic/dialect/catalog fingerprints. Legacy CLI сохраняется.
+Контракт и coverage: [sql-lineage.md](sql-lineage.md).
+
+## Contextual database identity
+
+`java_database.index_java_database(conn, repository_id, root, assignments, dialect="postgres")`
+загружает explicit imported database versions и связывает accesses с объектами в
+connection/search_path контексте. Assignment использует Java Symbol.logical_key.
+Неполная routing/schema информация остаётся partial/unresolved. Профиль включает
+schema fingerprints и assignments: новая версия/контекст инвалидирует reuse,
+а старые published snapshots сохраняют прежние identities.
+Контракт и CLI импорта: [database-identity.md](database-identity.md).
+
+## JPA/ORM semantics
+
+`java_orm.index_java_orm(conn, repository_id, root, assignments=(), dialect="postgres", naming_policy="UNKNOWN")`
+добавляет logical JPA mappings, persistence/query intents и native/JPQL distinction.
+Native terminal calls переиспользуют SQL semantic/database pipeline. Physical ORM
+naming разрешается только при explicit IDENTITY policy/context; default UNKNOWN
+не превращает logical names в DB objects. Profile включает ORM catalog/named queries,
+naming policy и предыдущие schema/lineage/catalog fingerprints. Контракт:
+[jpa-orm.md](jpa-orm.md). Legacy CLI writer сохраняется.
+
+## Source adapter registry
+
+`source_adapters.index_sources(conn, repository_id, root, registry)` маршрутизирует
+captured files через immutable descriptors и prepared adapters. Каждый producer
+возвращает AdapterFileResult(FileAnalysis, diagnostics, capabilities); registry
+проверяет ownership/request/version/range/coverage и добавляет SourceAnalysis.
+Longest suffix routing используется совместно capture и incremental planner.
+
+CLI `adapters list` описывает восемь Java profiles, Groovy и PL/Plus adapters; `index-sources ROOT
+--repository-key KEY --java-profile orm` строит BUILDING snapshot. Existing
+index_java_* APIs и legacy `index` сохраняются. Новый adapter подключается без
+изменения PostgreSQL loader. Groovy и PL/Plus подключены к `index-sources` по умолчанию;
+PL/Plus контракт: [plplus-ucm.md](plplus-ucm.md);
+контракт и ограничения: [groovy-ucm.md](groovy-ucm.md). Общий контракт: [source-adapters.md](source-adapters.md).

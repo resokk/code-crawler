@@ -12,8 +12,8 @@ orchestrator; analyzer возвращает остальные сущности 
 
 Inventory включает все tracked regular files Git, включая metadata/config;
 untracked, symlinks (в том числе через symlink directory), submodules и отсутствующие
-файлы не читаются. languages задаёт mapping конечного suffix→language (например,
-{'.java': 'java'}); файлы без adapter получают SourceFile language='unknown', но
+файлы не читаются. languages задаёт mapping suffix→language с longest case-sensitive match (например,
+{'.java': 'java', '.d.ts': 'typescript'}); файлы без adapter получают SourceFile language='unknown', но
 не передаются analyze. Git conflicts отклоняются. Root обязан быть корнем Git.
 Пути и dependencies — canonical relative POSIX paths без traversal.
 
@@ -60,3 +60,9 @@ snapshot metadata может остаться после DB failure; части�
 streaming, CLI switch и language-specific extraction/resolution — следующие
 changes. Для полной локальной resolution adapter может использовать собственный
 контекст; callback обязан вернуть факты каждого запрошенного файла ровно один раз.
+
+Общий SourceAdapter registry описан в [source-adapters.md](source-adapters.md).
+Prepared registry version объединяет descriptors и фактические catalog versions;
+изменение activation/routes/capability declarations/version инвалидирует profile.
+SOURCE_ANALYSIS reports являются обычными file-owned facts: no-change reuse
+сохраняет diagnostics/capabilities без повторного callback и без process cache.

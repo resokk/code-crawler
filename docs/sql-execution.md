@@ -55,3 +55,6 @@ if branches сохраняют possible origins; loops помечаются part
 numeric argument values сохраняются UNKNOWN, а не превращаются в string bindings.
 Обработка control flow не доказывает достижимость, порядок runtime execution или
 успешность вызова. Параметры и batch queues будут отдельным change.
+
+Binding snapshots, placeholders и Java Value origins доступны отдельным adapter
+[sql-lineage.md](sql-lineage.md); execution-only API сохраняет прежний coverage.

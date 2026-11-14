@@ -316,6 +316,340 @@
       "title": "DataAccess",
       "type": "object"
     },
+    "DatabaseAccess": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "DATABASE_ACCESS",
+          "default": "DATABASE_ACCESS",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "access_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Access Id",
+          "type": "string"
+        },
+        "context_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Id"
+        },
+        "execution_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Execution Id"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "access_id"
+      ],
+      "title": "DatabaseAccess",
+      "type": "object"
+    },
+    "DatabaseContext": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "DATABASE_CONTEXT",
+          "default": "DATABASE_CONTEXT",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "projection_file_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Projection File Id",
+          "type": "string"
+        },
+        "connection_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Connection Key",
+          "type": "string"
+        },
+        "database_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Database Key",
+          "type": "string"
+        },
+        "version_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Version Key",
+          "type": "string"
+        },
+        "schema_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Schema Fingerprint",
+          "type": "string"
+        },
+        "search_path": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Search Path",
+          "type": "array"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "projection_file_id",
+        "connection_key",
+        "database_key",
+        "version_key",
+        "schema_fingerprint"
+      ],
+      "title": "DatabaseContext",
+      "type": "object"
+    },
+    "DatabaseObject": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "DATABASE_OBJECT",
+          "default": "DATABASE_OBJECT",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "projection_file_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Projection File Id",
+          "type": "string"
+        },
+        "database_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Database Key",
+          "type": "string"
+        },
+        "version_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Version Key",
+          "type": "string"
+        },
+        "schema_fingerprint": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Schema Fingerprint",
+          "type": "string"
+        },
+        "object_key": {
+          "pattern": "^db:[0-9a-f]{64}$",
+          "title": "Object Key",
+          "type": "string"
+        },
+        "object_kind": {
+          "enum": [
+            "SCHEMA",
+            "TABLE",
+            "VIEW",
+            "MATERIALIZED_VIEW",
+            "FOREIGN_TABLE",
+            "COLUMN"
+          ],
+          "title": "Object Kind",
+          "type": "string"
+        },
+        "catalog_name": {
+          "minLength": 1,
+          "title": "Catalog Name",
+          "type": "string"
+        },
+        "schema_name": {
+          "minLength": 1,
+          "title": "Schema Name",
+          "type": "string"
+        },
+        "table_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Table Name"
+        },
+        "column_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column Name"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "projection_file_id",
+        "database_key",
+        "version_key",
+        "schema_fingerprint",
+        "object_key",
+        "object_kind",
+        "catalog_name",
+        "schema_name"
+      ],
+      "title": "DatabaseObject",
+      "type": "object"
+    },
     "DatabaseSelector": {
       "additionalProperties": false,
       "properties": {
@@ -384,6 +718,15 @@
         "SQL_EXECUTE",
         "SQL_STATEMENT",
         "DATA_ACCESS",
+        "SOURCE_ANALYSIS",
+        "ORM_MAPPING",
+        "ORM_QUERY",
+        "ORM_OPERATION",
+        "DATABASE_CONTEXT",
+        "DATABASE_OBJECT",
+        "DATABASE_ACCESS",
+        "SQL_BINDING",
+        "SQL_PLACEHOLDER",
         "EXTERNAL_REFERENCE",
         "RELATION",
         "OPERATION",
@@ -835,6 +1178,498 @@
       "title": "Operation",
       "type": "object"
     },
+    "OrmMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "ORM_MAPPING",
+          "default": "ORM_MAPPING",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "mapping_kind": {
+          "enum": [
+            "ENTITY",
+            "ATTRIBUTE"
+          ],
+          "title": "Mapping Kind",
+          "type": "string"
+        },
+        "entity_role": {
+          "enum": [
+            "ENTITY",
+            "MAPPED_SUPERCLASS",
+            "EMBEDDABLE"
+          ],
+          "title": "Entity Role",
+          "type": "string"
+        },
+        "symbol_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Symbol Id",
+          "type": "string"
+        },
+        "owner_symbol_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Owner Symbol Id",
+          "type": "string"
+        },
+        "entity_name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Entity Name",
+          "type": "string"
+        },
+        "attribute_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attribute Name"
+        },
+        "attribute_kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "BASIC",
+                "ID",
+                "VERSION",
+                "RELATIONSHIP",
+                "EMBEDDED"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Attribute Kind"
+        },
+        "access_mode": {
+          "enum": [
+            "FIELD",
+            "PROPERTY",
+            "UNKNOWN"
+          ],
+          "title": "Access Mode",
+          "type": "string"
+        },
+        "catalog_name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SqlIdentifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SqlIdentifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "table_name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SqlIdentifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "column_name": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SqlIdentifier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "nullable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nullable"
+        },
+        "insertable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Insertable"
+        },
+        "updatable": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Updatable"
+        },
+        "status": {
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "UNSUPPORTED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reasons": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "mapping_kind",
+        "entity_role",
+        "symbol_id",
+        "owner_symbol_id",
+        "entity_name",
+        "access_mode",
+        "status"
+      ],
+      "title": "OrmMapping",
+      "type": "object"
+    },
+    "OrmOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "ORM_OPERATION",
+          "default": "ORM_OPERATION",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "$ref": "#/$defs/SourceRange"
+        },
+        "owner_symbol_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Owner Symbol Id",
+          "type": "string"
+        },
+        "call_operation_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Call Operation Id",
+          "type": "string"
+        },
+        "api": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Api",
+          "type": "string"
+        },
+        "operation_kind": {
+          "enum": [
+            "PERSIST",
+            "MERGE",
+            "REMOVE",
+            "FIND",
+            "GET_REFERENCE",
+            "REFRESH",
+            "FLUSH",
+            "QUERY_READ",
+            "QUERY_WRITE"
+          ],
+          "title": "Operation Kind",
+          "type": "string"
+        },
+        "effect_kind": {
+          "enum": [
+            "READ",
+            "INSERT",
+            "MERGE",
+            "DELETE",
+            "WRITE",
+            "REFERENCE",
+            "UNKNOWN"
+          ],
+          "title": "Effect Kind",
+          "type": "string"
+        },
+        "query_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Id"
+        },
+        "context_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Id"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "source_range",
+        "owner_symbol_id",
+        "call_operation_id",
+        "api",
+        "operation_kind",
+        "effect_kind"
+      ],
+      "title": "OrmOperation",
+      "type": "object"
+    },
+    "OrmQuery": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "ORM_QUERY",
+          "default": "ORM_QUERY",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "owner_symbol_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Owner Symbol Id",
+          "type": "string"
+        },
+        "query_kind": {
+          "enum": [
+            "JPQL",
+            "NATIVE",
+            "NAMED_REFERENCE",
+            "CRITERIA",
+            "UNKNOWN"
+          ],
+          "title": "Query Kind",
+          "type": "string"
+        },
+        "query_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query Name"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "status": {
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "UNSUPPORTED"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reasons": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "owner_symbol_id",
+        "query_kind",
+        "status"
+      ],
+      "title": "OrmQuery",
+      "type": "object"
+    },
     "Position": {
       "additionalProperties": false,
       "properties": {
@@ -946,6 +1781,27 @@
     },
     "RelationKind": {
       "enum": [
+        "ORM_DECLARES_MAPPING",
+        "ORM_HAS_ATTRIBUTE",
+        "ORM_DECLARES_QUERY",
+        "ORM_NAMED_QUERY",
+        "ORM_QUERY_ENTITY",
+        "ORM_QUERY_READS_ATTRIBUTE",
+        "ORM_QUERY_WRITES_ATTRIBUTE",
+        "ORM_INVOKES",
+        "ORM_TARGET_ENTITY",
+        "ORM_EXECUTES_QUERY",
+        "ORM_DATABASE_TARGET",
+        "USES_DATABASE_CONTEXT",
+        "CONTEXTUALIZES_ACCESS",
+        "IN_DATABASE_CONTEXT",
+        "RESOLVES_DATABASE_OBJECT",
+        "HAS_SQL_BINDING",
+        "VALUE_BINDS_SQL",
+        "BINDS_PARAMETER",
+        "PARAMETER_COLUMN",
+        "HAS_SQL_PARAMETER",
+        "VALUE_OF",
         "HAS_SQL_STATEMENT",
         "EXECUTES_STATEMENT",
         "READS_FROM",
@@ -1119,6 +1975,147 @@
       "title": "Scope",
       "type": "object"
     },
+    "SourceAnalysis": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "SOURCE_ANALYSIS",
+          "default": "SOURCE_ANALYSIS",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "default": null,
+          "title": "Source Range",
+          "type": "null"
+        },
+        "source_file_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Source File Id",
+          "type": "string"
+        },
+        "adapter_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Adapter Key",
+          "type": "string"
+        },
+        "adapter_version": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Adapter Version",
+          "type": "string"
+        },
+        "analysis_version": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Analysis Version",
+          "type": "string"
+        },
+        "capabilities": {
+          "items": {
+            "$ref": "#/$defs/Coverage"
+          },
+          "minItems": 1,
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "diagnostics": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/SourceDiagnostic"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "source_file_id",
+        "adapter_key",
+        "adapter_version",
+        "analysis_version",
+        "capabilities"
+      ],
+      "title": "SourceAnalysis",
+      "type": "object"
+    },
+    "SourceDiagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "severity": {
+          "enum": [
+            "ERROR",
+            "WARNING",
+            "INFO"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "code": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Message",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ],
+      "title": "SourceDiagnostic",
+      "type": "object"
+    },
     "SourceFile": {
       "additionalProperties": false,
       "properties": {
@@ -1213,6 +2210,155 @@
         "end"
       ],
       "title": "SourceRange",
+      "type": "object"
+    },
+    "SqlBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "SQL_BINDING",
+          "default": "SQL_BINDING",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "execution_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Execution Id",
+          "type": "string"
+        },
+        "value_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Value Id",
+          "type": "string"
+        },
+        "setter_operation_id": {
+          "anyOf": [
+            {
+              "pattern": "^ucm:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Setter Operation Id"
+        },
+        "api": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Api",
+          "type": "string"
+        },
+        "binding_kind": {
+          "enum": [
+            "POSITIONAL",
+            "NAMED",
+            "UNKNOWN"
+          ],
+          "title": "Binding Kind",
+          "type": "string"
+        },
+        "position": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Position"
+        },
+        "parameter_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameter Name"
+        },
+        "status": {
+          "enum": [
+            "BOUND",
+            "PARTIAL",
+            "MISSING",
+            "UNKNOWN"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reasons": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "execution_id",
+        "value_id",
+        "api",
+        "binding_kind",
+        "status"
+      ],
+      "title": "SqlBinding",
       "type": "object"
     },
     "SqlConstruction": {
@@ -1431,6 +2577,133 @@
         "normalized"
       ],
       "title": "SqlIdentifier",
+      "type": "object"
+    },
+    "SqlPlaceholder": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Contract Version",
+          "type": "integer"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "logical_key": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Logical Key",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "SQL_PLACEHOLDER",
+          "default": "SQL_PLACEHOLDER",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Name",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "statement_id": {
+          "pattern": "^ucm:[0-9a-f]{64}$",
+          "title": "Statement Id",
+          "type": "string"
+        },
+        "ordinal": {
+          "minimum": 1,
+          "title": "Ordinal",
+          "type": "integer"
+        },
+        "parameter_kind": {
+          "enum": [
+            "POSITIONAL",
+            "INDEXED",
+            "NAMED"
+          ],
+          "title": "Parameter Kind",
+          "type": "string"
+        },
+        "position": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Position"
+        },
+        "parameter_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parameter Name"
+        },
+        "token_text": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Token Text",
+          "type": "string"
+        },
+        "text_start": {
+          "minimum": 0,
+          "title": "Text Start",
+          "type": "integer"
+        },
+        "text_end": {
+          "exclusiveMinimum": 0,
+          "title": "Text End",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "repository_id",
+        "logical_key",
+        "id",
+        "name",
+        "statement_id",
+        "ordinal",
+        "parameter_kind",
+        "token_text",
+        "text_start",
+        "text_end"
+      ],
+      "title": "SqlPlaceholder",
       "type": "object"
     },
     "SqlStatement": {
@@ -1931,17 +3204,26 @@
   "discriminator": {
     "mapping": {
       "CLASS": "#/$defs/CodeEntity",
+      "DATABASE_ACCESS": "#/$defs/DatabaseAccess",
+      "DATABASE_CONTEXT": "#/$defs/DatabaseContext",
+      "DATABASE_OBJECT": "#/$defs/DatabaseObject",
       "DATA_ACCESS": "#/$defs/DataAccess",
       "EXTERNAL_REFERENCE": "#/$defs/ExternalReference",
       "METHOD": "#/$defs/CodeEntity",
       "OCCURRENCE": "#/$defs/Occurrence",
       "OPERATION": "#/$defs/Operation",
+      "ORM_MAPPING": "#/$defs/OrmMapping",
+      "ORM_OPERATION": "#/$defs/OrmOperation",
+      "ORM_QUERY": "#/$defs/OrmQuery",
       "RELATION": "#/$defs/Relation",
       "SCOPE": "#/$defs/Scope",
+      "SOURCE_ANALYSIS": "#/$defs/SourceAnalysis",
       "SOURCE_FILE": "#/$defs/SourceFile",
+      "SQL_BINDING": "#/$defs/SqlBinding",
       "SQL_CANDIDATE": "#/$defs/CodeEntity",
       "SQL_CONSTRUCTION": "#/$defs/SqlConstruction",
       "SQL_EXECUTE": "#/$defs/SqlExecute",
+      "SQL_PLACEHOLDER": "#/$defs/SqlPlaceholder",
       "SQL_STATEMENT": "#/$defs/SqlStatement",
       "SYMBOL": "#/$defs/Symbol",
       "VALUE": "#/$defs/Value"
@@ -1987,6 +3269,33 @@
     },
     {
       "$ref": "#/$defs/DataAccess"
+    },
+    {
+      "$ref": "#/$defs/SqlBinding"
+    },
+    {
+      "$ref": "#/$defs/SqlPlaceholder"
+    },
+    {
+      "$ref": "#/$defs/DatabaseObject"
+    },
+    {
+      "$ref": "#/$defs/DatabaseContext"
+    },
+    {
+      "$ref": "#/$defs/DatabaseAccess"
+    },
+    {
+      "$ref": "#/$defs/OrmMapping"
+    },
+    {
+      "$ref": "#/$defs/OrmQuery"
+    },
+    {
+      "$ref": "#/$defs/OrmOperation"
+    },
+    {
+      "$ref": "#/$defs/SourceAnalysis"
     }
   ],
   "title": "EntityDocument"

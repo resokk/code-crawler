@@ -18,6 +18,15 @@ class EntityType(StrEnum):
     SQL_EXECUTE = "SQL_EXECUTE"
     SQL_STATEMENT = "SQL_STATEMENT"
     DATA_ACCESS = "DATA_ACCESS"
+    SOURCE_ANALYSIS = "SOURCE_ANALYSIS"
+    ORM_MAPPING = "ORM_MAPPING"
+    ORM_QUERY = "ORM_QUERY"
+    ORM_OPERATION = "ORM_OPERATION"
+    DATABASE_CONTEXT = "DATABASE_CONTEXT"
+    DATABASE_OBJECT = "DATABASE_OBJECT"
+    DATABASE_ACCESS = "DATABASE_ACCESS"
+    SQL_BINDING = "SQL_BINDING"
+    SQL_PLACEHOLDER = "SQL_PLACEHOLDER"
     EXTERNAL_REFERENCE = "EXTERNAL_REFERENCE"
     RELATION = "RELATION"
     OPERATION = "OPERATION"
@@ -284,6 +293,27 @@ class Evidence(ContractModel):
 
 
 class RelationKind(StrEnum):
+    ORM_DECLARES_MAPPING = "ORM_DECLARES_MAPPING"
+    ORM_HAS_ATTRIBUTE = "ORM_HAS_ATTRIBUTE"
+    ORM_DECLARES_QUERY = "ORM_DECLARES_QUERY"
+    ORM_NAMED_QUERY = "ORM_NAMED_QUERY"
+    ORM_QUERY_ENTITY = "ORM_QUERY_ENTITY"
+    ORM_QUERY_READS_ATTRIBUTE = "ORM_QUERY_READS_ATTRIBUTE"
+    ORM_QUERY_WRITES_ATTRIBUTE = "ORM_QUERY_WRITES_ATTRIBUTE"
+    ORM_INVOKES = "ORM_INVOKES"
+    ORM_TARGET_ENTITY = "ORM_TARGET_ENTITY"
+    ORM_EXECUTES_QUERY = "ORM_EXECUTES_QUERY"
+    ORM_DATABASE_TARGET = "ORM_DATABASE_TARGET"
+    USES_DATABASE_CONTEXT = "USES_DATABASE_CONTEXT"
+    CONTEXTUALIZES_ACCESS = "CONTEXTUALIZES_ACCESS"
+    IN_DATABASE_CONTEXT = "IN_DATABASE_CONTEXT"
+    RESOLVES_DATABASE_OBJECT = "RESOLVES_DATABASE_OBJECT"
+    HAS_SQL_BINDING = "HAS_SQL_BINDING"
+    VALUE_BINDS_SQL = "VALUE_BINDS_SQL"
+    BINDS_PARAMETER = "BINDS_PARAMETER"
+    PARAMETER_COLUMN = "PARAMETER_COLUMN"
+    HAS_SQL_PARAMETER = "HAS_SQL_PARAMETER"
+    VALUE_OF = "VALUE_OF"
     HAS_SQL_STATEMENT = "HAS_SQL_STATEMENT"
     EXECUTES_STATEMENT = "EXECUTES_STATEMENT"
     READS_FROM = "READS_FROM"
@@ -314,6 +344,29 @@ def _pairs(sources: str, targets: str) -> frozenset[tuple[EntityType, EntityType
 
 _RELATION_ENDPOINTS = MappingProxyType(
     {
+        RelationKind.ORM_DECLARES_MAPPING: _pairs("SYMBOL", "ORM_MAPPING"),
+        RelationKind.ORM_HAS_ATTRIBUTE: _pairs("ORM_MAPPING", "ORM_MAPPING"),
+        RelationKind.ORM_DECLARES_QUERY: _pairs("SYMBOL", "ORM_QUERY"),
+        RelationKind.ORM_NAMED_QUERY: _pairs("ORM_QUERY", "ORM_QUERY"),
+        RelationKind.ORM_QUERY_ENTITY: _pairs("ORM_QUERY", "ORM_MAPPING"),
+        RelationKind.ORM_QUERY_READS_ATTRIBUTE: _pairs("ORM_QUERY", "ORM_MAPPING"),
+        RelationKind.ORM_QUERY_WRITES_ATTRIBUTE: _pairs("ORM_QUERY", "ORM_MAPPING"),
+        RelationKind.ORM_INVOKES: _pairs("SYMBOL", "ORM_OPERATION"),
+        RelationKind.ORM_TARGET_ENTITY: _pairs("ORM_OPERATION", "ORM_MAPPING"),
+        RelationKind.ORM_EXECUTES_QUERY: _pairs("ORM_OPERATION", "ORM_QUERY"),
+        RelationKind.ORM_DATABASE_TARGET: _pairs("ORM_OPERATION", "DATABASE_OBJECT"),
+        RelationKind.USES_DATABASE_CONTEXT: _pairs("SQL_EXECUTE", "DATABASE_CONTEXT"),
+        RelationKind.CONTEXTUALIZES_ACCESS: _pairs("DATA_ACCESS", "DATABASE_ACCESS"),
+        RelationKind.IN_DATABASE_CONTEXT: _pairs("DATABASE_ACCESS", "DATABASE_CONTEXT"),
+        RelationKind.RESOLVES_DATABASE_OBJECT: _pairs(
+            "DATABASE_ACCESS", "DATABASE_OBJECT"
+        ),
+        RelationKind.HAS_SQL_BINDING: _pairs("SQL_EXECUTE", "SQL_BINDING"),
+        RelationKind.VALUE_BINDS_SQL: _pairs("VALUE", "SQL_BINDING"),
+        RelationKind.BINDS_PARAMETER: _pairs("SQL_BINDING", "SQL_PLACEHOLDER"),
+        RelationKind.PARAMETER_COLUMN: _pairs("SQL_PLACEHOLDER", "DATA_ACCESS"),
+        RelationKind.HAS_SQL_PARAMETER: _pairs("SQL_STATEMENT", "SQL_PLACEHOLDER"),
+        RelationKind.VALUE_OF: _pairs("VALUE", "SYMBOL"),
         RelationKind.HAS_SQL_STATEMENT: _pairs("SQL_CANDIDATE", "SQL_STATEMENT"),
         RelationKind.EXECUTES_STATEMENT: _pairs("SQL_EXECUTE", "SQL_STATEMENT"),
         **{
@@ -415,6 +468,105 @@ def validate_relation_endpoints(
                 raise ValueError("CALLS requires callable symbols")
             if isinstance(entity, Operation) and entity.operation_kind != "CALL":
                 raise ValueError("CALLS source operation must be CALL")
+    if relation.relation_kind == RelationKind.ORM_NAMED_QUERY and (
+        actual[0].query_kind != "NAMED_REFERENCE"
+        or any(
+            e.query_kind not in ("JPQL", "NATIVE")
+            or e.query_name != actual[0].query_name
+            for e in actual[1:]
+        )
+    ):
+        raise ValueError("ORM named query link must match its named declaration")
+    if relation.relation_kind == RelationKind.ORM_DECLARES_MAPPING and any(
+        e.symbol_id != actual[0].id for e in actual[1:]
+    ):
+        raise ValueError("ORM mapping declaration must use its Java symbol")
+    if relation.relation_kind in (
+        RelationKind.ORM_DECLARES_QUERY,
+        RelationKind.ORM_INVOKES,
+    ) and any(e.owner_symbol_id != actual[0].id for e in actual[1:]):
+        raise ValueError("ORM declaration/invocation must use its owner")
+    if relation.relation_kind == RelationKind.ORM_HAS_ATTRIBUTE and (
+        actual[0].mapping_kind != "ENTITY"
+        or any(
+            e.mapping_kind != "ATTRIBUTE" or e.owner_symbol_id != actual[0].symbol_id
+            for e in actual[1:]
+        )
+    ):
+        raise ValueError("ORM attributes must belong to their entity mapping")
+    if relation.relation_kind in (
+        RelationKind.ORM_QUERY_ENTITY,
+        RelationKind.ORM_TARGET_ENTITY,
+    ) and any(
+        e.mapping_kind != "ENTITY" or e.entity_role != "ENTITY" for e in actual[1:]
+    ):
+        raise ValueError("ORM entity target must be an entity mapping")
+    if relation.relation_kind in (
+        RelationKind.ORM_QUERY_READS_ATTRIBUTE,
+        RelationKind.ORM_QUERY_WRITES_ATTRIBUTE,
+    ) and any(e.mapping_kind != "ATTRIBUTE" for e in actual[1:]):
+        raise ValueError("ORM property reference requires attribute mapping")
+    if relation.relation_kind == RelationKind.ORM_EXECUTES_QUERY and (
+        (actual[0].query_id is None and relation.resolution.status == "RESOLVED")
+        or (
+            actual[0].query_id is not None
+            and any(e.id != actual[0].query_id for e in actual[1:])
+        )
+    ):
+        raise ValueError("ORM query execution must use its captured query")
+    if relation.relation_kind == RelationKind.ORM_DATABASE_TARGET and actual[1:]:
+        context = entities.get(actual[0].context_id)
+        if not isinstance(context, DatabaseContext) or any(
+            (e.database_key, e.version_key, e.schema_fingerprint)
+            != (context.database_key, context.version_key, context.schema_fingerprint)
+            for e in actual[1:]
+        ):
+            raise ValueError("ORM database target must use its operation context")
+    if relation.relation_kind == RelationKind.CONTEXTUALIZES_ACCESS and any(
+        entity.access_id != actual[0].id for entity in actual[1:]
+    ):
+        raise ValueError("contextual access must use its source DataAccess")
+    if relation.relation_kind == RelationKind.IN_DATABASE_CONTEXT and any(
+        entity.id != actual[0].context_id for entity in actual[1:]
+    ):
+        raise ValueError("database access must use its declared context")
+    if (
+        relation.relation_kind == RelationKind.RESOLVES_DATABASE_OBJECT
+        and len(actual) > 1
+    ):
+        context = entities.get(actual[0].context_id)
+        access = entities.get(actual[0].access_id)
+        if not isinstance(access, DataAccess) or any(
+            (entity.object_kind == "COLUMN") != (access.object_kind == "COLUMN")
+            or entity.object_kind == "SCHEMA"
+            for entity in actual[1:]
+        ):
+            raise ValueError(
+                "database resolution target kind must match table/column access"
+            )
+        if not isinstance(context, DatabaseContext) or any(
+            (entity.database_key, entity.version_key, entity.schema_fingerprint)
+            != (context.database_key, context.version_key, context.schema_fingerprint)
+            for entity in actual[1:]
+        ):
+            raise ValueError(
+                "resolved database object must belong to its context version"
+            )
+    owned = {
+        RelationKind.HAS_SQL_BINDING: "execution_id",
+        RelationKind.VALUE_BINDS_SQL: "value_id",
+        RelationKind.HAS_SQL_PARAMETER: "statement_id",
+    }
+    if relation.relation_kind in owned and any(
+        getattr(entity, owned[relation.relation_kind]) != actual[0].id
+        for entity in actual[1:]
+    ):
+        raise ValueError("lineage relation must use the entity owner/value")
+    if relation.relation_kind == RelationKind.PARAMETER_COLUMN and any(
+        entity.statement_id != actual[0].statement_id or entity.object_kind != "COLUMN"
+        for entity in actual[1:]
+    ):
+        raise ValueError("parameter column must be a column of the same statement")
     if relation.relation_kind == RelationKind.HAS_SQL_STATEMENT and any(
         entity.candidate_id != actual[0].id for entity in actual[1:]
     ):
@@ -664,6 +816,329 @@ class DataAccess(EntityEnvelope, SqlAccessDetail):
     statement_id: EntityId
 
 
+class SqlPlaceholder(EntityEnvelope):
+    entity_type: Literal[EntityType.SQL_PLACEHOLDER] = EntityType.SQL_PLACEHOLDER
+    statement_id: EntityId
+    ordinal: int = Field(ge=1)
+    parameter_kind: Literal["POSITIONAL", "INDEXED", "NAMED"]
+    position: int | None = Field(default=None, ge=1)
+    parameter_name: Text | None = None
+    token_text: Text
+    text_start: int = Field(ge=0)
+    text_end: int = Field(gt=0)
+
+    @model_validator(mode="after")
+    def valid_parameter(self) -> Self:
+        if self.text_end - self.text_start != len(self.token_text):
+            raise ValueError("placeholder token range must match text length")
+        if (self.parameter_kind == "NAMED") != (self.parameter_name is not None):
+            raise ValueError("named placeholder requires a name")
+        if (self.parameter_kind != "NAMED") != (self.position is not None):
+            raise ValueError("positional/indexed placeholder requires position")
+        return self
+
+
+class SqlBinding(EntityEnvelope):
+    entity_type: Literal[EntityType.SQL_BINDING] = EntityType.SQL_BINDING
+    execution_id: EntityId
+    value_id: EntityId
+    setter_operation_id: EntityId | None = None
+    api: Text
+    binding_kind: Literal["POSITIONAL", "NAMED", "UNKNOWN"]
+    position: int | None = Field(default=None, ge=1)
+    parameter_name: Text | None = None
+    status: Literal["BOUND", "PARTIAL", "MISSING", "UNKNOWN"]
+    reasons: tuple[Text, ...] = ()
+
+    @model_validator(mode="after")
+    def valid_binding(self) -> Self:
+        if (self.binding_kind == "POSITIONAL") != (self.position is not None):
+            raise ValueError("positional binding requires position")
+        if (self.binding_kind == "NAMED") != (self.parameter_name is not None):
+            raise ValueError("named binding requires name")
+        if (self.status != "BOUND") != bool(self.reasons):
+            raise ValueError("incomplete binding requires reasons")
+        return self
+
+
+def database_object_key(
+    database_key: str,
+    version_key: str,
+    object_kind: str,
+    catalog_name: str,
+    schema_name: str,
+    table_name: str | None = None,
+    column_name: str | None = None,
+) -> str:
+    """Return global database object identity, independent of code repository/snapshot."""
+    payload = json.dumps(
+        [
+            "database",
+            1,
+            database_key,
+            version_key,
+            object_kind,
+            catalog_name,
+            schema_name,
+            table_name,
+            column_name,
+        ],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode()
+    return "db:" + hashlib.sha256(payload).hexdigest()
+
+
+class DatabaseObject(EntityEnvelope):
+    entity_type: Literal[EntityType.DATABASE_OBJECT] = EntityType.DATABASE_OBJECT
+    projection_file_id: EntityId
+    database_key: Text
+    version_key: Text
+    schema_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    object_key: str = Field(pattern=r"^db:[0-9a-f]{64}$")
+    object_kind: Literal[
+        "SCHEMA", "TABLE", "VIEW", "MATERIALIZED_VIEW", "FOREIGN_TABLE", "COLUMN"
+    ]
+    catalog_name: str = Field(min_length=1)
+    schema_name: str = Field(min_length=1)
+    table_name: str | None = Field(default=None, min_length=1)
+    column_name: str | None = Field(default=None, min_length=1)
+
+    @model_validator(mode="after")
+    def valid_database_identity(self) -> Self:
+        if (self.object_kind == "COLUMN") != (self.column_name is not None) or (
+            self.object_kind != "SCHEMA"
+        ) != (self.table_name is not None):
+            raise ValueError("database object kind does not match identifier shape")
+        if self.object_key != database_object_key(
+            self.database_key,
+            self.version_key,
+            self.object_kind,
+            self.catalog_name,
+            self.schema_name,
+            self.table_name,
+            self.column_name,
+        ):
+            raise ValueError("database object key does not match global identity")
+        if self.logical_key != json.dumps(
+            ["database.object", self.projection_file_id, self.object_key],
+            separators=(",", ":"),
+        ):
+            raise ValueError(
+                "database object projection key does not match file/identity"
+            )
+        return self
+
+
+class DatabaseContext(EntityEnvelope):
+    entity_type: Literal[EntityType.DATABASE_CONTEXT] = EntityType.DATABASE_CONTEXT
+    projection_file_id: EntityId
+    connection_key: Text
+    database_key: Text
+    version_key: Text
+    schema_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    search_path: tuple[Annotated[str, Field(min_length=1)], ...] = ()
+
+    @model_validator(mode="after")
+    def valid_context_identity(self) -> Self:
+        if len(set(self.search_path)) != len(self.search_path):
+            raise ValueError("database search_path cannot contain duplicates")
+        expected = json.dumps(
+            [
+                "database.context",
+                self.projection_file_id,
+                self.connection_key,
+                self.database_key,
+                self.version_key,
+                self.search_path,
+            ],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        if self.logical_key != expected:
+            raise ValueError(
+                "database context key does not match its identity/search path"
+            )
+        return self
+
+
+class DatabaseAccess(EntityEnvelope):
+    entity_type: Literal[EntityType.DATABASE_ACCESS] = EntityType.DATABASE_ACCESS
+    access_id: EntityId
+    context_id: EntityId | None = None
+    execution_id: EntityId | None = None
+
+
+class OrmMapping(EntityEnvelope):
+    entity_type: Literal[EntityType.ORM_MAPPING] = EntityType.ORM_MAPPING
+    mapping_kind: Literal["ENTITY", "ATTRIBUTE"]
+    entity_role: Literal["ENTITY", "MAPPED_SUPERCLASS", "EMBEDDABLE"]
+    symbol_id: EntityId
+    owner_symbol_id: EntityId
+    entity_name: Text
+    attribute_name: Text | None = None
+    attribute_kind: (
+        Literal["BASIC", "ID", "VERSION", "RELATIONSHIP", "EMBEDDED"] | None
+    ) = None
+    access_mode: Literal["FIELD", "PROPERTY", "UNKNOWN"]
+    catalog_name: SqlIdentifier | None = None
+    schema_name: SqlIdentifier | None = None
+    table_name: SqlIdentifier | None = None
+    column_name: SqlIdentifier | None = None
+    nullable: bool | None = None
+    insertable: bool | None = None
+    updatable: bool | None = None
+    status: Literal["COMPLETE", "PARTIAL", "UNSUPPORTED"]
+    reasons: tuple[Text, ...] = ()
+
+    @model_validator(mode="after")
+    def valid_mapping(self) -> Self:
+        attribute = self.mapping_kind == "ATTRIBUTE"
+        if attribute != (self.attribute_name is not None) or attribute != (
+            self.attribute_kind is not None
+        ):
+            raise ValueError("ORM mapping attribute shape does not match kind")
+        if not attribute and (
+            self.owner_symbol_id != self.symbol_id or self.column_name is not None
+        ):
+            raise ValueError("ORM entity mapping must own its class symbol")
+        if (self.status != "COMPLETE") != bool(self.reasons):
+            raise ValueError("incomplete ORM mapping requires reasons")
+        return self
+
+
+class OrmQuery(EntityEnvelope):
+    entity_type: Literal[EntityType.ORM_QUERY] = EntityType.ORM_QUERY
+    owner_symbol_id: EntityId
+    query_kind: Literal["JPQL", "NATIVE", "NAMED_REFERENCE", "CRITERIA", "UNKNOWN"]
+    query_name: Text | None = None
+    text: Text | None = None
+    status: Literal["COMPLETE", "PARTIAL", "UNSUPPORTED"]
+    reasons: tuple[Text, ...] = ()
+
+    @model_validator(mode="after")
+    def valid_query(self) -> Self:
+        if self.query_kind == "CRITERIA" and (
+            self.status == "COMPLETE" or self.text is not None
+        ):
+            raise ValueError(
+                "Criteria query cannot assert complete string-query semantics"
+            )
+        if self.query_kind == "NAMED_REFERENCE" and self.text is not None:
+            raise ValueError("named query reference cannot pretend to be query text")
+        if self.status == "COMPLETE" and (
+            (self.query_kind in ("JPQL", "NATIVE") and self.text is None)
+            or (self.query_kind == "NAMED_REFERENCE" and self.query_name is None)
+        ):
+            raise ValueError("complete ORM query requires known text/name")
+        if (self.status != "COMPLETE") != bool(self.reasons):
+            raise ValueError("incomplete ORM query requires reasons")
+        return self
+
+
+class OrmOperation(EntityEnvelope):
+    entity_type: Literal[EntityType.ORM_OPERATION] = EntityType.ORM_OPERATION
+    source_range: SourceRange
+    owner_symbol_id: EntityId
+    call_operation_id: EntityId
+    api: Text
+    operation_kind: Literal[
+        "PERSIST",
+        "MERGE",
+        "REMOVE",
+        "FIND",
+        "GET_REFERENCE",
+        "REFRESH",
+        "FLUSH",
+        "QUERY_READ",
+        "QUERY_WRITE",
+    ]
+    effect_kind: Literal[
+        "READ", "INSERT", "MERGE", "DELETE", "WRITE", "REFERENCE", "UNKNOWN"
+    ]
+    query_id: EntityId | None = None
+    context_id: EntityId | None = None
+
+    @model_validator(mode="after")
+    def valid_effect(self) -> Self:
+        effects = {
+            "PERSIST": "INSERT",
+            "MERGE": "MERGE",
+            "REMOVE": "DELETE",
+            "FIND": "READ",
+            "GET_REFERENCE": "REFERENCE",
+            "REFRESH": "READ",
+            "FLUSH": "UNKNOWN",
+            "QUERY_READ": "READ",
+            "QUERY_WRITE": "WRITE",
+        }
+        methods = {
+            "PERSIST": {"persist"},
+            "MERGE": {"merge"},
+            "REMOVE": {"remove"},
+            "FIND": {"find"},
+            "GET_REFERENCE": {"getReference"},
+            "REFRESH": {"refresh"},
+            "FLUSH": {"flush"},
+            "QUERY_READ": {
+                "getResultList",
+                "getSingleResult",
+                "getSingleResultOrNull",
+                "getResultStream",
+            },
+            "QUERY_WRITE": {"executeUpdate"},
+        }
+        if self.api.rsplit(".", 1)[-1] not in methods[self.operation_kind]:
+            raise ValueError("ORM operation kind must match API method")
+        if self.effect_kind != effects[self.operation_kind]:
+            raise ValueError("ORM effect must match its invocation intent")
+        if self.query_id is not None and not self.operation_kind.startswith("QUERY_"):
+            raise ValueError("only query invocations may capture an ORM query")
+        return self
+
+
+class SourceDiagnostic(ContractModel):
+    severity: Literal["ERROR", "WARNING", "INFO"]
+    code: Text
+    message: Text
+    source_range: SourceRange | None = None
+
+
+class SourceAnalysis(EntityEnvelope):
+    entity_type: Literal[EntityType.SOURCE_ANALYSIS] = EntityType.SOURCE_ANALYSIS
+    source_range: None = None
+    source_file_id: EntityId
+    adapter_key: Text
+    adapter_version: Text
+    analysis_version: Text
+    capabilities: tuple[Coverage, ...] = Field(min_length=1)
+    diagnostics: tuple[SourceDiagnostic, ...] = ()
+
+    @model_validator(mode="after")
+    def valid_source_analysis(self) -> Self:
+        key = json.dumps(
+            ["source.analysis", self.source_file_id, self.adapter_key],
+            separators=(",", ":"),
+        )
+        if self.logical_key != key:
+            raise ValueError("source analysis identity must match file/adapter")
+        if len({c.capability for c in self.capabilities}) != len(self.capabilities):
+            raise ValueError("duplicate source analysis capability")
+        if any(
+            d.source_range is not None
+            and d.source_range.source_file_id != self.source_file_id
+            for d in self.diagnostics
+        ):
+            raise ValueError("source diagnostic range must belong to its file")
+        if any(d.severity == "ERROR" for d in self.diagnostics) and any(
+            c.status == "COMPLETE" for c in self.capabilities
+        ):
+            raise ValueError(
+                "error diagnostics cannot claim complete source capabilities"
+            )
+        return self
+
+
 Entity = Annotated[
     SourceFile
     | CodeEntity
@@ -677,7 +1152,16 @@ Entity = Annotated[
     | SqlConstruction
     | SqlExecute
     | SqlStatement
-    | DataAccess,
+    | DataAccess
+    | SqlBinding
+    | SqlPlaceholder
+    | DatabaseObject
+    | DatabaseContext
+    | DatabaseAccess
+    | OrmMapping
+    | OrmQuery
+    | OrmOperation
+    | SourceAnalysis,
     Field(discriminator="entity_type"),
 ]
 

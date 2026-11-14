@@ -11,7 +11,11 @@ uv run code-crawler <команда>
 | `db status` | проверяет, что схема БД соответствует коду — см. [db.md](db.md) |
 | `db init` | готовит пустую БД и применяет все миграции — см. [db.md](db.md) |
 | `db migrate` | применяет недостающие миграции схемы — см. [db.md](db.md) |
+| `schema import-version --database-key KEY --version-key VERSION` | независимый immutable PostgreSQL import — см. [database-identity.md](database-identity.md) |
+| `schema import-manifest PATH` | импорт typed JSON manifest в versioned inventory |
 | `schema import` | читает структуру прикладной БД в слой данных — см. [data-model.md](data-model.md) |
+| `adapters list` | описывает built-in versioned Java profiles, Groovy и PL/Plus adapters без доступа к БД |
+| `index-sources ROOT --repository-key KEY` | строит canonical BUILDING snapshot через source registry — см. [source-adapters.md](source-adapters.md) |
 | `index <источник>` | строит или обновляет индекс репозитория — см. [indexing.md](indexing.md) |
 
 `<источник>` — локальный каталог или URL репозитория. Пример:

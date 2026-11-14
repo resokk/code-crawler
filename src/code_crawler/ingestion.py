@@ -12,19 +12,28 @@ from code_crawler.ucm import (
     CodeEntity,
     ContractModel,
     DataAccess,
+    DatabaseAccess,
+    DatabaseContext,
+    DatabaseObject,
     DatabaseSelector,
     Entity,
     ExternalReference,
     HttpSelector,
     Occurrence,
     Operation,
+    OrmMapping,
+    OrmOperation,
+    OrmQuery,
     Relation,
     RelationKind,
     Scope,
+    SourceAnalysis,
     SourceFile,
     SourceRange,
+    SqlBinding,
     SqlConstruction,
     SqlExecute,
+    SqlPlaceholder,
     SqlStatement,
     Symbol,
     SymbolSelector,
@@ -66,6 +75,8 @@ class UcmBatch(ContractModel):
                 if entity.path in paths:
                     raise ValueError("duplicate source file path")
                 paths.add(entity.path)
+            elif isinstance(entity, SourceAnalysis):
+                require(entity.source_file_id, SourceFile)
             elif isinstance(entity, Symbol):
                 require(entity.scope_id, Scope)
                 type_ref(entity.type_ref)
@@ -90,6 +101,142 @@ class UcmBatch(ContractModel):
                     producers.add(value_id)
             elif isinstance(entity, Value):
                 type_ref(entity.type_ref)
+            elif isinstance(entity, OrmMapping):
+                require(entity.symbol_id, Symbol)
+                require(entity.owner_symbol_id, Symbol)
+                if catalog[entity.owner_symbol_id].symbol_kind != "CLASS":
+                    raise ValueError("ORM mapping owner must be a class")
+                if (
+                    entity.mapping_kind == "ENTITY"
+                    and catalog[entity.symbol_id].symbol_kind != "CLASS"
+                ):
+                    raise ValueError("ORM entity mapping must use a class symbol")
+                if entity.mapping_kind == "ATTRIBUTE" and catalog[
+                    entity.symbol_id
+                ].symbol_kind not in ("FIELD", "METHOD"):
+                    raise ValueError("ORM attribute requires field/getter symbol")
+                if entity.mapping_kind == "ATTRIBUTE":
+                    symbol = catalog[entity.symbol_id]
+                    owner = catalog[entity.owner_symbol_id]
+                    if (
+                        symbol.symbol_kind == "METHOD"
+                        and symbol.owner_key != owner.logical_key
+                    ):
+                        raise ValueError("ORM getter must belong to its entity class")
+                    if (
+                        symbol.symbol_kind == "FIELD"
+                        and catalog[symbol.scope_id].owner_symbol_id != owner.id
+                    ):
+                        raise ValueError("ORM field must belong to its entity class")
+            elif isinstance(entity, OrmQuery):
+                require(entity.owner_symbol_id, Symbol)
+                if catalog[entity.owner_symbol_id].symbol_kind not in (
+                    "CLASS",
+                    "METHOD",
+                    "CONSTRUCTOR",
+                ):
+                    raise ValueError("ORM query owner must be a type or callable")
+            elif isinstance(entity, OrmOperation):
+                require(entity.owner_symbol_id, Symbol)
+                require(entity.call_operation_id, Operation)
+                require(entity.query_id, OrmQuery)
+                require(entity.context_id, DatabaseContext)
+                operation = catalog[entity.call_operation_id]
+                if (
+                    catalog[entity.owner_symbol_id].symbol_kind
+                    not in ("METHOD", "CONSTRUCTOR")
+                    or operation.operation_kind != "CALL"
+                    or operation.callee is None
+                    or operation.callee.name != entity.api
+                ):
+                    raise ValueError("ORM invocation must use its callable/CALL API")
+                scope = catalog.get(operation.scope_id)
+                seen = set()
+                owner = None
+                while isinstance(scope, Scope) and scope.id not in seen:
+                    seen.add(scope.id)
+                    symbol = catalog.get(scope.owner_symbol_id)
+                    if isinstance(symbol, Symbol) and symbol.symbol_kind in (
+                        "METHOD",
+                        "CONSTRUCTOR",
+                    ):
+                        owner = symbol.id
+                        break
+                    scope = catalog.get(scope.parent_scope_id)
+                if owner != entity.owner_symbol_id:
+                    raise ValueError(
+                        "ORM CALL scope must belong to its invocation owner"
+                    )
+            elif isinstance(entity, (DatabaseContext, DatabaseObject)):
+                require(entity.projection_file_id, SourceFile)
+                if (
+                    entity.source_range is not None
+                    and entity.source_range.source_file_id != entity.projection_file_id
+                ):
+                    raise ValueError(
+                        "database projection must belong to its source file"
+                    )
+            elif isinstance(entity, DatabaseAccess):
+                require(entity.access_id, DataAccess)
+                require(entity.context_id, DatabaseContext)
+                require(entity.execution_id, SqlExecute)
+            elif isinstance(entity, SqlPlaceholder):
+                require(entity.statement_id, SqlStatement)
+                statement = catalog[entity.statement_id]
+                if (
+                    statement.parse_status != "COMPLETE"
+                    or statement.text[entity.text_start : entity.text_end]
+                    != entity.token_text
+                ):
+                    raise ValueError(
+                        "SQL placeholder must match a complete statement slice"
+                    )
+            elif isinstance(entity, SqlBinding):
+                require(entity.execution_id, SqlExecute)
+                require(entity.value_id, Value)
+                require(entity.setter_operation_id, Operation)
+                if entity.setter_operation_id is not None:
+                    setter = catalog[entity.setter_operation_id]
+                    if (
+                        setter.operation_kind != "CALL"
+                        or setter.callee is None
+                        or setter.callee.name != entity.api
+                    ):
+                        raise ValueError("SQL binding setter must match a CALL API")
+                    if entity.api.startswith("java.sql."):
+                        if len(setter.input_value_ids) < 2:
+                            raise ValueError(
+                                "JDBC setter requires selector and value/type inputs"
+                            )
+                        selector = catalog[setter.input_value_ids[0]]
+                        if entity.binding_kind == "POSITIONAL" and (
+                            selector.value_kind != "LITERAL"
+                            or type(selector.literal) is not int
+                            or selector.literal != entity.position
+                        ):
+                            raise ValueError(
+                                "binding selector must match JDBC setter input"
+                            )
+                        if entity.binding_kind == "NAMED" and (
+                            selector.value_kind != "LITERAL"
+                            or selector.literal != entity.parameter_name
+                        ):
+                            raise ValueError(
+                                "binding selector must match JDBC setter input"
+                            )
+                        value = catalog[entity.value_id]
+                        if entity.api.endswith(".setNull"):
+                            if (
+                                value.value_kind != "LITERAL"
+                                or value.literal is not None
+                            ):
+                                raise ValueError(
+                                    "setNull binding requires literal null"
+                                )
+                        elif setter.input_value_ids[1] != entity.value_id:
+                            raise ValueError(
+                                "binding value must match JDBC setter input"
+                            )
             elif isinstance(entity, SqlStatement):
                 candidate = catalog.get(entity.candidate_id)
                 if candidate is None or candidate.entity_type.value != "SQL_CANDIDATE":
@@ -156,6 +303,13 @@ class UcmBatch(ContractModel):
                 validate_relation_endpoints(entity, catalog)
             elif isinstance(entity, ExternalReference):
                 validate_external_reference(entity, catalog)
+        source_reports = [
+            e.source_file_id for e in self.entities if isinstance(e, SourceAnalysis)
+        ]
+        if len(set(source_reports)) != len(source_reports):
+            raise ValueError(
+                "source file cannot have multiple adapter analysis reports"
+            )
         sql_candidates = [
             variant.candidate_id
             for e in self.entities
@@ -239,6 +393,94 @@ class UcmBatch(ContractModel):
                     raise ValueError(
                         "definite execution statement requires complete unambiguous origin"
                     )
+        parameter_keys: set[tuple[str, int]] = set()
+        executable = {}
+        for relation in self.entities:
+            if (
+                isinstance(relation, Relation)
+                and relation.relation_kind == RelationKind.EXECUTES_STATEMENT
+            ):
+                refs = (
+                    (relation.resolution.target,)
+                    if relation.resolution.target
+                    else relation.resolution.candidates
+                )
+                executable.setdefault(relation.source.id, set()).update(
+                    ref.id for ref in refs
+                )
+        for entity in self.entities:
+            if isinstance(entity, SqlPlaceholder):
+                key = (entity.statement_id, entity.ordinal)
+                if key in parameter_keys:
+                    raise ValueError("duplicate SQL placeholder ordinal")
+                parameter_keys.add(key)
+            if (
+                isinstance(entity, Relation)
+                and entity.relation_kind == RelationKind.BINDS_PARAMETER
+            ):
+                binding = catalog[entity.source.id]
+                targets = (
+                    (entity.resolution.target,)
+                    if entity.resolution.target
+                    else entity.resolution.candidates
+                )
+                for ref in targets:
+                    parameter = catalog[ref.id]
+                    if parameter.statement_id not in executable.get(
+                        binding.execution_id, set()
+                    ):
+                        raise ValueError(
+                            "binding placeholder must belong to an execution statement"
+                        )
+                    if binding.binding_kind == "POSITIONAL" and (
+                        parameter.parameter_kind != "POSITIONAL"
+                        or binding.position != parameter.position
+                    ):
+                        raise ValueError(
+                            "binding position must match the SQL placeholder"
+                        )
+                    if binding.binding_kind == "NAMED" and (
+                        parameter.parameter_kind != "NAMED"
+                        or binding.parameter_name != parameter.parameter_name
+                    ):
+                        raise ValueError("binding name must match the SQL placeholder")
+                    if (
+                        entity.resolution.status == "RESOLVED"
+                        and binding.status != "BOUND"
+                    ):
+                        raise ValueError(
+                            "incomplete SQL binding cannot assert definite parameter link"
+                        )
+        database_choices = {}
+        for relation in self.entities:
+            if (
+                isinstance(relation, Relation)
+                and relation.relation_kind == RelationKind.USES_DATABASE_CONTEXT
+            ):
+                refs = (
+                    (relation.resolution.target,)
+                    if relation.resolution.target
+                    else relation.resolution.candidates
+                )
+                database_choices.setdefault(relation.source.id, set()).update(
+                    ref.id for ref in refs
+                )
+        for entity in self.entities:
+            if not isinstance(entity, DatabaseAccess) or entity.execution_id is None:
+                continue
+            access = catalog[entity.access_id]
+            if access.statement_id not in executable.get(entity.execution_id, set()):
+                raise ValueError(
+                    "contextual database access must belong to an execution statement"
+                )
+            if (
+                entity.context_id is not None
+                and entity.context_id
+                not in database_choices.get(entity.execution_id, set())
+            ):
+                raise ValueError(
+                    "contextual database access must use an execution context"
+                )
         checked: set[str] = set()
         for entity in self.entities:
             if not isinstance(entity, Scope):
@@ -313,6 +555,46 @@ def _records(snapshot_id: UUID, batch: UcmBatch) -> dict[str, list[dict]]:
                 language=entity.language,
                 content_sha256=entity.content_sha256,
             )
+        elif isinstance(entity, SourceAnalysis):
+            add(
+                "ucm_source_analyses",
+                **base,
+                source_file_id=entity.source_file_id,
+                adapter_key=entity.adapter_key,
+                adapter_version=entity.adapter_version,
+                analysis_version=entity.analysis_version,
+            )
+            for capability in entity.capabilities:
+                add(
+                    "ucm_source_analysis_capabilities",
+                    analysis_id=entity.id,
+                    capability=capability.capability,
+                    analyzer_version=capability.analyzer_version,
+                    status=capability.status,
+                )
+                for ordinal, reason in enumerate(capability.reasons):
+                    add(
+                        "ucm_source_analysis_reasons",
+                        analysis_id=entity.id,
+                        capability=capability.capability,
+                        ordinal=ordinal,
+                        reason=reason,
+                    )
+            for ordinal, diagnostic in enumerate(entity.diagnostics):
+                f, sl, sc, el, ec = _range(diagnostic.source_range)
+                add(
+                    "ucm_source_diagnostics",
+                    analysis_id=entity.id,
+                    ordinal=ordinal,
+                    severity=diagnostic.severity,
+                    code=diagnostic.code,
+                    message=diagnostic.message,
+                    source_file_id=f,
+                    start_line=sl,
+                    start_byte_column=sc,
+                    end_line=el,
+                    end_byte_column=ec,
+                )
         elif isinstance(entity, Symbol):
             add(
                 "ucm_symbols",
@@ -375,6 +657,143 @@ def _records(snapshot_id: UUID, batch: UcmBatch) -> dict[str, list[dict]]:
                         position=position,
                         value_id=value_id,
                     )
+        elif isinstance(entity, OrmMapping):
+            add(
+                "ucm_orm_mappings",
+                **base,
+                mapping_kind=entity.mapping_kind,
+                entity_role=entity.entity_role,
+                symbol_id=entity.symbol_id,
+                owner_symbol_id=entity.owner_symbol_id,
+                entity_name=entity.entity_name,
+                attribute_name=entity.attribute_name,
+                attribute_kind=entity.attribute_kind,
+                access_mode=entity.access_mode,
+                nullable=entity.nullable,
+                insertable=entity.insertable,
+                updatable=entity.updatable,
+                status=entity.status,
+            )
+            for part in ("catalog_name", "schema_name", "table_name", "column_name"):
+                identifier = getattr(entity, part)
+                if identifier is not None:
+                    add(
+                        "ucm_orm_mapping_names",
+                        mapping_id=entity.id,
+                        part=part,
+                        text=identifier.text,
+                        quoted=identifier.quoted,
+                        normalized=identifier.normalized,
+                    )
+            for ordinal, reason in enumerate(entity.reasons):
+                add(
+                    "ucm_orm_reasons",
+                    owner_id=entity.id,
+                    ordinal=ordinal,
+                    reason=reason,
+                )
+        elif isinstance(entity, OrmQuery):
+            add(
+                "ucm_orm_queries",
+                **base,
+                owner_symbol_id=entity.owner_symbol_id,
+                query_kind=entity.query_kind,
+                query_name=entity.query_name,
+                text=entity.text,
+                status=entity.status,
+            )
+            for ordinal, reason in enumerate(entity.reasons):
+                add(
+                    "ucm_orm_reasons",
+                    owner_id=entity.id,
+                    ordinal=ordinal,
+                    reason=reason,
+                )
+        elif isinstance(entity, OrmOperation):
+            add(
+                "ucm_orm_operations",
+                **base,
+                owner_symbol_id=entity.owner_symbol_id,
+                call_operation_id=entity.call_operation_id,
+                api=entity.api,
+                operation_kind=entity.operation_kind,
+                effect_kind=entity.effect_kind,
+                query_id=entity.query_id,
+                context_id=entity.context_id,
+            )
+        elif isinstance(entity, DatabaseObject):
+            add(
+                "ucm_database_objects",
+                **base,
+                projection_file_id=entity.projection_file_id,
+                database_key=entity.database_key,
+                version_key=entity.version_key,
+                schema_fingerprint=entity.schema_fingerprint,
+                object_key=entity.object_key,
+                object_kind=entity.object_kind,
+                catalog_name=entity.catalog_name,
+                schema_name=entity.schema_name,
+                table_name=entity.table_name,
+                column_name=entity.column_name,
+            )
+        elif isinstance(entity, DatabaseContext):
+            add(
+                "ucm_database_contexts",
+                **base,
+                projection_file_id=entity.projection_file_id,
+                connection_key=entity.connection_key,
+                database_key=entity.database_key,
+                version_key=entity.version_key,
+                schema_fingerprint=entity.schema_fingerprint,
+            )
+            for position, name in enumerate(entity.search_path):
+                add(
+                    "ucm_database_search_paths",
+                    context_id=entity.id,
+                    position=position,
+                    schema_name=name,
+                )
+        elif isinstance(entity, DatabaseAccess):
+            add(
+                "ucm_database_accesses",
+                **base,
+                access_id=entity.access_id,
+                context_id=entity.context_id,
+                execution_id=entity.execution_id,
+            )
+        elif isinstance(entity, SqlPlaceholder):
+            add(
+                "ucm_sql_placeholders",
+                **base,
+                statement_id=entity.statement_id,
+                ordinal=entity.ordinal,
+                parameter_kind=entity.parameter_kind,
+                position=entity.position,
+                parameter_name=entity.parameter_name,
+                token_text=entity.token_text,
+                text_start=entity.text_start,
+                text_end=entity.text_end,
+            )
+        elif isinstance(entity, SqlBinding):
+            add(
+                "ucm_sql_bindings",
+                **base,
+                execution_id=entity.execution_id,
+                value_id=entity.value_id,
+                setter_operation_id=entity.setter_operation_id,
+                api=entity.api,
+                binding_kind=entity.binding_kind,
+                position=entity.position,
+                parameter_name=entity.parameter_name,
+                status=entity.status,
+            )
+            for ordinal, reason in enumerate(entity.reasons):
+                add(
+                    "ucm_sql_binding_reasons",
+                    binding_id=entity.id,
+                    ordinal=ordinal,
+                    reason=reason,
+                )
         elif isinstance(entity, SqlStatement):
             add(
                 "ucm_sql_statements",

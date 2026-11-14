@@ -10,6 +10,15 @@ import asyncpg
 from code_crawler.ingestion import UcmBatch
 
 _SUBTYPES = {
+    "SOURCE_ANALYSIS": "ucm_source_analyses",
+    "ORM_MAPPING": "ucm_orm_mappings",
+    "ORM_QUERY": "ucm_orm_queries",
+    "ORM_OPERATION": "ucm_orm_operations",
+    "DATABASE_OBJECT": "ucm_database_objects",
+    "DATABASE_CONTEXT": "ucm_database_contexts",
+    "DATABASE_ACCESS": "ucm_database_accesses",
+    "SQL_PLACEHOLDER": "ucm_sql_placeholders",
+    "SQL_BINDING": "ucm_sql_bindings",
     "SQL_STATEMENT": "ucm_sql_statements",
     "DATA_ACCESS": "ucm_data_accesses",
     "SQL_EXECUTE": "ucm_sql_executions",
@@ -24,6 +33,13 @@ _SUBTYPES = {
     "EXTERNAL_REFERENCE": "ucm_external_references",
 }
 _AUXILIARY = {
+    "ucm_source_analysis_capabilities": "analysis_id",
+    "ucm_source_analysis_reasons": "analysis_id",
+    "ucm_source_diagnostics": "analysis_id",
+    "ucm_orm_mapping_names": "mapping_id",
+    "ucm_orm_reasons": "owner_id",
+    "ucm_database_search_paths": "context_id",
+    "ucm_sql_binding_reasons": "binding_id",
     "ucm_sql_statement_reasons": "statement_id",
     "ucm_sql_access_names": "access_id",
     "ucm_sql_variants": "construction_id",
@@ -113,13 +129,74 @@ def _restore(repository_id: UUID, tables: dict[str, list[dict]]) -> UcmBatch:
                 raise ValueError("multiple singleton TypeRefs")
             return values[0] if values else None
 
-        if kind == "SYMBOL":
+        if kind == "SOURCE_ANALYSIS":
+            reasons = auxiliary["ucm_source_analysis_reasons"].pop(entity_id, [])
+            capabilities = auxiliary["ucm_source_analysis_capabilities"].pop(
+                entity_id, []
+            )
+            detail["capabilities"] = []
+            for capability in sorted(capabilities, key=lambda row: row["capability"]):
+                matching = [
+                    r for r in reasons if r["capability"] == capability["capability"]
+                ]
+                reasons = [
+                    r for r in reasons if r["capability"] != capability["capability"]
+                ]
+                detail["capabilities"].append(
+                    {
+                        "capability": capability["capability"],
+                        "analyzer_version": capability["analyzer_version"],
+                        "status": capability["status"],
+                        "reasons": [r["reason"] for r in _ordered(matching, "ordinal")],
+                    }
+                )
+            if reasons:
+                raise ValueError("source analysis reason lacks capability")
+            detail["diagnostics"] = [
+                {
+                    "severity": row["severity"],
+                    "code": row["code"],
+                    "message": row["message"],
+                    "source_range": _location(row),
+                }
+                for row in _ordered(
+                    auxiliary["ucm_source_diagnostics"].pop(entity_id, []), "ordinal"
+                )
+            ]
+        elif kind == "SYMBOL":
             detail["type_ref"] = single("TYPE")
             if detail["owner_key"] is not None:
                 detail["signature"] = {
                     "parameter_types": refs("PARAMETER"),
                     "return_type": single("RETURN"),
                 }
+        elif kind in ("ORM_MAPPING", "ORM_QUERY"):
+            detail["reasons"] = [
+                row["reason"]
+                for row in _ordered(
+                    auxiliary["ucm_orm_reasons"].pop(entity_id, []), "ordinal"
+                )
+            ]
+            if kind == "ORM_MAPPING":
+                for row in auxiliary["ucm_orm_mapping_names"].pop(entity_id, []):
+                    detail[row["part"]] = {
+                        key: row[key] for key in ("text", "quoted", "normalized")
+                    }
+        elif kind == "DATABASE_CONTEXT":
+            detail["search_path"] = [
+                row["schema_name"]
+                for row in _ordered(
+                    auxiliary["ucm_database_search_paths"].pop(entity_id, []),
+                    "position",
+                )
+            ]
+        elif kind == "SQL_BINDING":
+            detail["reasons"] = [
+                row["reason"]
+                for row in _ordered(
+                    auxiliary["ucm_sql_binding_reasons"].pop(entity_id, []), "ordinal"
+                )
+            ]
         elif kind == "SQL_STATEMENT":
             detail["reasons"] = [
                 row["reason"]

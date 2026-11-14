@@ -276,6 +276,7 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
         "local_variable_declaration",
         *java._FIELDS,
         "assignment_expression",
+        "update_expression",
         "method_invocation",
         "return_statement",
         "annotation",

@@ -2,7 +2,7 @@
 
 `code_crawler.ingestion.UcmBatch` — полный замкнутый batch одного репозитория:
 repository_id UUID, entities tuple всех SourceFile/CodeEntity/Symbol/Scope/
-Occurrence/Operation/Value/Relation/ExternalReference/SqlConstruction/SqlExecute/SqlStatement/DataAccess. repository_id каждого
+Occurrence/Operation/Value/Relation/ExternalReference/SqlConstruction/SqlExecute/SqlStatement/DataAccess/SqlBinding/SqlPlaceholder/DatabaseContext/DatabaseObject/DatabaseAccess/OrmMapping/OrmQuery/OrmOperation/SourceAnalysis. repository_id каждого
 entity должен равняться str(UUID). Порядок entities не важен. Дубликаты ID,
 отсутствующие или неверно типизированные ссылки, циклы parent_scope и несколько
 producer одного Value отклоняются до записи. Внешние зависимости ссылаются
@@ -49,3 +49,25 @@ SQL semantic validation дополнительно проверяет уника
 candidate text slice, partial construction isolation, access/statement/effect
 consistency и EXECUTES_STATEMENT origin через execution construction resolution.
 Identifier parts и statement reasons загружаются отдельными ordered/typed rows.
+
+Lineage validation проверяет token slice/ordinal, selector shape, binding owner
+и Value, setter CALL/API и JDBC inputs, BINDS_PARAMETER membership/selector,
+PARAMETER_COLUMN ownership/object kind и запрет definite links у incomplete binding.
+Binding reasons загружаются/восстанавливаются отдельными ordered rows.
+
+Database identity validation проверяет global object key/name shape, file-owned
+projection identity, context search_path, execution/statement/context membership и
+resolved target kind/database/version/fingerprint. SQL FK дополнительно требует
+существующего immutable imported object и READY version; импорт inventory выполняется
+отдельным API, не внутри UcmBatch или code indexing.
+
+ORM validation проверяет entity/attribute symbol kinds и class ownership,
+status/reasons, CALL/API/callable scope, invocation/effect consistency, named
+query matching и captured query. ORM database targets обязаны принадлежать
+context database/version/fingerprint. ORM annotations/recovered queries не
+подменяются JSONB payload; names/flags/reasons сохраняются typed rows.
+
+SourceAnalysis reports создаёт orchestrator registry. Batch проверяет source-file
+reference и максимум один report на файл; nested capabilities/diagnostics проверяют
+strict UCM validators. Reports/capability reasons/diagnostic ranges загружаются
+нормализованно и восстанавливаются readiness gate без сессионного состояния.

@@ -58,3 +58,15 @@ DDL constraint/index expressions и triggers/cascades не объявляютс�
 Legacy `sql.analyze` остаётся совместимым агрегированным PostgreSQL projection;
 новые canonical facts используют существующие operation/clause helpers, не меняя
 legacy identity или CLI writer.
+
+Parameter-specific JDBC/Spring lineage доступен отдельным opt-in adapter:
+[sql-lineage.md](sql-lineage.md). Semantic-only API не добавляет binding facts;
+database identity и полная projection lineage остаются отдельными capabilities.
+
+Contextual object identity доступен отдельным adapter:
+[database-identity.md](database-identity.md). Syntactic DataAccess сохраняет исходные
+name/binding facts; resolved DB targets находятся в context-specific relations.
+
+JPA native query terminal sites подключаются opt-in ORM adapter через общий
+`semantic_constructions` builder; JPQL интерпретируется отдельным ORM catalog,
+а не physical SQL names. См. [jpa-orm.md](jpa-orm.md).

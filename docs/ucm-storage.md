@@ -63,3 +63,31 @@ access facts хранятся раздельно. FK snapshot-scoped/deferred; w
 защищают все четыре таблицы. Gate восстанавливает names/reasons и проверяет
 candidate slices, effect relations и execution origin. SQL offsets — decoded
 character positions, а не Java UTF-8 byte columns.
+
+Миграция 0011 добавляет ucm_sql_placeholders, ucm_sql_bindings и ordered
+ucm_sql_binding_reasons. Selector kinds/names/one-based positions, Value и setter
+CALL links хранятся typed columns, без opaque JSONB. Snapshot-scoped deferred FK,
+unique statement/ordinal и immutable write/truncate guards применяются ко всем
+трём таблицам. Gate проверяет token slice, execution/statement membership,
+selector/value input consistency и причины неполноты после restore.
+
+Миграция 0012 добавляет независимые ucm_database_catalogs/schema_versions/
+schema_objects: immutable READY versions, globally keyed schema/relation/column
+inventory, parent FK и fingerprint. Code snapshots используют ucm_database_objects,
+ucm_database_contexts, ordered ucm_database_search_paths и ucm_database_accesses.
+Global inventory не принадлежит code snapshot; проекции имеют snapshot/file-owned
+UCM IDs и FK к READY imported version/object. Guard запрещает изменения/import в
+READY inventory; snapshot guards сохраняют прежнюю lifecycle защиту projections.
+
+Миграция 0013 добавляет ucm_orm_mappings, typed ucm_orm_mapping_names,
+ucm_orm_queries, ucm_orm_operations и ordered ucm_orm_reasons. Entity/attribute
+symbols, CALL/query/context refs и registry endpoints snapshot-scoped/deferred.
+Все пять таблиц имеют write/truncate immutable guards; readiness восстанавливает
+names/reasons и повторяет owner/API/effect/query/database invariants.
+
+Миграция 0014 добавляет ucm_source_analyses, ucm_source_analysis_capabilities,
+ordered ucm_source_analysis_reasons и ucm_source_diagnostics. Adapter/version/profile,
+coverage/status/reasons и optional diagnostic coordinates хранятся typed columns.
+Unique snapshot/source_file, deferred FK и immutable write/truncate guards
+применяются ко всем четырём таблицам. Restore/gate проверяет report identity,
+capability uniqueness/reasons и error/complete contradiction.

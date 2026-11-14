@@ -3,12 +3,31 @@ import asyncio
 import json
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 
+from pydantic import TypeAdapter
 from rich.console import Console
 from rich.markup import escape
 from rich.progress import Progress, SpinnerColumn, TimeElapsedColumn
 
-from code_crawler import datamodel, db, indexer, legacy, repos
+from code_crawler import (
+    database_schema,
+    datamodel,
+    db,
+    indexer,
+    legacy,
+    repos,
+    snapshots,
+)
+from code_crawler.database_resolution import ConnectionAssignment
+from code_crawler.groovy_adapter import GroovySourceAdapter
+from code_crawler.java_adapter import (
+    JAVA_PROFILES,
+    JavaSourceAdapter,
+    java_adapter_catalog,
+)
+from code_crawler.plplus_adapter import PlplusSourceAdapter
+from code_crawler.source_adapters import AdapterRegistry, index_sources
 
 console = Console()
 
@@ -187,6 +206,102 @@ async def schema_import() -> None:
         )
 
 
+async def schema_import_version(database_key: str, version_key: str) -> None:
+    with operation("Импорт версии структуры БД"):
+        source = await db.connect("SOURCE_DATABASE_URL")
+        try:
+            document = await database_schema.introspect_schema(
+                source, database_key, version_key
+            )
+        finally:
+            await source.close()
+        conn = await db.connect()
+        try:
+            fingerprint = await database_schema.import_schema(conn, document)
+            console.print(f"{database_key}/{version_key}: {fingerprint}")
+        finally:
+            await conn.close()
+
+
+async def schema_import_manifest(path: str) -> None:
+    with operation("Импорт schema manifest"):
+        content = await asyncio.to_thread(Path(path).read_bytes)
+        document = await asyncio.to_thread(
+            database_schema.SchemaImport.model_validate_json, content
+        )
+        conn = await db.connect()
+        try:
+            fingerprint = await database_schema.import_schema(conn, document)
+            console.print(
+                f"{document.database_key}/{document.version_key}: {fingerprint}"
+            )
+        finally:
+            await conn.close()
+
+
+async def list_adapters() -> None:
+    console.print_json(
+        json.dumps(
+            [
+                descriptor.manifest()
+                for descriptor in (
+                    *java_adapter_catalog(),
+                    GroovySourceAdapter().descriptor,
+                    PlplusSourceAdapter().descriptor,
+                )
+            ],
+            ensure_ascii=False,
+        )
+    )
+
+
+async def index_registered(
+    root: str,
+    repository_key: str,
+    java_profile: str,
+    dialect: str,
+    naming_policy: str,
+    connections: str | None = None,
+) -> None:
+    with operation("Индексация source adapters"):
+        path = await asyncio.to_thread(Path(root).resolve, strict=True)
+        assignments = ()
+        if connections is not None:
+            content = await asyncio.to_thread(Path(connections).read_bytes)
+            assignments = await asyncio.to_thread(
+                TypeAdapter(tuple[ConnectionAssignment, ...]).validate_json, content
+            )
+        conn = await db.connect()
+        try:
+            schemas = []
+            for key, version in sorted(
+                {(a.context.database_key, a.context.version_key) for a in assignments}
+            ):
+                schemas.append(await database_schema.load_schema(conn, key, version))
+            adapter = JavaSourceAdapter(
+                profile=java_profile,
+                schemas=tuple(schemas),
+                assignments=assignments,
+                dialect=dialect,
+                naming_policy=naming_policy,
+            )
+            registry = AdapterRegistry(
+                (adapter, GroovySourceAdapter(dialect=dialect), PlplusSourceAdapter())
+            )
+            repository = await snapshots.register_repository(
+                conn,
+                snapshots.RepositoryInput(
+                    repository_key=repository_key,
+                    display_name=repository_key,
+                    source=str(path),
+                ),
+            )
+            result = await index_sources(conn, repository, path, registry)
+            console.print(f"BUILDING snapshot: {result.snapshot_id}")
+        finally:
+            await conn.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="code-crawler", description="Управление индексами code-crawler."
@@ -210,6 +325,42 @@ def main() -> None:
     schema_commands.add_parser(
         "import", help="прочитать структуру прикладной БД и заменить ею слой данных"
     ).set_defaults(run=schema_import)
+    version_parser = schema_commands.add_parser(
+        "import-version",
+        help="импортировать неизменяемую версию из SOURCE_DATABASE_URL",
+    )
+    version_parser.add_argument("--database-key", required=True)
+    version_parser.add_argument("--version-key", required=True)
+    version_parser.set_defaults(run=schema_import_version)
+    manifest_parser = schema_commands.add_parser(
+        "import-manifest", help="импортировать typed JSON schema manifest"
+    )
+    manifest_parser.add_argument("path")
+    manifest_parser.set_defaults(run=schema_import_manifest)
+    adapter_commands = commands.add_parser(
+        "adapters", help="versioned source adapter capabilities"
+    ).add_subparsers(metavar="действие", required=True)
+    adapter_commands.add_parser(
+        "list",
+        help="описать доступные Java profiles, Groovy и PL/Plus adapters без доступа к БД",
+    ).set_defaults(run=list_adapters)
+    source_parser = commands.add_parser(
+        "index-sources",
+        help="построить canonical BUILDING snapshot через source registry",
+    )
+    source_parser.add_argument("root")
+    source_parser.add_argument("--repository-key", required=True)
+    source_parser.add_argument("--java-profile", choices=JAVA_PROFILES, default="orm")
+    source_parser.add_argument(
+        "--dialect", choices=("postgres", "mysql", "tsql"), default="postgres"
+    )
+    source_parser.add_argument(
+        "--naming-policy", choices=("UNKNOWN", "IDENTITY"), default="UNKNOWN"
+    )
+    source_parser.add_argument(
+        "--connections", help="JSON tuple/list of typed ConnectionAssignment"
+    )
+    source_parser.set_defaults(run=index_registered)
     index_parser = commands.add_parser(
         "index", help="построить или обновить индекс репозитория"
     )

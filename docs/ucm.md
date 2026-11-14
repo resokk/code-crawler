@@ -4,7 +4,7 @@
 Модуль `code_crawler.ucm` определяет Entity Envelope и SourceFile.
 Нормативные поля типизированы; произвольного JSONB-контейнера нет.
 
-EntityType v1: SOURCE_FILE, CLASS, METHOD, SQL_CANDIDATE, SQL_CONSTRUCTION, SQL_EXECUTE, SQL_STATEMENT, DATA_ACCESS, SYMBOL, SCOPE,
+EntityType v1: SOURCE_FILE, CLASS, METHOD, SQL_CANDIDATE, SQL_CONSTRUCTION, SQL_EXECUTE, SQL_STATEMENT, DATA_ACCESS, SQL_BINDING, SQL_PLACEHOLDER, DATABASE_CONTEXT, DATABASE_OBJECT, DATABASE_ACCESS, ORM_MAPPING, ORM_QUERY, ORM_OPERATION, SOURCE_ANALYSIS, SYMBOL, SCOPE,
 OCCURRENCE, OPERATION, VALUE, RELATION, EXTERNAL_REFERENCE. Модели описаны ниже.
 Конвертеры появятся отдельными changes.
 SQL_CANDIDATE означает обнаруженный SQL и не доказывает его выполнение.
@@ -219,3 +219,79 @@ MERGES_INTO/DDL_ON: SQL_STATEMENT → DATA_ACCESS. Gate проверяет candi
 access kind/statement и происхождение execution через USES_SQL_CONSTRUCTION.
 Definite EXECUTES_STATEMENT требует complete statement и один variant у resolved
 construction. Контракт: [sql-semantics.md](sql-semantics.md).
+
+## SQL parameter lineage
+
+SqlPlaceholder принадлежит complete SqlStatement; ordinal упорядочен внутри
+statement, token_text/text_start/text_end ссылаются на decoded statement slice.
+POSITIONAL хранит one-based position по candidate text; INDEXED сохраняет explicit
+server index, NAMED — parameter_name. Строки/comments/JSON operators не являются
+placeholders. SqlBinding принадлежит execution и Value, содержит api, optional
+setter_operation_id, POSITIONAL/NAMED/UNKNOWN selector, status и reasons.
+
+HAS_SQL_PARAMETER: SQL_STATEMENT → SQL_PLACEHOLDER; HAS_SQL_BINDING: SQL_EXECUTE →
+SQL_BINDING; VALUE_BINDS_SQL: VALUE → SQL_BINDING; BINDS_PARAMETER: SQL_BINDING →
+SQL_PLACEHOLDER; PARAMETER_COLUMN: SQL_PLACEHOLDER → COLUMN DATA_ACCESS; VALUE_OF:
+VALUE → SYMBOL. Relations сохраняют Evidence/Resolution/Certainty/Coverage.
+
+Gate проверяет ownership, token slices, complete statement, setter CALL/api,
+JDBC selector/value inputs, execution-statement membership и selector matching.
+Incomplete bindings не дают definite parameter links. PARAMETER_COLUMN ссылается
+на syntactic access; DB identity остаётся unresolved. Подробности:
+[sql-lineage.md](sql-lineage.md).
+
+## Database identity
+
+DatabaseObject — file-owned projection глобального object_key: database/version,
+schema fingerprint, object kind и original catalog/schema/table/column names.
+Ключ `db:` вычисляется независимо от repository; local logical_key включает
+projection_file_id. DatabaseContext содержит explicit connection/database/version,
+immutable schema fingerprint и ordered search_path. DatabaseAccess связывает
+syntactic DataAccess с nullable execution/context, сохраняя unknown cases.
+
+USES_DATABASE_CONTEXT: SQL_EXECUTE → DATABASE_CONTEXT; CONTEXTUALIZES_ACCESS:
+DATA_ACCESS → DATABASE_ACCESS; IN_DATABASE_CONTEXT: DATABASE_ACCESS → DATABASE_CONTEXT;
+RESOLVES_DATABASE_OBJECT: DATABASE_ACCESS → DATABASE_OBJECT. Gate проверяет
+source ownership/file, execution-statement/context membership, object kind и
+принадлежность target той же database/version/fingerprint. Неизменяемый imported
+inventory подтверждается SQL FK. Syntactic DataAccess не переписывается.
+Контракт: [database-identity.md](database-identity.md).
+
+## JPA/ORM facts
+
+OrmMapping связывает Java class/field/getter Symbol с logical ENTITY/ATTRIBUTE
+mapping, entity role/name, access mode, identifier parts/column flags и явным
+status/reasons. OrmQuery различает JPQL/NATIVE/NAMED_REFERENCE/CRITERIA/UNKNOWN,
+owner, optional name/text и status/reasons. OrmOperation хранит callable owner,
+CALL operation/API, persistence/query intent/effect, nullable captured query/context.
+MERGE не подменяется UPDATE; getReference — REFERENCE, flush — UNKNOWN.
+
+ORM_DECLARES_MAPPING/ORM_HAS_ATTRIBUTE/ORM_DECLARES_QUERY задают ownership;
+ORM_NAMED_QUERY связывает named reference с matching declarations;
+ORM_QUERY_ENTITY/READS_ATTRIBUTE/WRITES_ATTRIBUTE используют ORM mappings;
+ORM_INVOKES/ORM_TARGET_ENTITY/ORM_EXECUTES_QUERY задают invocation/targets;
+ORM_DATABASE_TARGET допускает physical object только из context version операции.
+FK и readiness проверяют symbol kind/owner, getter/field class, CALL API/scope,
+effect intent, query capture, named declaration и database membership.
+Подробности: [jpa-orm.md](jpa-orm.md).
+
+## Source adapter reports
+
+SourceAnalysis принадлежит SourceFile, содержит adapter_key/version, prepared
+analysis_version, nonempty unique Coverage tuple и structured SourceDiagnostic
+(severity/code/message/optional SourceRange). Envelope range отсутствует: report
+относится к файлу целиком. Logical key включает SourceFile ID и adapter key.
+Один SourceFile имеет не более одного report в snapshot; diagnostic range обязан
+указывать на тот же файл. Error diagnostics не допускают COMPLETE capabilities.
+
+Registry генерирует reports; adapter не может подменять SourceFile/SourceAnalysis.
+Report является canonical fact и переносится при reuse вместе с file ownership.
+Контракт: [source-adapters.md](source-adapters.md).
+
+### PL/Plus source adapter
+
+`PlplusSourceAdapter` использует canonical symbols/scopes/occurrences, bounded CALLS
+candidates и unresolved CFT class/attribute ExternalReferences. Evidence.rule
+сохраняет access mode/role, без SQL_STATEMENT/DATA_ACCESS для CFT queries и без
+physical database identity по naming convention. SourceAnalysis отражает parser
+errors, macros и partial coverage. Контракт: [plplus-ucm.md](plplus-ucm.md).

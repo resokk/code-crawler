@@ -105,3 +105,22 @@ records и relations EXECUTES_SQL/USES_SQL_CONSTRUCTION. Контракт:
 statement/reason/access/name tables и semantic relation registry. Имена и quoted
 flags нормализованы в columns, SQL AST не является opaque JSONB payload.
 См. [sql-semantics.md](sql-semantics.md).
+
+Миграция `0011_sql_parameter_lineage.sql` добавляет typed placeholders/bindings,
+ordered reasons и lineage registry pairs, snapshot-scoped FK и immutable guards.
+См. [sql-lineage.md](sql-lineage.md).
+
+Миграция `0012_database_schema_identity.sql` вводит independent versioned database
+inventory и file-owned UCM projections/contextual resolutions. Imports атомарны,
+READY versions immutable; global identity включает database/version и name parts.
+Legacy data_* остаются. См. [database-identity.md](database-identity.md).
+
+Миграция `0013_jpa_orm_semantic_analysis.sql` вводит ORM_MAPPING/QUERY/OPERATION,
+typed names/reasons, owner/CALL/query/context FK и ORM relation registry.
+SQL/native pipeline переиспользует существующие canonical tables; JPQL не
+создаёт physical SQL execution. См. [jpa-orm.md](jpa-orm.md).
+
+Миграция `0014_source_adapter_registry.sql` вводит SOURCE_ANALYSIS и normalized
+per-file adapter profiles/capabilities/reasons/diagnostics. Reports immutable вместе
+с snapshot; runtime registration не хранится arbitrary JSONB. См.
+[source-adapters.md](source-adapters.md).

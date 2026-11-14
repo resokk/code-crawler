@@ -20,6 +20,7 @@ from pydantic import model_validator
 from code_crawler import repos, snapshots
 from code_crawler.ingestion import UcmBatch, _ingest_records, _records
 from code_crawler.publication import load_snapshot_batch
+from code_crawler.source_routing import source_language, valid_suffix
 from code_crawler.ucm import (
     ContractModel,
     Entity,
@@ -139,7 +140,7 @@ def _scan(
             id=logical_id(str(repository_id), EntityType.SOURCE_FILE, path),
             name=PurePosixPath(path).name,
             path=path,
-            language=languages.get(PurePosixPath(path).suffix, "unknown"),
+            language=source_language(path, languages) or "unknown",
             content_sha256=hashlib.sha256(content).hexdigest(),
         )
         result.append(SourceInput(source, content))
@@ -288,9 +289,7 @@ async def index_incremental(
         raise ValueError("analysis_version must match the analyzer catalog profile")
     languages = dict(languages)
     if not analysis_version.strip() or any(
-        not re.fullmatch(r"\.[A-Za-z0-9_+-]+", key)
-        or not value.strip()
-        or value == "unknown"
+        not valid_suffix(key) or not value.strip() or value == "unknown"
         for key, value in languages.items()
     ):
         raise ValueError("invalid analysis version or language mapping")
@@ -387,7 +386,7 @@ async def index_incremental(
         else {}
     )
     current = {s.file.path: s.file for s in captured.sources}
-    parsed = {path for path in current if PurePosixPath(path).suffix in languages}
+    parsed = {path for path in current if source_language(path, languages) is not None}
     plan = plan_changes(
         previous,
         current,

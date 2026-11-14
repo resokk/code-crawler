@@ -21,6 +21,7 @@ from code_crawler.ucm import (
     Certainty,
     Coverage,
     DataAccess,
+    Entity,
     EntityRef,
     EntityType,
     Evidence,
@@ -76,6 +77,131 @@ def _relation(
     )
 
 
+def semantic_constructions(
+    constructions: dict[str, SqlConstruction],
+    repository: str,
+    dialect: str,
+    coverage: Coverage,
+) -> tuple[tuple[Entity, ...], dict[str, list[SqlStatement]]]:
+    """Build statement/access facts for confirmed SQL construction envelopes."""
+    entities = []
+    statements_by_construction = {}
+    for construction in constructions.values():
+        location = construction.source_range
+        statements_by_construction[construction.id] = []
+        for variant in construction.variants:
+            parsed = (
+                (
+                    StatementAnalysis(
+                        variant.text,
+                        0,
+                        len(variant.text),
+                        "UNKNOWN",
+                        "PARTIAL",
+                        variant.partial_reasons,
+                        (),
+                    ),
+                )
+                if variant.partial
+                else analyze_statements(variant.text, dialect)
+            )
+            if not parsed:
+                parsed = (
+                    StatementAnalysis(
+                        variant.text,
+                        0,
+                        len(variant.text),
+                        "UNKNOWN",
+                        "UNSUPPORTED",
+                        ("no SQL statement AST",),
+                        (),
+                    ),
+                )
+            for index, result in enumerate(parsed):
+                key = variant.candidate_id + f":statement:{index}:{dialect}"
+                statement = SqlStatement(
+                    **_envelope(
+                        repository,
+                        EntityType.SQL_STATEMENT,
+                        key,
+                        result.operation,
+                        location,
+                    ),
+                    candidate_id=variant.candidate_id,
+                    statement_index=index,
+                    dialect=dialect,
+                    text=result.text,
+                    text_start=result.text_start,
+                    text_end=result.text_end,
+                    operation=result.operation,
+                    parse_status=result.parse_status,
+                    reasons=result.reasons,
+                )
+                entities.append(statement)
+                statements_by_construction[construction.id].append(statement)
+                evidence = Evidence(
+                    source_range=location,
+                    analyzer="sql.semantic",
+                    analyzer_version="1",
+                    rule="statement-ast",
+                    description=f"Decoded candidate chars [{result.text_start},{result.text_end}); dialect={dialect}; Java origin range is not a decoded-character mapping",
+                )
+                entities.append(
+                    _relation(
+                        repository,
+                        key + ":candidate",
+                        RelationKind.HAS_SQL_STATEMENT,
+                        EntityRef(
+                            id=variant.candidate_id,
+                            entity_type=EntityType.SQL_CANDIDATE,
+                        ),
+                        Resolution(
+                            status="RESOLVED",
+                            target=EntityRef(
+                                id=statement.id,
+                                entity_type=EntityType.SQL_STATEMENT,
+                            ),
+                        ),
+                        evidence,
+                        coverage,
+                    )
+                )
+                for access_index, detail in enumerate(result.accesses):
+                    access_key = key + f":access:{access_index}"
+                    access = DataAccess(
+                        **_envelope(
+                            repository,
+                            EntityType.DATA_ACCESS,
+                            access_key,
+                            detail.access_kind + " " + detail.object_kind,
+                            location,
+                        ),
+                        statement_id=statement.id,
+                        **detail.model_dump(),
+                    )
+                    entities.append(access)
+                    entities.append(
+                        _relation(
+                            repository,
+                            access_key + ":effect",
+                            _EFFECT_RELATIONS[access.access_kind],
+                            EntityRef(
+                                id=statement.id,
+                                entity_type=EntityType.SQL_STATEMENT,
+                            ),
+                            Resolution(
+                                status="RESOLVED",
+                                target=EntityRef(
+                                    id=access.id, entity_type=EntityType.DATA_ACCESS
+                                ),
+                            ),
+                            evidence,
+                            coverage,
+                        )
+                    )
+    return tuple(entities), statements_by_construction
+
+
 class JavaSemanticAnalyzer(JavaExecutionAnalyzer):
     """Analyze each recovered candidate using an explicit SQL dialect profile."""
 
@@ -108,119 +234,10 @@ class JavaSemanticAnalyzer(JavaExecutionAnalyzer):
             e.id: e for e in base.entities if isinstance(e, SqlConstruction)
         }
         repository = file.source.file.repository_id
-        for construction in constructions.values():
-            location = construction.source_range
-            statements_by_construction[construction.id] = []
-            for variant in construction.variants:
-                parsed = (
-                    (
-                        StatementAnalysis(
-                            variant.text,
-                            0,
-                            len(variant.text),
-                            "UNKNOWN",
-                            "PARTIAL",
-                            variant.partial_reasons,
-                            (),
-                        ),
-                    )
-                    if variant.partial
-                    else analyze_statements(variant.text, self.dialect)
-                )
-                if not parsed:
-                    parsed = (
-                        StatementAnalysis(
-                            variant.text,
-                            0,
-                            len(variant.text),
-                            "UNKNOWN",
-                            "UNSUPPORTED",
-                            ("no SQL statement AST",),
-                            (),
-                        ),
-                    )
-                for index, result in enumerate(parsed):
-                    key = variant.candidate_id + f":statement:{index}:{self.dialect}"
-                    statement = SqlStatement(
-                        **_envelope(
-                            repository,
-                            EntityType.SQL_STATEMENT,
-                            key,
-                            result.operation,
-                            location,
-                        ),
-                        candidate_id=variant.candidate_id,
-                        statement_index=index,
-                        dialect=self.dialect,
-                        text=result.text,
-                        text_start=result.text_start,
-                        text_end=result.text_end,
-                        operation=result.operation,
-                        parse_status=result.parse_status,
-                        reasons=result.reasons,
-                    )
-                    entities.append(statement)
-                    statements_by_construction[construction.id].append(statement)
-                    evidence = Evidence(
-                        source_range=location,
-                        analyzer="sql.semantic",
-                        analyzer_version="1",
-                        rule="statement-ast",
-                        description=f"Decoded candidate chars [{result.text_start},{result.text_end}); dialect={self.dialect}; Java origin range is not a decoded-character mapping",
-                    )
-                    entities.append(
-                        _relation(
-                            repository,
-                            key + ":candidate",
-                            RelationKind.HAS_SQL_STATEMENT,
-                            EntityRef(
-                                id=variant.candidate_id,
-                                entity_type=EntityType.SQL_CANDIDATE,
-                            ),
-                            Resolution(
-                                status="RESOLVED",
-                                target=EntityRef(
-                                    id=statement.id,
-                                    entity_type=EntityType.SQL_STATEMENT,
-                                ),
-                            ),
-                            evidence,
-                            self.semantic_coverage,
-                        )
-                    )
-                    for access_index, detail in enumerate(result.accesses):
-                        access_key = key + f":access:{access_index}"
-                        access = DataAccess(
-                            **_envelope(
-                                repository,
-                                EntityType.DATA_ACCESS,
-                                access_key,
-                                detail.access_kind + " " + detail.object_kind,
-                                location,
-                            ),
-                            statement_id=statement.id,
-                            **detail.model_dump(),
-                        )
-                        entities.append(access)
-                        entities.append(
-                            _relation(
-                                repository,
-                                access_key + ":effect",
-                                _EFFECT_RELATIONS[access.access_kind],
-                                EntityRef(
-                                    id=statement.id,
-                                    entity_type=EntityType.SQL_STATEMENT,
-                                ),
-                                Resolution(
-                                    status="RESOLVED",
-                                    target=EntityRef(
-                                        id=access.id, entity_type=EntityType.DATA_ACCESS
-                                    ),
-                                ),
-                                evidence,
-                                self.semantic_coverage,
-                            )
-                        )
+        facts, statements_by_construction = semantic_constructions(
+            constructions, repository, self.dialect, self.semantic_coverage
+        )
+        entities.extend(facts)
         for usage in base.entities:
             if (
                 not isinstance(usage, Relation)
