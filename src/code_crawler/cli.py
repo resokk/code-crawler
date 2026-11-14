@@ -439,6 +439,9 @@ async def snapshot_gc(
                 building_older_than_hours=building_older_than,
                 keep_retired=keep_retired,
             )
+        except jobs.GCError as error:
+            console.print_json(json.dumps(error.report, default=str))
+            raise
         finally:
             await conn.close()
         console.print_json(json.dumps(result, default=str))

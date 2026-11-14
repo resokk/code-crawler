@@ -59,3 +59,8 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 клиентский `repository_keys` может только сузить scope. Discovery выдаёт кандидатов
 с UNKNOWN certainty, включая единственный match; snapshot/generation manifest,
 PARTIAL availability и pagination fingerprint возвращаются явно.
+
+Поиск внутри MCP-транзакции держит shared snapshot lease до завершения tool call.
+GC пропускает используемую версию; следующий вызов GC может удалить её после
+освобождения lease. Прямым SQL-читателям доступен `snapshots.pin_snapshot` внутри
+транзакции. Подробности и отчёт очистки: [ingest-jobs.md](ingest-jobs.md).

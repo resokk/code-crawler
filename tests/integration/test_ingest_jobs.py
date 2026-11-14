@@ -144,6 +144,7 @@ def test_gc_removes_abandoned_building_and_old_retired_only(
                 "1",
             )
             assert code == 0, output
+            assert '"ignored_tables"' in output and f'"{foreign_table}"' in output
             assert {
                 tuple(row)
                 for row in await conn.fetch(f"SELECT * FROM public.{foreign_table}")

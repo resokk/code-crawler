@@ -21,6 +21,15 @@ def test_benchmark_isolated_database_and_identical_results(database_url, monkeyp
                 r["indexrelname"] for r in report["phases"]["after_0018"]["index_sizes"]
             }
             assert "ucm_entities_symbol_name_idx" in names
+            assert (
+                report["phases"]["before_0018"]["cleanup_mode"]
+                == "explicit_historical_trial"
+            )
+            assert (
+                report["phases"]["after_0018"]["cleanup_mode"]
+                == "explicit_historical_trial"
+            )
+            assert report["phases"]["current"]["cleanup_mode"] == "snapshot_gc"
             for phase in report["phases"].values():
                 assert phase["queries"]["typed_incoming"]["plans"]
                 assert phase["queries"]["callers"]["sql_count"] > 0

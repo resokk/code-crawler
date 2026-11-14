@@ -202,3 +202,11 @@ lexical indexes make ingestion faster. Cleanup between trials is excluded from
 these figures and took much of the benchmark's elapsed time; this run did not
 record a separate GC duration. The harness now reports GC duration explicitly for
 future runs. Controlled ingest/GC measurements at larger scale remain necessary.
+
+
+A01 requires current known migrations for operational GC. Historical benchmark
+phases through 0017/0018 therefore remove only their own trial UUID in the isolated
+benchmark database through the explicit UCM registry, under a transaction; no
+foreign table discovery is used. Current-schema trials call normal snapshot GC.
+The report labels this distinction in `cleanup_mode`; historical trial-cleanup
+times are not measurements of the current operational GC preflight.

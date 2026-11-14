@@ -181,13 +181,16 @@ def test_pinned_read_survives_publication_and_gc_without_mixing_facts(
                     result.snapshot_id,
                     expected_snapshot_id=old.snapshot_id,
                 )
-                await collect_garbage(writer, keep_retired=0)
-                assert not await writer.fetchval(
+                report = await collect_garbage(writer, keep_retired=0)
+                assert old.snapshot_id in report["skipped"]
+                assert await writer.fetchval(
                     "SELECT EXISTS(SELECT 1 FROM ucm_snapshots WHERE id=$1)",
                     old.snapshot_id,
                 )
                 assert await old.get_entity(source) == old_file
                 assert await old.get_sql_statement(stmt_id) == statement
+            report = await collect_garbage(writer, keep_retired=0)
+            assert old.snapshot_id in report["retired"]
             async with published_reader(conn, "app") as current:
                 assert current.snapshot_id == result.snapshot_id
                 assert (

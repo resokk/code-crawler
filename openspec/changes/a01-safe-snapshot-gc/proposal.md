@@ -1,7 +1,7 @@
 # Proposal: Безопасная очистка UCM snapshots
 
 ## Why
-jobs._delete_snapshots() обнаруживает все таблицы public с колонкой snapshot_id и удаляет из них строки; посторонняя таблица может попасть в GC.
+До `cefc213` jobs._delete_snapshots() находил все public таблицы с snapshot_id. Явный реестр уже внедрён; A01 завершает runtime preflight, блокировки/leases, атомарность reaping и отчётность.
 
 ## Goal
 Удалять только подконтрольные UCM таблицы конкретных snapshots в проверяемом FK-safe порядке; исключить неконтролируемое расширение области DELETE.

@@ -222,6 +222,10 @@ async def _phase(
         )
     ]
     profiles = await _profile(conn, snapshot_id, groups, repeats)
+    pending, unknown = await db.schema_state(conn)
+    if unknown:
+        raise ValueError("unsupported historical benchmark schema")
+    cleanup_mode = "explicit_historical_trial" if pending else "snapshot_gc"
     copy_times = []
     gc_times = []
     for attempt in range(2):
@@ -238,7 +242,22 @@ async def _phase(
         copy_times.append(time.perf_counter() - start)
         logger.info("Committed batch copy finished in %.2fs", copy_times[-1])
         start = time.perf_counter()
-        await jobs.collect_garbage(conn, building_older_than_hours=0)
+        if pending:
+            # This owned disposable DB intentionally lacks index migrations; the
+            # production GC must reject that state. Remove only this known trial.
+            async with conn.transaction():
+                await conn.execute("SET CONSTRAINTS ALL DEFERRED")
+                await conn.execute("SET LOCAL code_crawler.gc = 'on'")
+                for table in jobs._SNAPSHOT_TABLES:
+                    if await conn.fetchval("SELECT to_regclass($1)", "public." + table):
+                        await conn.execute(
+                            f"DELETE FROM public.{table} WHERE snapshot_id=$1", trial
+                        )
+                await conn.execute(
+                    "DELETE FROM public.ucm_snapshots WHERE id=$1", trial
+                )
+        else:
+            await jobs.collect_garbage(conn, building_older_than_hours=0)
         gc_times.append(time.perf_counter() - start)
         logger.info("Trial cleanup finished in %.2fs", gc_times[-1])
     return {
@@ -248,6 +267,7 @@ async def _phase(
         "queries": profiles,
         "committed_batch_copy_seconds": copy_times,
         "garbage_collection_seconds": gc_times,
+        "cleanup_mode": cleanup_mode,
     }
 
 
