@@ -124,3 +124,7 @@ SQL/native pipeline переиспользует существующие canoni
 per-file adapter profiles/capabilities/reasons/diagnostics. Reports immutable вместе
 с snapshot; runtime registration не хранится arbitrary JSONB. См.
 [source-adapters.md](source-adapters.md).
+
+Миграция `0015_per_adapter_invalidation.sql` вводит `ingest_snapshot_adapters`:
+версия и fingerprint каждого адаптера в snapshot, immutable с VALIDATING. См.
+[ucm-incremental.md](ucm-incremental.md).

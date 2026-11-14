@@ -36,11 +36,17 @@ manifest вызывает полный переразбор поддержива
 изменения parser/resolver/config semantics. Незаявленные динамические зависимости
 не угадываются: полнота explicit dependency extraction — обязанность adapter.
 
-Перед записью повторно проверяются HEAD, branch, dirty и inventory fingerprint;
-если исходники изменились во время анализа, операция отклоняется. Анализатор
-должен использовать переданные immutable bytes. При file read также проверяется
-стабильность stat. Это не filesystem snapshot: транзитные изменения, вернувшиеся
-к тем же bytes между проверками, не обнаруживаются.
+Исходники читаются один раз: captured inventory (`_Worktree`: commit, branch,
+dirty, Git listing, SourceInput, stat каждого файла) создаётся в `_capture` и
+передаётся дальше — `index_sources` и `index_java_*` отдают его в
+`index_incremental(captured=...)`, без повторного чтения для prepare и анализа.
+Перед записью `_verify` заново сверяет HEAD, branch, dirty и Git listing, а файлы
+сравнивает по stat (inode, size, mtime, ctime); перечитываются и сверяются по
+SHA-256 только файлы с изменившимся stat. Если исходники изменились во время
+анализа, операция отклоняется. Анализатор должен использовать переданные
+immutable bytes. При file read также проверяется стабильность stat. Это не
+filesystem snapshot: транзитные изменения, вернувшиеся к тем же bytes, и
+перезапись на месте с прежними inode/size/mtime/ctime не обнаруживаются.
 
 Старые facts изменённых/удалённых файлов исключаются, остальные берутся из
 immutable baseline; SourceFile заново формируются из текущих bytes. Итоговый UcmBatch
@@ -65,7 +71,18 @@ changes. Для полной локальной resolution adapter может и
 контекст; callback обязан вернуть факты каждого запрошенного файла ровно один раз.
 
 Общий SourceAdapter registry описан в [source-adapters.md](source-adapters.md).
-Prepared registry version объединяет descriptors и фактические catalog versions;
-изменение activation/routes/capability declarations/version инвалидирует profile.
+Prepared registry version объединяет descriptors и фактические catalog versions.
+
+Инвалидация по адаптерам: `index_incremental(scopes=...)` получает по одному
+`AnalysisScope(key, analysis_version, fingerprint, suffixes)` на адаптер;
+fingerprint — SHA-256 от descriptor manifest и версии prepared catalog. Миграция
+0015 хранит их в `ingest_snapshot_adapters` (строка на адаптер в snapshot). Если
+общий profile изменился, а у baseline есть эти строки, полного переразбора нет:
+инвалидируются только файлы адаптеров с другим (или отсутствующим) fingerprint,
+и далее — транзитивно их dependents по обычным file dependencies, в том числе в
+других языках. Так изменение Java catalog не трогает Groovy и PL/Plus, пока их
+факты не ссылаются на переразбираемые Java-файлы. Baseline без строк адаптеров
+(создан до 0015 или без scopes) переразбирается целиком. Snapshot остаётся один
+на все адаптеры.
 SOURCE_ANALYSIS reports являются обычными file-owned facts: no-change reuse
 сохраняет diagnostics/capabilities без повторного callback и без process cache.

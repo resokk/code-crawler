@@ -327,4 +327,5 @@ async def index_java_semantic(
         analyzer,
         languages={".java": "java"},
         analysis_version=analyzer.analysis_version,
+        captured=captured,
     )

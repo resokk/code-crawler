@@ -557,4 +557,5 @@ async def index_java_lineage(
         analyzer,
         languages={".java": "java"},
         analysis_version=analyzer.analysis_version,
+        captured=captured,
     )

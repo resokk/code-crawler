@@ -563,4 +563,5 @@ async def index_java_execution(
         analyzer,
         languages={".java": "java"},
         analysis_version=analyzer.analysis_version,
+        captured=captured,
     )

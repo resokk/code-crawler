@@ -172,7 +172,9 @@ def test_registry_multi_adapter_routing_report_roundtrip_and_reuse(
                 e.id: e for e in restored.entities
             }
             changed = await index_sources(conn, repo, tmp_path, registry("2"))
-            assert changed.plan.reanalyze == ("A.d.tag", "A.tag", "Broken.java")
+            assert not changed.plan.full_rebuild
+            assert changed.plan.reanalyze == ("A.tag",)
+            assert changed.plan.reused == ("A.d.tag", "Broken.java")
             await validate_snapshot(conn, changed.snapshot_id)
             before = await conn.fetchval("SELECT count(*) FROM ucm_snapshots")
             with pytest.raises(AdapterError):

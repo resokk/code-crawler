@@ -420,3 +420,38 @@ def test_sql_candidate_parse_errors_are_structured_without_losing_safe_facts() -
     report = next(e for e in results[0].entities if isinstance(e, SourceAnalysis))
     assert any(d.code == "sql.CANDIDATE_PARSE_ERROR" for d in report.diagnostics)
     assert all(c.status != "COMPLETE" for c in report.capabilities)
+
+
+def test_line_index_checks_byte_columns_once_per_file() -> None:
+    from code_crawler.source_adapters import _LineIndex
+
+    class Counting(bytes):
+        finds = 0
+
+        def find(self, *args):
+            Counting.finds += 1
+            return super().find(*args)
+
+    src = source("A.txt", "aб\nxy")
+    src = SourceInput(src.file, Counting(src.content))
+    index = _LineIndex()
+
+    def at(line: int, column: int, end_line: int, end_column: int) -> SourceRange:
+        return SourceRange(
+            source_file_id=src.file.id,
+            start=Position(line=line, byte_column=column),
+            end=Position(line=end_line, byte_column=end_column),
+        )
+
+    for _ in range(50):
+        index.check(src, at(1, 0, 2, 2))
+        index.check(src, at(1, 1, 1, 3))
+    assert Counting.finds == 2  # one pass over the two lines, not one per range
+    for bad, match in (
+        (at(1, 0, 1, 4), "exceeds"),  # past the newline of line 1
+        (at(2, 0, 2, 3), "exceeds"),
+        (at(3, 0, 3, 0), "exceeds"),
+        (at(1, 2, 1, 3), "UTF-8"),  # inside the two-byte "б"
+    ):
+        with pytest.raises(ValueError, match=match):
+            index.check(src, bad)

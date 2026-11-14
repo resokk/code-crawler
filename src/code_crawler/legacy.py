@@ -8,7 +8,7 @@ from uuid import UUID
 import asyncpg
 
 from code_crawler import indexer, snapshots
-from code_crawler.incremental import _capture, _Worktree
+from code_crawler.incremental import _capture, _verify, _Worktree
 from code_crawler.ingestion import UcmBatch, _ingest_records
 from code_crawler.publication import publish_snapshot, validate_snapshot
 from code_crawler.ucm import (
@@ -285,13 +285,7 @@ async def migrate_index(
     if _payload(rebuilt) != _payload(graph):
         raise ValueError("legacy graph differs from captured sources; run index first")
     batch, ids = await asyncio.to_thread(_convert, repo, captured, graph)
-    verified = await _capture(root, repo, {".java": "java", ".plp": "plplus"})
-    if (captured.commit, captured.branch, captured.dirty, captured.fingerprint) != (
-        verified.commit,
-        verified.branch,
-        verified.dirty,
-        verified.fingerprint,
-    ):
+    if not await _verify(root, repo, {".java": "java", ".plp": "plplus"}, captured):
         raise ValueError("worktree changed during migration")
     snap = await snapshots.create_snapshot(
         conn,

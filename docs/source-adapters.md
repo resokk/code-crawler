@@ -46,6 +46,12 @@ range относится к своему file; cross-file semantic evidence до
 captured files. Semantic closure/ownership/references дополнительно проверяет общий
 UcmBatch/incremental loader. Явные negative file dependencies сохраняются как раньше.
 
+Границы строк файла вычисляются один раз на файл за проверку результатов адаптера
+и переиспользуются для всех его SourceRange (diagnostics, facts, Evidence): число
+проходов по содержимому не зависит от числа проверяемых ranges. Position обязана
+лежать внутри своей строки (перевод строки `\n` в неё не входит; конец файла
+допустим) и не попадать внутрь многобайтового UTF-8 символа.
+
 ## Reports и failures
 
 SourceAnalysis logical ID стабилен по SourceFile/adapter key; версии/profile/actual

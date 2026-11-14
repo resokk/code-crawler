@@ -12,6 +12,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from types import MappingProxyType
 from uuid import UUID
 
 import asyncpg
@@ -62,6 +63,16 @@ class SourceInput:
 
 
 @dataclass(frozen=True)
+class AnalysisScope:
+    """One independently versioned analyzer and the suffix routes it owns."""
+
+    key: str
+    analysis_version: str
+    fingerprint: str
+    suffixes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class IncrementalPlan:
     added: tuple[str, ...]
     changed: tuple[str, ...]
@@ -86,6 +97,9 @@ class _Worktree:
     dirty: bool
     sources: tuple[SourceInput, ...]
     fingerprint: str
+    # Git listing and per-file stat signatures: enough to re-verify without re-reading.
+    paths: tuple[str, ...] = ()
+    stats: Mapping[str, tuple[int, ...]] = MappingProxyType({})
 
 
 def _hash(value: object) -> str:
@@ -94,8 +108,16 @@ def _hash(value: object) -> str:
     ).hexdigest()
 
 
+def _signature(status: os.stat_result) -> tuple[int, ...]:
+    return (status.st_ino, status.st_size, status.st_mtime_ns, status.st_ctime_ns)
+
+
 def _scan(
-    root: Path, paths: list[str], repository_id: UUID, languages: Mapping[str, str]
+    root: Path,
+    paths: list[str],
+    repository_id: UUID,
+    languages: Mapping[str, str],
+    stats: dict[str, tuple[int, ...]] | None = None,
 ) -> tuple[SourceInput, ...]:
     result = []
     for path in sorted(set(paths)):
@@ -127,13 +149,10 @@ def _scan(
             if exc.errno in (errno.ENOENT, errno.ENOTDIR, errno.ELOOP):
                 continue
             raise
-        if (before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
-            after.st_ino,
-            after.st_size,
-            after.st_mtime_ns,
-            after.st_ctime_ns,
-        ):
+        if _signature(before) != _signature(after):
             raise ValueError("source changed during read")
+        if stats is not None:
+            stats[path] = _signature(after)
         source = SourceFile(
             repository_id=str(repository_id),
             logical_key=path,
@@ -147,9 +166,7 @@ def _scan(
     return tuple(result)
 
 
-async def _capture(
-    root: Path, repository_id: UUID, languages: Mapping[str, str]
-) -> _Worktree:
+async def _tracked(root: Path) -> tuple[str, str | None, tuple[str, ...]]:
     commit, branch = await repos.head(root)
     if await repos.git_output("ls-files", "--unmerged", "-z", cwd=root):
         raise ValueError("unresolved Git index conflicts")
@@ -160,18 +177,69 @@ async def _capture(
             metadata, path = record.split(b"\t", 1)
             if metadata.split()[0] in (b"100644", b"100755"):
                 paths.append(path.decode("utf-8"))
-    sources = await asyncio.to_thread(_scan, root, paths, repository_id, languages)
-    dirty = bool(
+    return commit, branch, tuple(paths)
+
+
+async def _dirty(root: Path) -> bool:
+    return bool(
         await repos.git_output(
             "status", "--porcelain=v1", "-z", "--untracked-files=no", cwd=root
         )
     )
+
+
+async def _capture(
+    root: Path, repository_id: UUID, languages: Mapping[str, str]
+) -> _Worktree:
+    commit, branch, paths = await _tracked(root)
+    stats: dict[str, tuple[int, ...]] = {}
+    sources = await asyncio.to_thread(
+        _scan, root, list(paths), repository_id, languages, stats
+    )
+    dirty = await _dirty(root)
     if await repos.head(root) != (commit, branch):
         raise ValueError("HEAD changed during source capture")
     fingerprint = _hash(
         [[s.file.path, s.file.content_sha256, s.file.language] for s in sources]
     )
-    return _Worktree(commit, branch, dirty, sources, fingerprint)
+    return _Worktree(
+        commit, branch, dirty, sources, fingerprint, paths, MappingProxyType(stats)
+    )
+
+
+def _restated(root: Path, captured: _Worktree) -> list[str]:
+    result = []
+    for path in captured.paths:
+        try:
+            status = os.lstat(root / path)
+            signature = _signature(status) if stat.S_ISREG(status.st_mode) else None
+        except OSError:
+            signature = None
+        if signature != captured.stats.get(path):
+            result.append(path)
+    return result
+
+
+async def _verify(
+    root: Path, repository_id: UUID, languages: Mapping[str, str], captured: _Worktree
+) -> bool:
+    """Tell whether the worktree still equals the capture, re-reading only restated files."""
+    if (*await _tracked(root), await _dirty(root)) != (
+        captured.commit,
+        captured.branch,
+        captured.paths,
+        captured.dirty,
+    ):
+        return False
+    # shortcut: an in-place rewrite keeping inode, size, mtime and ctime is not seen
+    # (the "racy Git" limit); hash every file again if that guarantee is ever needed.
+    restated = await asyncio.to_thread(_restated, root, captured)
+    if not restated:
+        return True
+    reread = await asyncio.to_thread(_scan, root, restated, repository_id, languages)
+    return {s.file.path: s.file for s in reread} == {
+        s.file.path: s.file for s in captured.sources if s.file.path in set(restated)
+    }
 
 
 def plan_changes(
@@ -182,6 +250,7 @@ def plan_changes(
     parsed_paths: set[str],
     full_rebuild: bool,
     git_changed: tuple[str, ...] = (),
+    invalidated: frozenset[str] | set[str] = frozenset(),
 ) -> IncrementalPlan:
     """Plan reverse transitive invalidation from authoritative file fingerprints."""
     added = current.keys() - previous.keys()
@@ -195,7 +264,7 @@ def plan_changes(
     reverse: dict[str, set[str]] = defaultdict(set)
     for dependent, dependency in dependencies:
         reverse[dependency].add(dependent)
-    affected = set(added) | set(changed) | set(deleted)
+    affected = set(added) | set(changed) | set(deleted) | set(invalidated)
     pending = deque(affected)
     while pending:
         for dependent in reverse[pending.popleft()]:
@@ -281,8 +350,14 @@ async def index_incremental(
     *,
     languages: Mapping[str, str],
     analysis_version: str,
+    captured: _Worktree | None = None,
+    scopes: tuple[AnalysisScope, ...] = (),
 ) -> IncrementalResult:
-    """Analyze changed/dependent files, reusing the published UCM facts of other files."""
+    """Analyze changed/dependent files, reusing the published UCM facts of other files.
+
+    With scopes, a changed analyzer invalidates only its own routed files (and their
+    dependents) instead of forcing a full rebuild.
+    """
     if conn.is_in_transaction():
         raise ValueError("incremental indexing requires a free connection")
     required_version = getattr(analyze, "analysis_version", analysis_version)
@@ -294,6 +369,13 @@ async def index_incremental(
         for key, value in languages.items()
     ):
         raise ValueError("invalid analysis version or language mapping")
+    owner = {suffix: scope for scope in scopes for suffix in scope.suffixes}
+    if scopes and (
+        owner.keys() != languages.keys()
+        or len(owner) != sum(len(scope.suffixes) for scope in scopes)
+        or len({scope.key for scope in scopes}) != len(scopes)
+    ):
+        raise ValueError("analysis scopes must partition the language suffixes")
     if not await conn.fetchval(
         "SELECT EXISTS(SELECT 1 FROM public.ucm_repositories WHERE id=$1)",
         repository_id,
@@ -303,7 +385,8 @@ async def index_incremental(
     git_root = Path(await repos.git("rev-parse", "--show-toplevel", cwd=root))
     if await asyncio.to_thread(git_root.resolve) != root:
         raise ValueError("root must be the Git repository root")
-    captured = await _capture(root, repository_id, languages)
+    if captured is None:
+        captured = await _capture(root, repository_id, languages)
     profile_hash = _hash([analysis_version, sorted(languages.items())])
     published = await snapshots.published_snapshot(conn, repository_id)
     base_id = published["id"] if published else None
@@ -388,15 +471,43 @@ async def index_incremental(
     )
     current = {s.file.path: s.file for s in captured.sources}
     parsed = {path for path in current if source_language(path, languages) is not None}
+    full_rebuild = (
+        profile is None
+        or profile["analysis_version"] != analysis_version
+        or profile["profile_sha256"] != profile_hash
+    )
+    invalidated: set[str] = set()
+    if full_rebuild and profile is not None and scopes:
+        stored = {
+            r["adapter_key"]: r["fingerprint"]
+            for r in await conn.fetch(
+                "SELECT adapter_key,fingerprint FROM public.ingest_snapshot_adapters WHERE snapshot_id=$1",
+                base_id,
+            )
+        }
+        # A baseline without scope rows predates them: nothing proves its facts current.
+        if stored:
+            full_rebuild = False
+            invalidated = {
+                path
+                for path in parsed
+                if stored.get(
+                    (
+                        scope := owner[
+                            max((s for s in owner if path.endswith(s)), key=len)
+                        ]
+                    ).key
+                )
+                != scope.fingerprint
+            }
     plan = plan_changes(
         previous,
         current,
         dependencies,
         parsed_paths=parsed,
-        full_rebuild=profile is None
-        or profile["analysis_version"] != analysis_version
-        or profile["profile_sha256"] != profile_hash,
+        full_rebuild=full_rebuild,
         git_changed=git_changed,
+        invalidated=invalidated,
     )
     selected_paths = set(plan.reanalyze)
     selected = tuple(s for s in captured.sources if s.file.path in selected_paths)
@@ -411,13 +522,7 @@ async def index_incremental(
         plan,
         analyses,
     )
-    checked = await _capture(root, repository_id, languages)
-    if (captured.commit, captured.branch, captured.dirty, captured.fingerprint) != (
-        checked.commit,
-        checked.branch,
-        checked.dirty,
-        checked.fingerprint,
-    ):
+    if not await _verify(root, repository_id, languages, captured):
         raise ValueError("worktree changed during analysis")
     snap = await snapshots.create_snapshot(
         conn,
@@ -431,11 +536,16 @@ async def index_incremental(
     )
     async with conn.transaction():
         await _ingest_records(conn, snap, batch)
+        tick("Запись в БД: манифесты и фиксация")
         await conn.execute(
             "INSERT INTO public.ingest_snapshot_profiles(snapshot_id,analysis_version,profile_sha256) VALUES ($1,$2,$3)",
             snap,
             analysis_version,
             profile_hash,
+        )
+        await conn.executemany(
+            "INSERT INTO public.ingest_snapshot_adapters(snapshot_id,adapter_key,analysis_version,fingerprint) VALUES ($1,$2,$3,$4)",
+            [(snap, s.key, s.analysis_version, s.fingerprint) for s in scopes],
         )
         await conn.copy_records_to_table(
             "ingest_file_entities",

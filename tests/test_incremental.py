@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import os
 from pathlib import Path
 from uuid import uuid4
 
@@ -7,7 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from code_crawler import repos
-from code_crawler.incremental import FileAnalysis, _capture, plan_changes
+from code_crawler.incremental import FileAnalysis, _capture, _verify, plan_changes
 from code_crawler.ucm import EntityType, SourceFile, logical_id
 
 
@@ -167,3 +168,54 @@ def test_capture_rejects_git_conflicts(tmp_path: Path) -> None:
             await _capture(tmp_path, uuid4(), {".java": "java"})
 
     asyncio.run(scenario())
+
+
+def test_verify_detects_changes_without_rereading_unchanged_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from code_crawler import incremental
+
+    repo, languages = uuid4(), {".java": "java"}
+    reread: list[str] = []
+    scan = incremental._scan
+
+    def counting(root, paths, *args):
+        reread.extend(paths)
+        return scan(root, paths, *args)
+
+    async def run() -> None:
+        await repos.git("init", cwd=tmp_path)
+        await repos.git("config", "user.name", "Test", cwd=tmp_path)
+        await repos.git("config", "user.email", "test@example.invalid", cwd=tmp_path)
+        (tmp_path / "A.java").write_text("class A {}")
+        (tmp_path / "B.java").write_text("class B {}")
+        await repos.git("add", ".", cwd=tmp_path)
+        await repos.git("commit", "-m", "fixture", cwd=tmp_path)
+        captured = await _capture(tmp_path, repo, languages)
+        monkeypatch.setattr(incremental, "_scan", counting)
+        assert await _verify(tmp_path, repo, languages, captured)
+        assert reread == []
+        os.utime(tmp_path / "A.java", ns=(1, 1))  # touched, same bytes
+        assert await _verify(tmp_path, repo, languages, captured)
+        assert reread == ["A.java"]
+        (tmp_path / "B.java").write_text("class C {}")
+        assert not await _verify(tmp_path, repo, languages, captured)
+        (tmp_path / "B.java").unlink()
+        assert not await _verify(tmp_path, repo, languages, captured)
+
+    asyncio.run(run())
+
+
+def test_invalidated_scope_reaches_only_its_files_and_their_dependents() -> None:
+    files = {path: file(path) for path in ("A.java", "B.java", "C.groovy", "D.groovy")}
+    plan = plan_changes(
+        files,
+        files,
+        {("C.groovy", "A.java")},
+        parsed_paths=set(files),
+        full_rebuild=False,
+        invalidated={"A.java", "B.java"},
+    )
+    assert plan.changed == () and not plan.full_rebuild
+    assert plan.reanalyze == ("A.java", "B.java", "C.groovy")
+    assert plan.reused == ("D.groovy",)

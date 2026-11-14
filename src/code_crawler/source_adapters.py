@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import json
+from array import array
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,7 @@ import asyncpg
 from pydantic import Field, model_validator
 
 from code_crawler.incremental import (
+    AnalysisScope,
     FileAnalysis,
     IncrementalResult,
     SourceInput,
@@ -142,18 +144,37 @@ def _error(key: str, stage: str, error: Exception) -> AdapterError:
     )
 
 
-def _range(source: SourceInput, location: SourceRange | None) -> None:
-    if location is None:
-        return
-    if location.source_file_id != source.file.id:
-        raise ValueError("diagnostic points outside its captured source file")
-    lines = source.content.split(b"\n")
-    if any(
-        position.line > len(lines)
-        or position.byte_column > len(lines[position.line - 1])
-        for position in (location.start, location.end)
-    ):
-        raise ValueError("diagnostic range exceeds captured source bytes")
+class _LineIndex:
+    """Line start offsets of the captured files, built once per file for all ranges."""
+
+    def __init__(self) -> None:
+        self._starts: dict[str, array] = {}
+
+    def check(self, source: SourceInput, location: SourceRange | None) -> None:
+        if location is None:
+            return
+        if location.source_file_id != source.file.id:
+            raise ValueError("diagnostic points outside its captured source file")
+        content = source.content
+        starts = self._starts.get(source.file.id)
+        if starts is None:
+            starts = array("Q", (0,))
+            while (found := content.find(b"\n", starts[-1])) >= 0:
+                starts.append(found + 1)
+            self._starts[source.file.id] = starts
+        for position in (location.start, location.end):
+            if position.line > len(starts):
+                raise ValueError("diagnostic range exceeds captured source bytes")
+            offset = starts[position.line - 1] + position.byte_column
+            end = (
+                starts[position.line] - 1
+                if position.line < len(starts)
+                else len(content)
+            )
+            if offset > end:
+                raise ValueError("diagnostic range exceeds captured source bytes")
+            if offset < len(content) and content[offset] & 0xC0 == 0x80:
+                raise ValueError("diagnostic range splits a UTF-8 character")
 
 
 def _ranges(value: object):
@@ -287,13 +308,23 @@ class PreparedSourceRegistry:
             [descriptor.manifest(), version]
             for descriptor, _, version in prepared.values()
         ]
-        self.analysis_version = (
-            "source.registry/1:"
-            + hashlib.sha256(
+
+        def digest(value: object) -> str:
+            return hashlib.sha256(
                 json.dumps(
-                    payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                    value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
                 ).encode()
             ).hexdigest()
+
+        self.analysis_version = "source.registry/1:" + digest(payload)
+        self.scopes = tuple(
+            AnalysisScope(
+                key,
+                version,
+                digest([descriptor.manifest(), version]),
+                tuple(route.suffix for route in descriptor.routes),
+            )
+            for key, (descriptor, _, version) in sorted(prepared.items())
         )
 
     async def __call__(
@@ -366,10 +397,11 @@ class PreparedSourceRegistry:
         }
         output = []
         by_id = {source.file.id: source for source in captured.values()}
+        lines = _LineIndex()
         for result in results:
             source = source_by_path[result.analysis.path]
             for diagnostic in result.diagnostics:
-                _range(source, diagnostic.source_range)
+                lines.check(source, diagnostic.source_range)
             capabilities = result.capabilities or descriptor.capabilities
             reported = {c.capability: c for c in capabilities}
             if len(reported) != len(capabilities) or set(reported) != set(declared):
@@ -411,7 +443,7 @@ class PreparedSourceRegistry:
                         raise ValueError(
                             "fact source range points outside captured inventory"
                         )
-                    _range(referenced, location)
+                    lines.check(referenced, location)
                 if entity.entity_type not in descriptor.entity_types:
                     raise ValueError(
                         "adapter emitted an undeclared/orchestrator-owned entity type"
@@ -472,4 +504,6 @@ async def index_sources(
         prepared,
         languages=registry.languages,
         analysis_version=prepared.analysis_version,
+        captured=captured,
+        scopes=prepared.scopes,
     )

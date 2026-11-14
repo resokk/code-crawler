@@ -588,4 +588,5 @@ async def index_java_sql(
         analyzer,
         languages={".java": "java"},
         analysis_version=analyzer.analysis_version,
+        captured=captured,
     )
