@@ -48,6 +48,14 @@ validation остаётся для диагностики. Удалённый RE
 Расписания нет: retention запускается только явной командой. Записи заданий
 переживают удаление snapshot.
 
+GC удаляет строки только из явного реестра `_SNAPSHOT_TABLES` в `jobs.py`:
+факты UCM, snapshot manifests, source links и validation receipts. Наличие колонки
+`snapshot_id` или префикса `ucm_` не включает постороннюю таблицу в очистку.
+`ingest_jobs` сохраняется через `ON DELETE SET NULL`; publication pointers и общие
+source blobs не входят в реестр. При добавлении snapshot-таблицы миграцией нужно
+явно дополнить реестр; integration test сверяет его с чистой схемой миграций.
+
+
 ## Защита фактов
 
 Факты и receipts по-прежнему immutable вне BUILDING. Миграция 0016 разрешает

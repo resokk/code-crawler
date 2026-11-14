@@ -84,8 +84,12 @@ def test_failed_job_keeps_diagnostics_and_retries_safely(
     asyncio.run(run())
 
 
+@pytest.mark.parametrize(
+    ("foreign_table", "snapshot_type"),
+    [("application_snapshots", "uuid"), ("ucm_application_snapshots", "text")],
+)
 def test_gc_removes_abandoned_building_and_old_retired_only(
-    database_url: str, tmp_path: Path
+    database_url: str, tmp_path: Path, foreign_table: str, snapshot_type: str
 ) -> None:
     async def run() -> None:
         conn = await asyncpg.connect(database_url)
@@ -112,6 +116,17 @@ def test_gc_removes_abandoned_building_and_old_retired_only(
                     "DELETE FROM ucm_entities WHERE snapshot_id=$1", published[0]
                 )
 
+            await conn.execute(
+                f"CREATE TABLE public.{foreign_table} (snapshot_id {snapshot_type} PRIMARY KEY, payload text NOT NULL)"
+            )
+            protected = [
+                (str(snap) if snapshot_type == "text" else snap, f"payload:{i}")
+                for i, snap in enumerate([building, *published])
+            ]
+            await conn.executemany(
+                f"INSERT INTO public.{foreign_table} VALUES ($1,$2)", protected
+            )
+
             repository = await conn.fetchval("SELECT id FROM ucm_repositories")
             # A RUNNING row without its session lock is a job whose process died.
             await conn.execute(
@@ -129,6 +144,10 @@ def test_gc_removes_abandoned_building_and_old_retired_only(
                 "1",
             )
             assert code == 0, output
+            assert {
+                tuple(row)
+                for row in await conn.fetch(f"SELECT * FROM public.{foreign_table}")
+            } == set(protected)
             assert (
                 await conn.fetchval(
                     "SELECT state FROM ingest_jobs WHERE id=$1", building
@@ -155,6 +174,31 @@ def test_gc_removes_abandoned_building_and_old_retired_only(
             assert code == 0, output
             code, _ = await command(database_url, "snapshot", "gc")
             assert code != 0
+        finally:
+            await conn.close()
+
+    asyncio.run(run())
+
+
+def test_gc_registry_covers_migrated_snapshot_tables(
+    database_url: str, tmp_path: Path
+) -> None:
+    async def run() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            await prepare(conn, tmp_path)
+            tables = {
+                row["table_name"]
+                for row in await conn.fetch(
+                    "SELECT table_name FROM information_schema.columns "
+                    "WHERE table_schema='public' AND column_name='snapshot_id'"
+                )
+            }
+            assert len(jobs._SNAPSHOT_TABLES) == len(set(jobs._SNAPSHOT_TABLES))
+            assert set(jobs._SNAPSHOT_TABLES) == tables - {
+                "ingest_jobs",
+                "ucm_repository_publications",
+            }
         finally:
             await conn.close()
 

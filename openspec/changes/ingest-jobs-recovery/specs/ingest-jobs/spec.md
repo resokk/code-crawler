@@ -34,3 +34,13 @@ database rejects it.
 
 GIVEN `snapshot gc` without options WHEN parsed THEN it exits nonzero and deletes
 nothing.
+
+## Requirement: explicit snapshot cleanup ownership
+
+GIVEN an unrelated public table with a snapshot_id column containing the IDs of
+collected snapshots WHEN GC runs THEN its rows remain unchanged and normal UCM
+cleanup succeeds, even if its name starts with ucm_ or its column has another type.
+
+GIVEN the complete migrated UCM schema WHEN its snapshot-owned tables change THEN
+the GC registry coverage test requires an explicit registry update rather than
+expanding production cleanup through database introspection.

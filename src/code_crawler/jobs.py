@@ -11,6 +11,62 @@ _LOCK = "SELECT pg_try_advisory_lock($1, hashtext($2::text))"
 _UNLOCK = "SELECT pg_advisory_unlock($1, hashtext($2::text))"
 
 
+# Only snapshot-owned UCM tables; new migrations must update this registry.
+# Alphabetical order keeps source links ahead of source files (immediate FK).
+_SNAPSHOT_TABLES = (
+    "ingest_file_dependencies",
+    "ingest_file_entities",
+    "ingest_legacy_edges",
+    "ingest_legacy_nodes",
+    "ingest_legacy_refs",
+    "ingest_legacy_snapshots",
+    "ingest_snapshot_adapters",
+    "ingest_snapshot_profiles",
+    "ucm_coverage_reasons",
+    "ucm_data_accesses",
+    "ucm_database_accesses",
+    "ucm_database_contexts",
+    "ucm_database_objects",
+    "ucm_database_search_paths",
+    "ucm_entities",
+    "ucm_evidence",
+    "ucm_external_references",
+    "ucm_occurrences",
+    "ucm_operation_values",
+    "ucm_operations",
+    "ucm_orm_mapping_names",
+    "ucm_orm_mappings",
+    "ucm_orm_operations",
+    "ucm_orm_queries",
+    "ucm_orm_reasons",
+    "ucm_relation_candidates",
+    "ucm_relations",
+    "ucm_scopes",
+    "ucm_snapshot_sources",
+    "ucm_snapshot_validations",
+    "ucm_source_analyses",
+    "ucm_source_analysis_capabilities",
+    "ucm_source_analysis_reasons",
+    "ucm_source_diagnostics",
+    "ucm_source_evidence_legacy_snapshots",
+    "ucm_source_files",
+    "ucm_sql_access_names",
+    "ucm_sql_binding_reasons",
+    "ucm_sql_bindings",
+    "ucm_sql_constructions",
+    "ucm_sql_executions",
+    "ucm_sql_fragments",
+    "ucm_sql_partial_reasons",
+    "ucm_sql_placeholders",
+    "ucm_sql_statement_reasons",
+    "ucm_sql_statements",
+    "ucm_sql_variants",
+    "ucm_symbols",
+    "ucm_type_refs",
+    "ucm_values",
+)
+
+
 async def begin(
     conn: asyncpg.Connection, repository_id: UUID, parameters: dict
 ) -> UUID:
@@ -93,18 +149,10 @@ async def reap(conn: asyncpg.Connection) -> list[UUID]:
 
 
 async def _delete_snapshots(conn: asyncpg.Connection, ids: list[UUID]) -> None:
-    tables = await conn.fetch(
-        "SELECT format('%I', c.relname) AS name FROM pg_attribute a "
-        "JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace "
-        "WHERE n.nspname='public' AND c.relkind='r' AND a.attname='snapshot_id' "
-        "AND NOT a.attisdropped AND c.relname<>'ingest_jobs' ORDER BY 1"
-    )
     # shortcut: row-by-row guarded deletes, slow on huge snapshots; partition by
     # snapshot and drop partitions when GC time starts to matter.
-    for table in tables:
-        await conn.execute(
-            f"DELETE FROM public.{table['name']} WHERE snapshot_id=ANY($1)", ids
-        )
+    for table in _SNAPSHOT_TABLES:
+        await conn.execute(f"DELETE FROM public.{table} WHERE snapshot_id=ANY($1)", ids)
     await conn.execute("DELETE FROM public.ucm_snapshots WHERE id=ANY($1)", ids)
 
 
