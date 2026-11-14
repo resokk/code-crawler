@@ -3,12 +3,15 @@
 import asyncio
 import json
 from collections import defaultdict
+from collections.abc import Iterator
 from uuid import UUID
 
 import asyncpg
+from pydantic import TypeAdapter
 
 from code_crawler.ingestion import UcmBatch
 from code_crawler.source_evidence import require_source_archive
+from code_crawler.ucm import Entity
 
 _SUBTYPES = {
     "SOURCE_ANALYSIS": "ucm_source_analyses",
@@ -78,18 +81,29 @@ def _reference(row: dict, prefix: str) -> dict | None:
 
 
 def _restore_documents(tables: dict[str, list[dict]]) -> list[dict]:
+    return list(_documents(tables))
+
+
+def _documents(tables: dict[str, list[dict]]) -> Iterator[dict]:
+    """Yield entity documents one at a time, emptying `tables` as rows are consumed.
+
+    Rows and documents are released as the caller moves on, so a whole snapshot is
+    never held as rows, documents and models at once.
+    """
     subtypes = {
-        kind: {row["entity_id"]: row for row in tables[table]}
+        kind: {row["entity_id"]: row for row in tables.pop(table)}
         for kind, table in _SUBTYPES.items()
     }
     auxiliary = {}
     for table, owner_column in _AUXILIARY.items():
         grouped = defaultdict(list)
-        for row in tables[table]:
+        for row in tables.pop(table):
             grouped[row[owner_column]].append(row)
         auxiliary[table] = grouped
-    documents = []
-    for envelope in tables["ucm_entities"]:
+    envelopes = tables.pop("ucm_entities")
+    envelopes.reverse()
+    while envelopes:
+        envelope = envelopes.pop()
         entity_id, kind = envelope["entity_id"], envelope["entity_type"]
         document = {
             "id": entity_id,
@@ -343,22 +357,24 @@ def _restore_documents(tables: dict[str, list[dict]]) -> list[dict]:
                     }
                 )
         document.update(detail)
-        documents.append(document)
+        yield document
     if any(rows for rows in subtypes.values()) or any(
         rows for rows in auxiliary.values()
     ):
         raise ValueError("unconsumed canonical rows")
-    return documents
+
+
+_ENTITY = TypeAdapter(Entity)
 
 
 def _restore(repository_id: UUID, tables: dict[str, list[dict]]) -> UcmBatch:
-    documents = _restore_documents(tables)
-    return UcmBatch.model_validate_json(
-        json.dumps(
-            {"repository_id": str(repository_id), "entities": documents},
-            ensure_ascii=False,
-        )
+    # По одной сущности через строгий JSON: один JSON на весь snapshot занимал
+    # сотни мегабайт сверх самих моделей.
+    entities = tuple(
+        _ENTITY.validate_json(json.dumps(document, ensure_ascii=False))
+        for document in _documents(tables)
     )
+    return UcmBatch(repository_id=repository_id, entities=entities)
 
 
 def _require_free_connection(conn: asyncpg.Connection) -> None:
