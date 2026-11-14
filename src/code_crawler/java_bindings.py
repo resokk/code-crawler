@@ -109,7 +109,7 @@ class BindingFlow(_ExecutionFlow):
         )
         self.symbols = {
             entity.id: entity
-            for entity in file.result.analysis.entities
+            for entity in file.result.declared
             if isinstance(entity, Symbol)
         }
         for symbol in self.symbols.values():

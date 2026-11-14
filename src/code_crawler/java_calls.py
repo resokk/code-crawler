@@ -173,7 +173,7 @@ class JavaCallAnalyzer:
         extracted = {source.file.path: extract(source) for source in sources}
         type_paths = defaultdict(set)
         for path, result in extracted.items():
-            for entity in result.analysis.entities:
+            for entity in result.declared:
                 if (
                     isinstance(entity, Symbol)
                     and entity.symbol_kind == "CLASS"
@@ -225,7 +225,7 @@ class JavaCallAnalyzer:
             self.files[source.file.path] = file
             tick("Java: каталог", len(sources))
             extractor = result._extractor
-            for entity in result.analysis.entities:
+            for entity in result.declared:
                 if isinstance(entity, Symbol) and entity.symbol_kind == "CLASS":
                     global_type = entity.logical_key.startswith("java:type:")
                     node = extractor.symbol_nodes[entity.id]
@@ -246,9 +246,7 @@ class JavaCallAnalyzer:
                     self.class_keys[entity.logical_key] = info
         for file in self.files.values():
             extractor = file.result._extractor
-            symbols = {
-                e.id: e for e in file.result.analysis.entities if isinstance(e, Symbol)
-            }
+            symbols = {e.id: e for e in file.result.declared if isinstance(e, Symbol)}
             for symbol in symbols.values():
                 if symbol.symbol_kind not in ("METHOD", "CONSTRUCTOR"):
                     continue
@@ -679,11 +677,8 @@ class JavaCallAnalyzer:
         replacements = {}
         added = []
         dependencies = set()
-        references = {
-            e.source.id: e
-            for e in file.result.analysis.entities
-            if isinstance(e, Relation)
-        }
+        base = file.result.analysis.entities
+        references = {e.source.id: e for e in base if isinstance(e, Relation)}
         for site in self.sites.values():
             if site.file is not file:
                 continue
@@ -810,10 +805,7 @@ class JavaCallAnalyzer:
                 )
         return FileAnalysis(
             path=file.source.file.path,
-            entities=tuple(
-                replacements.get(e.id, e) for e in file.result.analysis.entities
-            )
-            + tuple(added),
+            entities=tuple(replacements.get(e.id, e) for e in base) + tuple(added),
             dependencies=tuple(sorted(dependencies)),
         )
 

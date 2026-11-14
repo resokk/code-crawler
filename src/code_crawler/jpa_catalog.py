@@ -240,7 +240,7 @@ class JpaCatalog:
                 None,
             )
             members = []
-            for symbol in file.result.analysis.entities:
+            for symbol in file.result.declared:
                 if not isinstance(symbol, Symbol) or symbol.symbol_kind not in (
                     "FIELD",
                     "METHOD",

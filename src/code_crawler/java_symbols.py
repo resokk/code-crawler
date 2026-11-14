@@ -50,10 +50,24 @@ _EXCLUDED = {
 
 @dataclass(frozen=True)
 class JavaSymbolsResult:
-    analysis: FileAnalysis
+    path: str
+    # Symbols and scopes; a catalog of every file keeps only these.
+    declared: tuple[Entity, ...]
     diagnostics: tuple[java.Diagnostic, ...]
     coverage: Coverage
-    _extractor: "_Extractor | None" = field(default=None, repr=False, compare=False)
+    _extractor: "_Extractor" = field(repr=False, compare=False)
+
+    @property
+    def analysis(self) -> FileAnalysis:
+        """All facts of the file, rebuilt on each access.
+
+        Occurrences and their relations are most of a file's facts; they are derived
+        from the kept extractor state instead of being held for the whole catalog.
+        """
+        return FileAnalysis(
+            path=self.path,
+            entities=(*self.declared, *self._extractor.occurrences()),
+        )
 
 
 def _name(node: Node | None, erase: bool = False) -> str:
@@ -389,7 +403,8 @@ class _Extractor:
                 return []
             current = self.scopes[current.parent_scope_id]
 
-    def occurrences(self) -> None:
+    def occurrences(self) -> list[Entity]:
+        entities: list[Entity] = []
         for node, scope in self.nodes:
             declaration = self.declarations.get(node.id)
             name = java._text(node)
@@ -473,7 +488,7 @@ class _Extractor:
                     resolution=status,
                     target_symbol_id=candidates[0].id if resolved else None,
                 )
-                self.entities.append(occurrence)
+                entities.append(occurrence)
                 relation_key = key + ":relation"
                 relation_resolution = (
                     Resolution(
@@ -494,7 +509,7 @@ class _Extractor:
                         reason="lexical collector does not prove target applicability",
                     )
                 )
-                self.entities.append(
+                entities.append(
                     Relation(
                         repository_id=self.repo,
                         logical_key=relation_key,
@@ -526,6 +541,7 @@ class _Extractor:
                         coverage=self.coverage,
                     )
                 )
+        return entities
 
 
 def extract(
@@ -552,9 +568,9 @@ def extract(
             "java:file-scope:" + source.file.path, "FILE", None, None, root
         )
         extractor.walk(root, scope.id, None, package)
-        extractor.occurrences()
     return JavaSymbolsResult(
-        FileAnalysis(path=source.file.path, entities=tuple(extractor.entities)),
+        source.file.path,
+        tuple(extractor.entities),
         parsed.diagnostics,
         extractor.coverage,
         extractor,

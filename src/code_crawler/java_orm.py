@@ -122,7 +122,7 @@ class JavaOrmAnalyzer(JavaDatabaseAnalyzer):
         if key not in self._native_cache:
             owner = next(
                 e
-                for e in definition.file.result.analysis.entities
+                for e in definition.file.result.declared
                 if e.id == definition.query.owner_symbol_id
             )
             self._native_cache[key] = native_facts(
@@ -554,9 +554,7 @@ class JavaOrmAnalyzer(JavaDatabaseAnalyzer):
     def _context(
         self, file: _File, calls: list[OrmCall], location, facts: dict
     ) -> DatabaseContext | None:
-        symbols = {
-            e.id: e for e in file.result.analysis.entities if hasattr(e, "symbol_kind")
-        }
+        symbols = {e.id: e for e in file.result.declared if hasattr(e, "symbol_kind")}
         contexts = {}
         for call in calls:
             symbol = symbols.get(call.connection_symbol_id)

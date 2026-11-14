@@ -67,7 +67,7 @@ class JavaDatabaseAnalyzer(JavaLineageAnalyzer):
         symbols = {
             e.logical_key: e
             for file in self.files.values()
-            for e in file.result.analysis.entities
+            for e in file.result.declared
             if isinstance(e, Symbol)
         }
         for assignment in assignments:
@@ -109,9 +109,7 @@ class JavaDatabaseAnalyzer(JavaLineageAnalyzer):
         entities = list(base.entities)
         catalog = {e.id: e for e in base.entities}
         repository = file.source.file.repository_id
-        symbols = {
-            e.id: e for e in file.result.analysis.entities if isinstance(e, Symbol)
-        }
+        symbols = {e.id: e for e in file.result.declared if isinstance(e, Symbol)}
         events = []
         for method in self.methods.values():
             if method.owner.file is file:

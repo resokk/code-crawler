@@ -420,7 +420,7 @@ class JavaSqlAnalyzer(JavaCallAnalyzer):
         extractor = file.result._extractor
         owners = [
             e
-            for e in file.result.analysis.entities
+            for e in file.result.declared
             if isinstance(e, Symbol)
             and e.symbol_kind in ("CLASS", "METHOD", "CONSTRUCTOR")
         ]
