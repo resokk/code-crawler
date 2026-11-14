@@ -51,6 +51,7 @@ def test_server_exposes_structural_tools(pool: FakePool) -> None:
     tools = {tool.name: tool for tool in asyncio.run(list_tools())}
     assert set(tools) == {
         "search_symbols",
+        "search_text",
         "find_callers",
         "find_callees",
         "find_sql_executions",

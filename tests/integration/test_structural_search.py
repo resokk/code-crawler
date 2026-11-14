@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from uuid import uuid4
 
 import asyncpg
 import pytest
@@ -225,5 +226,71 @@ def test_mcp_tool_reads_published_snapshot(
                 await client.call_tool(
                     "search_symbols", {"repository_key": "missing", "name": "x"}
                 )
+
+    asyncio.run(run())
+
+
+def test_lexical_search_ranks_filters_and_pages(
+    database_url: str, tmp_path: Path
+) -> None:
+    async def run() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            await publish(conn, tmp_path)
+
+            async def text(query: str, **options) -> dict:
+                return await search.search_text(conn, "app", query, **options)
+
+            def labels(result: dict) -> list[tuple[str, str]]:
+                return [
+                    (i.get("qualified_name", i["name"]), i["match"])
+                    for i in result["items"]
+                ]
+
+            assert labels(await text("LOAD"))[0] == ("app.Repo.load", "EXACT")
+            assert ("app.Repo.load", "WORDS") in labels(await text("repo load"))
+            assert ("app.Service", "SIMILAR") in labels(await text("Servce"))
+            assert labels(await text("app.Service.audit"))[0] == (
+                "app.Service.audit",
+                "EXACT",
+            )
+            assert not (await text("zzzzqqq"))["items"]
+            files = await text("Repo", entity_types=["SOURCE_FILE"])
+            assert [i["type"] for i in files["items"]] == ["SOURCE_FILE"]
+            assert files["items"][0]["path"] == "Repo.java"
+
+            first = await text("service", limit=1)
+            assert first["truncated"] and first["next_offset"] == 1
+            second = await text("service", limit=1, offset=first["next_offset"])
+            assert second["items"] and second["items"] != first["items"]
+            everything = await text("service")
+            assert everything["next_offset"] is None
+            assert everything["items"][:2] == first["items"] + second["items"]
+
+            published = await conn.fetchval(
+                "SELECT snapshot_id FROM ucm_repository_publications"
+            )
+            pinned = await text("load", snapshot_id=published)
+            assert pinned["snapshot_id"] == str(published)
+            for bad in (
+                {"query": " "},
+                {"query": "x", "offset": search.MAX_OFFSET + 1},
+                {"query": "x", "entity_types": ["RELATION"]},
+                {"query": "x", "snapshot_id": uuid4()},
+            ):
+                with pytest.raises(ValueError):
+                    await search.search_text(conn, "app", **bad)
+            # A snapshot that was never published is not readable even by ID.
+            building = await snapshots.create_snapshot(
+                conn,
+                await conn.fetchval("SELECT id FROM ucm_repositories"),
+                snapshots.SnapshotInput(
+                    commit_hash="c", source_fingerprint="a" * 64, dirty=False
+                ),
+            )
+            with pytest.raises(ValueError, match="not a published version"):
+                await text("load", snapshot_id=building)
+        finally:
+            await conn.close()
 
     asyncio.run(run())

@@ -3,6 +3,7 @@
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Annotated, Literal
+from uuid import UUID
 
 import asyncpg
 from fastmcp import FastMCP
@@ -72,6 +73,41 @@ async def search_symbols(
             kind=kind,
             parameter_types=parameter_types,
             limit=limit,
+        ),
+    )
+
+
+@mcp.tool
+async def search_text(
+    ctx: Context,
+    repository_key: RepositoryKey,
+    query: Annotated[str, Field(min_length=1)],
+    entity_types: list[
+        Literal["SYMBOL", "SOURCE_FILE", "DATABASE_OBJECT", "ORM_MAPPING", "ORM_QUERY"]
+    ]
+    | None = None,
+    snapshot_id: UUID | None = None,
+    limit: Limit = 50,
+    offset: Annotated[int, Field(ge=0, le=search.MAX_OFFSET)] = 0,
+) -> dict:
+    """Нечёткий поиск по именам, когда точное имя неизвестно.
+
+    Имена делятся на слова по регистру и знакам: "user id" находит getUserId и
+    user_id. Порядок: `match=EXACT`, затем `WORDS` (все слова запроса есть в имени),
+    затем `SIMILAR` (похожее написание, опечатки). Следующая страница — тот же
+    запрос с `offset=next_offset`. `snapshot_id` выбирает прежнюю опубликованную
+    версию вместо текущей.
+    """
+    return await _query(
+        ctx,
+        lambda conn: search.search_text(
+            conn,
+            repository_key,
+            query,
+            entity_types=entity_types,
+            snapshot_id=snapshot_id,
+            limit=limit,
+            offset=offset,
         ),
     )
 

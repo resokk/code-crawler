@@ -2,8 +2,9 @@
 
 ## Requirement: tool set
 
-GIVEN a running server WHEN tools are listed THEN exactly the eight structural
-tools are present, each with a description and typed arguments.
+GIVEN a running server WHEN tools are listed THEN the eight structural tools are
+present, each with a description and typed arguments. (lexical-search-index later
+adds search_text.)
 
 ## Requirement: published snapshots only
 

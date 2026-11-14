@@ -22,6 +22,7 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 | Инструмент | Назначение |
 | --- | --- |
 | `search_symbols` | символы по точному простому или полному имени, виду и типам параметров |
+| `search_text` | нечёткий поиск по именам с ранжированием и страницами, см. [lexical-search.md](lexical-search.md) |
 | `find_callers` | кто вызывает символ |
 | `find_callees` | что вызывает символ |
 | `find_sql_executions` | места выполнения SQL и их тексты |
@@ -36,7 +37,7 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
   snapshot этого репозитория. Сервер ничего не пишет: запрос идёт в read-only
   транзакции.
 - Аргументы проверяются до запроса: ID сущностей — `ucm:` и 64 hex-символа,
-  `limit` — 1–200, `depth` — 1–6. Путей к файлам инструменты не принимают.
+  `limit` — 1–200, `depth` — 1–6, `offset` — 0–1000. Путей к файлам инструменты не принимают.
 - Неполнота явная: `truncated`, `resolution`/`reason`/`candidates` у связей,
   `coverage.status` с причинами, пустые `statements` и `executions`.
 - Неизвестный репозиторий, репозиторий без публикации и неизвестная связь

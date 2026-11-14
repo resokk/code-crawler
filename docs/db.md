@@ -141,3 +141,7 @@ immutability/checksums, обязательный архив перед READY/PUB
 
 Миграция `0018_ucm_query_indexes.sql` добавляет четыре B-tree индекса под запросы
 структурного поиска. См. [query-indexes.md](query-indexes.md).
+
+Миграция `0019_lexical_search_index.sql` ставит расширения `pg_trgm` и `btree_gin`,
+вводит функцию `ucm_identifier_words` и три GIN-индекса лексического поиска. См.
+[lexical-search.md](lexical-search.md).

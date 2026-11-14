@@ -8,6 +8,10 @@ import asyncpg
 MAX_LIMIT = 200
 MAX_DEPTH = 6
 
+MAX_OFFSET = 1000
+# Тот же список — в предикате частичных индексов миграции 0019.
+TEXT_TYPES = ("SYMBOL", "SOURCE_FILE", "DATABASE_OBJECT", "ORM_MAPPING", "ORM_QUERY")
+
 _WRITES = ("INSERT", "UPDATE", "DELETE", "MERGE", "DDL")
 
 
@@ -17,7 +21,20 @@ def _limit(limit: int) -> int:
     return limit
 
 
-async def _snapshot(conn: asyncpg.Connection, repository_key: str) -> UUID:
+async def _snapshot(
+    conn: asyncpg.Connection, repository_key: str, snapshot_id: UUID | None = None
+) -> UUID:
+    if snapshot_id is not None:
+        # Явная версия — только та, что была опубликована: BUILDING/READY не читаются.
+        if not await conn.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM public.ucm_snapshots s "
+            "JOIN public.ucm_repositories r ON r.id=s.repository_id "
+            "WHERE s.id=$2 AND r.repository_key=$1 AND s.state IN ('PUBLISHED','RETIRED'))",
+            repository_key,
+            snapshot_id,
+        ):
+            raise ValueError("snapshot is not a published version of the repository")
+        return snapshot_id
     snapshot_id = await conn.fetchval(
         "SELECT p.snapshot_id FROM public.ucm_repository_publications p "
         "JOIN public.ucm_repositories r ON r.id=p.repository_id WHERE r.repository_key=$1",
@@ -42,7 +59,7 @@ async def _entities(
 ) -> dict[str, dict]:
     rows = await conn.fetch(
         "SELECT e.entity_id AS id, e.entity_type AS type, e.name, s.symbol_kind AS kind, "
-        "s.qualified_name, f.path, e.start_line, e.end_line, "
+        "s.qualified_name, COALESCE(f.path, own.path) AS path, e.start_line, e.end_line, "
         "(SELECT array_agg(t.name ORDER BY t.position) FROM public.ucm_type_refs t "
         " WHERE t.snapshot_id=e.snapshot_id AND t.owner_id=e.entity_id "
         " AND t.role='PARAMETER') AS parameter_types "
@@ -50,6 +67,9 @@ async def _entities(
         "LEFT JOIN public.ucm_symbols s USING (snapshot_id, entity_id) "
         "LEFT JOIN public.ucm_source_files f ON f.snapshot_id=e.snapshot_id "
         " AND f.entity_id=e.source_file_id "
+        # Сам файл: у SOURCE_FILE нет source_file_id, его путь — в собственной строке.
+        "LEFT JOIN public.ucm_source_files own ON own.snapshot_id=e.snapshot_id "
+        " AND own.entity_id=e.entity_id "
         "WHERE e.snapshot_id=$1 AND e.entity_id=ANY($2)",
         snapshot_id,
         [i for i in ids if i],
@@ -169,6 +189,78 @@ async def search_symbols(
     )
     entities = await _entities(conn, snapshot_id, {row["entity_id"] for row in rows})
     return _page(snapshot_id, [entities[row["entity_id"]] for row in rows], rows, limit)
+
+
+async def search_text(
+    conn: asyncpg.Connection,
+    repository_key: str,
+    query: str,
+    *,
+    entity_types: list[str] | None = None,
+    snapshot_id: UUID | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict:
+    """Fuzzy identifier search: exact name, then all query words, then similar spelling.
+
+    Query and names are split into words on case changes and punctuation, so
+    "user id" finds getUserId and user_id.
+    """
+    if not query.strip():
+        raise ValueError("query must not be blank")
+    if not 0 <= offset <= MAX_OFFSET:
+        raise ValueError(f"offset must be between 0 and {MAX_OFFSET}")
+    types = tuple(entity_types or TEXT_TYPES)
+    if not set(types) <= set(TEXT_TYPES):
+        raise ValueError("entity_types must be among " + ", ".join(TEXT_TYPES))
+    snapshot_id = await _snapshot(conn, repository_key, snapshot_id)
+    # Литералы из фиксированного списка: по ним планировщик выбирает частичные индексы.
+    listed = ",".join(f"'{entity_type}'" for entity_type in types)
+    like = "%" + query.lower().translate({ord(c): "\\" + c for c in "\\%_"}) + "%"
+    words = "plainto_tsquery('simple', public.ucm_identifier_words($2))"
+    name_words = "to_tsvector('simple', public.ucm_identifier_words(e.name))"
+    qualified_words = (
+        "to_tsvector('simple', public.ucm_identifier_words(s.qualified_name))"
+    )
+    rows = await conn.fetch(
+        "WITH hits AS ("
+        " SELECT e.entity_id FROM public.ucm_entities e WHERE e.snapshot_id=$1 "
+        f" AND e.entity_type IN ({listed}) AND (lower(e.name) % lower($2) "
+        f"  OR lower(e.name) LIKE $3 OR {name_words} @@ {words}) "
+        " UNION SELECT s.entity_id FROM public.ucm_symbols s WHERE s.snapshot_id=$1 "
+        f" AND 'SYMBOL' IN ({listed}) AND {qualified_words} @@ {words}) "
+        "SELECT * FROM (SELECT e.entity_id, CASE "
+        " WHEN lower($2) IN (lower(e.name), lower(s.qualified_name)) THEN 'EXACT' "
+        f" WHEN {name_words} @@ {words} OR {qualified_words} @@ {words} THEN 'WORDS' "
+        " ELSE 'SIMILAR' END AS match, "
+        "similarity(lower(e.name), lower($2)) AS similarity, "
+        "COALESCE(s.qualified_name, e.name) AS label "
+        "FROM hits JOIN public.ucm_entities e ON e.snapshot_id=$1 "
+        " AND e.entity_id=hits.entity_id "
+        "LEFT JOIN public.ucm_symbols s ON s.snapshot_id=$1 "
+        " AND s.entity_id=e.entity_id) ranked "
+        "ORDER BY array_position(ARRAY['EXACT','WORDS','SIMILAR'], match), "
+        "similarity DESC, label, entity_id LIMIT $4 OFFSET $5",
+        snapshot_id,
+        query,
+        like,
+        _limit(limit) + 1,
+        offset,
+    )
+    entities = await _entities(conn, snapshot_id, {row["entity_id"] for row in rows})
+    page = _page(
+        snapshot_id,
+        [
+            entities[row["entity_id"]]
+            | {"match": row["match"], "similarity": round(row["similarity"], 3)}
+            for row in rows
+        ],
+        rows,
+        limit,
+    )
+    # Курсор — смещение в детерминированном порядке; None, когда страниц больше нет.
+    page["next_offset"] = offset + limit if page["truncated"] else None
+    return page
 
 
 async def _calls(
