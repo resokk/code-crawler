@@ -4,6 +4,7 @@ import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from uuid import UUID
 
 from pydantic import TypeAdapter
 from rich.console import Console
@@ -17,6 +18,7 @@ from code_crawler import (
     indexer,
     ingestion,
     legacy,
+    publication,
     repos,
     snapshots,
 )
@@ -256,6 +258,74 @@ async def list_adapters() -> None:
     )
 
 
+async def _snapshot_report(conn, snapshot_id: UUID) -> None:
+    row = await conn.fetchrow(
+        "SELECT s.id AS snapshot_id, s.repository_id, s.state AS status, "
+        "(SELECT count(*) FROM public.ucm_entities e WHERE e.snapshot_id=s.id) AS entity_count, "
+        "p.snapshot_id AS published_snapshot_id FROM public.ucm_snapshots s "
+        "LEFT JOIN public.ucm_repository_publications p ON p.repository_id=s.repository_id "
+        "WHERE s.id=$1",
+        snapshot_id,
+    )
+    if row is None:
+        raise ValueError("snapshot does not exist")
+    diagnostics = await conn.fetch(
+        "SELECT severity,count(*) AS count FROM public.ucm_source_diagnostics "
+        "WHERE snapshot_id=$1 GROUP BY severity ORDER BY severity",
+        snapshot_id,
+    )
+    report = dict(row)
+    report["diagnostics"] = {r["severity"]: r["count"] for r in diagnostics}
+    console.print_json(json.dumps(report, default=str))
+
+
+async def _publish_cli_snapshot(
+    conn, snapshot_id: UUID, expected_current: UUID | None
+) -> None:
+    row = await conn.fetchrow(
+        "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1",
+        snapshot_id,
+    )
+    if row is None:
+        raise ValueError("snapshot does not exist")
+    if row["state"] != "PUBLISHED":
+        await publication.validate_snapshot(conn, snapshot_id)
+    await publication.publish_snapshot(
+        conn, row["repository_id"], snapshot_id, expected_snapshot_id=expected_current
+    )
+
+
+async def snapshot_validate(snapshot_id: UUID) -> None:
+    """Validate stored canonical facts without changing publication visibility."""
+    with operation("Проверка UCM snapshot"):
+        conn = await db.connect()
+        try:
+            await publication.validate_snapshot(conn, snapshot_id)
+            await _snapshot_report(conn, snapshot_id)
+        finally:
+            await conn.close()
+
+
+async def snapshot_publish(snapshot_id: UUID, expected_current: UUID | None) -> None:
+    """Validate and atomically publish using an explicitly supplied expected pointer."""
+    with operation("Публикация UCM snapshot"):
+        conn = await db.connect()
+        try:
+            await _publish_cli_snapshot(conn, snapshot_id, expected_current)
+            await _snapshot_report(conn, snapshot_id)
+        finally:
+            await conn.close()
+
+
+def _expected_pointer(value: str) -> UUID | None:
+    if value == "none":
+        return None
+    try:
+        return UUID(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("expected UUID or 'none'") from error
+
+
 async def index_registered(
     root: str,
     repository_key: str,
@@ -263,6 +333,7 @@ async def index_registered(
     dialect: str,
     naming_policy: str,
     connections: str | None = None,
+    publish: bool = False,
 ) -> None:
     with operation("Индексация source adapters") as progress:
         tasks: dict[str, TaskID] = {}
@@ -312,6 +383,11 @@ async def index_registered(
             )
             result = await index_sources(conn, repository, path, registry)
             console.print(f"BUILDING snapshot: {result.snapshot_id}")
+            if publish:
+                await _publish_cli_snapshot(
+                    conn, result.snapshot_id, result.base_snapshot_id
+                )
+            await _snapshot_report(conn, result.snapshot_id)
         finally:
             await conn.close()
 
@@ -374,7 +450,28 @@ def main() -> None:
     source_parser.add_argument(
         "--connections", help="JSON tuple/list of typed ConnectionAssignment"
     )
+    source_parser.add_argument(
+        "--publish",
+        action="store_true",
+        help="проверить и атомарно опубликовать snapshot",
+    )
     source_parser.set_defaults(run=index_registered)
+    snapshot_commands = commands.add_parser(
+        "snapshot", help="проверка и публикация canonical UCM"
+    ).add_subparsers(metavar="действие", required=True)
+    validate_parser = snapshot_commands.add_parser(
+        "validate", help="проверить snapshot и перевести в READY"
+    )
+    validate_parser.add_argument("snapshot_id", type=UUID)
+    validate_parser.set_defaults(run=snapshot_validate)
+    publish_parser = snapshot_commands.add_parser(
+        "publish", help="проверить и опубликовать snapshot с CAS"
+    )
+    publish_parser.add_argument("snapshot_id", type=UUID)
+    publish_parser.add_argument(
+        "--expected-current", required=True, type=_expected_pointer, metavar="UUID|none"
+    )
+    publish_parser.set_defaults(run=snapshot_publish)
     index_parser = commands.add_parser(
         "index", help="построить или обновить индекс репозитория"
     )

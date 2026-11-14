@@ -87,7 +87,9 @@ Java profiles: symbols, calls, sql, execution, semantic, lineage, database, orm.
 Symbol logical keys/ConnectionContext (см. [database-identity.md](database-identity.md)).
 CLI загружает READY schema versions до создания adapter, а producer получает только
 typed manifests. `index-sources` local Git root должен быть repository root. Вывод —
-BUILDING snapshot_id; validate_snapshot/publish_snapshot остаются отдельными actions.
+BUILDING snapshot_id по умолчанию; `--publish` завершает validation/publication
+с expected base pointer. Ручные `snapshot validate/publish` описаны в
+[canonical-publication-cli.md](canonical-publication-cli.md).
 Legacy CLI `index` и existing index_java_* APIs продолжают работать без registry.
 
 Programmatic activation:

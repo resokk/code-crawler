@@ -294,7 +294,9 @@ captured files через immutable descriptors и prepared adapters. Кажды
 Longest suffix routing используется совместно capture и incremental planner.
 
 CLI `adapters list` описывает восемь Java profiles, Groovy и PL/Plus adapters; `index-sources ROOT
---repository-key KEY --java-profile orm` строит BUILDING snapshot. Existing
+--repository-key KEY --java-profile orm` строит BUILDING snapshot.
+Опция `--publish` добавляет validation и atomic publication с expected base pointer;
+ручные команды — [canonical-publication-cli.md](canonical-publication-cli.md). Existing
 index_java_* APIs и legacy `index` сохраняются. Новый adapter подключается без
 изменения PostgreSQL loader. Groovy и PL/Plus подключены к `index-sources` по умолчанию;
 PL/Plus контракт: [plplus-ucm.md](plplus-ucm.md);

@@ -52,7 +52,9 @@ ingest_file_dependencies. Их записи immutable с VALIDATING, как cano
 Canonical COPY и manifests фиксируются одной транзакцией. Пустой BUILDING
 snapshot metadata может остаться после DB failure; частичных facts/manifests нет.
 Результат содержит snapshot_id, base_snapshot_id и IncrementalPlan. Публикация
-отдельная: validate_snapshot, затем publish_snapshot(expected_snapshot_id=base).
+отдельная через API: validate_snapshot, затем publish_snapshot(expected_snapshot_id=base).
+CLI `index-sources --publish` выполняет эту последовательность автоматически;
+ручные команды: [canonical-publication-cli.md](canonical-publication-cli.md).
 Если baseline pointer успел измениться, CAS не позволит затереть новую публикацию.
 
 Переиспользуется разбор, но итоговый полный batch всё ещё читается/хранится в

@@ -15,7 +15,9 @@ uv run code-crawler <команда>
 | `schema import-manifest PATH` | импорт typed JSON manifest в versioned inventory |
 | `schema import` | читает структуру прикладной БД в слой данных — см. [data-model.md](data-model.md) |
 | `adapters list` | описывает built-in versioned Java profiles, Groovy и PL/Plus adapters без доступа к БД |
-| `index-sources ROOT --repository-key KEY` | строит canonical BUILDING snapshot через source registry — см. [source-adapters.md](source-adapters.md) |
+| `snapshot validate UUID` | проверяет canonical snapshot и переводит его в READY |
+| `snapshot publish UUID --expected-current UUID\|none` | validation и атомарная CAS публикация — [контракт](canonical-publication-cli.md) |
+| `index-sources ROOT --repository-key KEY [--publish]` | строит canonical BUILDING snapshot; `--publish` проверяет и публикует через существующий lifecycle API — см. [source-adapters.md](source-adapters.md) |
 | `index <источник>` | строит или обновляет индекс репозитория — см. [indexing.md](indexing.md) |
 
 `<источник>` — локальный каталог или URL репозитория. Пример:
@@ -73,3 +75,5 @@ uv run code-crawler use-index org/billing --backend legacy
 совпадения индексов; `show-index` возвращает nodes/edges/refs выбранного reader.
 После следующего `index` повторите `migrate-index`, чтобы обновить UCM snapshot.
 Точный контракт и ограничения семантики: [ucm-legacy-migration.md](ucm-legacy-migration.md).
+
+Актуальный порядок разработки: [план 2.0](development-plan-v2.md).
