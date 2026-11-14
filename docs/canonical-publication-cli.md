@@ -35,3 +35,7 @@ CAS conflict сохраняется для явного retry с новым expe
 См. [source-evidence.md](source-evidence.md). Snapshot reports включают archive
 status/counts, commit/fingerprint/dirty. Read API, default backend и CI enforcement
 остаются отдельными changes [плана 2.0](development-plan-v2.md).
+
+Стандартная команда `index SOURCE` теперь всегда выполняет canonical
+index → validate → publish; `--backend legacy` выбирает прежний writer.
+См. [default-index.md](default-index.md).

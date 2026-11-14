@@ -2,7 +2,8 @@
 
 `index_incremental(conn, repository_id, root, analyze, *, languages, analysis_version)`
 строит новый BUILDING snapshot, используя текущий опубликованный как baseline.
-Legacy CLI пока не переключается: вызов предназначен для UCM adapters, которые
+Стандартный CLI `index` использует этот pipeline через registry и публикует
+результат; `index --backend legacy` сохраняет прежний writer. UCM adapters
 получают tuple SourceInput(file: SourceFile, content: bytes) и возвращают tuple
 FileAnalysis(path, entities, dependencies). Анализатор вызывается один раз только
 для выбранных файлов; пустой набор не вызывает callback. SourceFile создаёт

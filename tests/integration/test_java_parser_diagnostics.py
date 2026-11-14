@@ -43,6 +43,8 @@ def test_cli_persists_and_reports_parser_diagnostics(
                 "-c",
                 "from code_crawler.cli import main; main()",
                 "index",
+                "--backend",
+                "legacy",
                 str(tmp_path),
                 env={**os.environ, "DATABASE_URL": database_url, "NO_COLOR": "1"},
                 stdout=asyncio.subprocess.PIPE,

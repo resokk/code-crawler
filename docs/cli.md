@@ -18,7 +18,7 @@ uv run code-crawler <команда>
 | `snapshot validate UUID` | проверяет canonical snapshot и переводит его в READY |
 | `snapshot publish UUID --expected-current UUID\|none` | validation и атомарная CAS публикация — [контракт](canonical-publication-cli.md) |
 | `index-sources ROOT --repository-key KEY [--publish]` | строит canonical BUILDING snapshot; `--publish` проверяет и публикует через существующий lifecycle API — см. [source-adapters.md](source-adapters.md) |
-| `index <источник>` | строит или обновляет индекс репозитория — см. [indexing.md](indexing.md) |
+| `index SOURCE [--backend ucm\|legacy]` | по умолчанию строит, проверяет и публикует canonical UCM; legacy только явно — [default-index.md](default-index.md) |
 
 `<источник>` — локальный каталог или URL репозитория. Пример:
 
@@ -27,9 +27,13 @@ uv run code-crawler index git@host:group/billing.git
 uv run code-crawler index ~/work/billing
 ```
 
-Перед индексацией схема БД должна быть актуальной (`db status`). По завершении печатаются имя репозитория, ветка, коммит и число файлов, классов, методов, SQL-запросов и таблиц.
+Перед индексацией схема БД должна быть актуальной (`db status`). Canonical index
+печатает repository key, job/snapshot IDs, статус, entity count, diagnostics и
+archive provenance. Legacy выводит прежнюю статистику с явным compatibility warning.
+Canonical options и identity: [default-index.md](default-index.md).
 
-Команд удаления и просмотра индексов пока нет.
+Для canonical доступны typed reader/search/MCP и `snapshot gc`;
+`show-index` относится к compatibility reader, а не к canonical typed API.
 
 ## Прогресс и статус
 
@@ -62,7 +66,7 @@ PL/Plus и Java, анализ Groovy, проверку результатов а
 ## Переход с legacy на UCM
 
 ```bash
-uv run code-crawler index ~/work/billing
+uv run code-crawler index ~/work/billing --backend legacy
 uv run code-crawler migrate-index billing --repository-key org/billing
 uv run code-crawler compare-index org/billing
 uv run code-crawler use-index org/billing --backend ucm
@@ -74,7 +78,7 @@ uv run code-crawler use-index org/billing --backend legacy
 `migrate-index` публикует новый snapshot, сохраняя legacy. `compare-index` выдаёт
 полный compatibility report и exit 1 при расхождении. `use-index ucm` требует
 совпадения индексов; `show-index` возвращает nodes/edges/refs выбранного reader.
-После следующего `index` повторите `migrate-index`, чтобы обновить UCM snapshot.
+После следующего `index --backend legacy` повторите `migrate-index`, чтобы обновить UCM snapshot.
 Точный контракт и ограничения семантики: [ucm-legacy-migration.md](ucm-legacy-migration.md).
 
 Актуальный порядок разработки: [план 2.0](development-plan-v2.md).

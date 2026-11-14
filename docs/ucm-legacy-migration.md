@@ -3,7 +3,7 @@
 Команды `migrate-index <legacy-name> --repository-key <key>`,
 `compare-index <key>`, `use-index <key> --backend legacy|ucm`, `show-index <key>`
 вводят compatibility bridge без удаления repos/nodes/edges/data_*.
-`index` сохраняет прежнее поведение; после обновления legacy индекса миграцию
+`index --backend legacy` сохраняет прежнее поведение; после обновления legacy индекса миграцию
 можно повторить, получив новый immutable snapshot.
 
 Миграция читает legacy Graph и проверяет его эквивалентность повторному анализу
@@ -38,3 +38,6 @@ Java/SQL или GraphRAG. MCP пока каркас; его будущие tools
 compatibility projection нормативными facts. Инкрементальный API остаётся доступен,
 но bridge делает полный разбор: shared PLPlus entities ещё не имеют нормативного
 file ownership. Legacy tables не выводятся из эксплуатации на этом этапе.
+
+Стандартный `index` теперь напрямую создаёт canonical publication без bridge:
+[default-index.md](default-index.md). Legacy executes не становятся confirmed SQL executions.

@@ -97,9 +97,57 @@ async def db_migrate() -> None:
     await _migrate("Миграция БД", init=False)
 
 
-async def index(source: str) -> None:
+async def index(
+    source: str,
+    backend: str = "ucm",
+    repository_key: str | None = None,
+    java_profile: str | None = None,
+    dialect: str | None = None,
+    naming_policy: str | None = None,
+    connections: str | None = None,
+) -> None:
+    """Build and publish canonical UCM by default; legacy requires explicit selection."""
+    if backend == "legacy":
+        if any(
+            value is not None
+            for value in (
+                repository_key,
+                java_profile,
+                dialect,
+                naming_policy,
+                connections,
+            )
+        ):
+            raise SystemExit("canonical options cannot be used with --backend legacy")
+        await index_legacy(source)
+        return
+    if backend != "ucm":
+        raise SystemExit("unknown index backend")
+    with operation("Подготовка canonical репозитория"):
+        if repository_key is not None and not repository_key.strip():
+            raise ValueError("repository key must be nonblank")
+        repo, default_key = await asyncio.to_thread(repos.resolve_canonical, source)
+        if repo.remote:
+            await repos.sync_canonical(repo)
+        key = repository_key if repository_key is not None else default_key
+        console.print(f"Canonical repository key: {escape(key)}")
+    await index_registered(
+        str(repo.path),
+        key,
+        java_profile if java_profile is not None else "orm",
+        dialect if dialect is not None else "postgres",
+        naming_policy if naming_policy is not None else "UNKNOWN",
+        connections,
+        publish=True,
+    )
+
+
+async def index_legacy(source: str) -> None:
     with operation(f"Индексация {source}") as progress:
-        repo = repos.resolve(source)
+        console.print(
+            "[yellow]LEGACY compatibility: executes means SQL discovery, not verified execution.[/]"
+        )
+        repo = await asyncio.to_thread(repos.resolve, source)
         conn = await db.connect()
         try:
             pending, unknown = await db.schema_state(conn)
@@ -428,6 +476,11 @@ async def index_registered(
             )
         conn = await db.connect()
         try:
+            pending, unknown = await db.schema_state(conn)
+            if pending or unknown:
+                raise RuntimeError(
+                    "схема БД не соответствует коду, см. `code-crawler db status`"
+                )
             schemas = []
             for key, version in sorted(
                 {(a.context.database_key, a.context.version_key) for a in assignments}
@@ -473,6 +526,23 @@ async def index_registered(
             await _snapshot_report(conn, result.snapshot_id)
         finally:
             await conn.close()
+
+
+def _canonical_options(parser: argparse.ArgumentParser, *, defaults: bool) -> None:
+    parser.add_argument(
+        "--java-profile", choices=JAVA_PROFILES, default="orm" if defaults else None
+    )
+    parser.add_argument(
+        "--dialect",
+        choices=("postgres", "mysql", "tsql"),
+        default="postgres" if defaults else None,
+    )
+    parser.add_argument(
+        "--naming-policy",
+        choices=("UNKNOWN", "IDENTITY"),
+        default="UNKNOWN" if defaults else None,
+    )
+    parser.add_argument("--connections", help="JSON list of typed ConnectionAssignment")
 
 
 def main() -> None:
@@ -523,16 +593,7 @@ def main() -> None:
     )
     source_parser.add_argument("root")
     source_parser.add_argument("--repository-key", required=True)
-    source_parser.add_argument("--java-profile", choices=JAVA_PROFILES, default="orm")
-    source_parser.add_argument(
-        "--dialect", choices=("postgres", "mysql", "tsql"), default="postgres"
-    )
-    source_parser.add_argument(
-        "--naming-policy", choices=("UNKNOWN", "IDENTITY"), default="UNKNOWN"
-    )
-    source_parser.add_argument(
-        "--connections", help="JSON tuple/list of typed ConnectionAssignment"
-    )
+    _canonical_options(source_parser, defaults=True)
     source_parser.add_argument(
         "--publish",
         action="store_true",
@@ -583,9 +644,15 @@ def main() -> None:
     retry_parser.add_argument("job_id", type=UUID)
     retry_parser.set_defaults(run=jobs_retry)
     index_parser = commands.add_parser(
-        "index", help="построить или обновить индекс репозитория"
+        "index",
+        help="построить, проверить и опубликовать canonical UCM (legacy — явно)",
     )
     index_parser.add_argument("source", help="локальный каталог или URL репозитория")
+    index_parser.add_argument("--backend", choices=("ucm", "legacy"), default="ucm")
+    index_parser.add_argument(
+        "--repository-key", help="canonical key; по умолчанию source identity"
+    )
+    _canonical_options(index_parser, defaults=False)
     index_parser.set_defaults(run=index)
     migrate_parser = commands.add_parser(
         "migrate-index", help="перенести legacy индекс в UCM snapshot"

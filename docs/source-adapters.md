@@ -96,7 +96,7 @@ typed manifests. `index-sources` local Git root должен быть repository
 BUILDING snapshot_id по умолчанию; `--publish` завершает validation/publication
 с expected base pointer. Ручные `snapshot validate/publish` описаны в
 [canonical-publication-cli.md](canonical-publication-cli.md).
-Legacy CLI `index` и existing index_java_* APIs продолжают работать без registry.
+Legacy CLI `index --backend legacy` и existing index_java_* APIs продолжают работать без registry.
 
 Programmatic activation:
 
@@ -125,3 +125,6 @@ full profile invalidation. No-change route/profile переносит SOURCE_ANA
 с facts; JSON Schema и миграция 0014 обеспечивают immutable typed report storage.
 Per-adapter fine-grained invalidation, dynamic plugin loading и cross-language
 semantic linking не объявляются этим change.
+
+Стандартный `index SOURCE` использует registry и publish по умолчанию;
+`index-sources` сохраняет BUILDING/--publish варианты: [default-index.md](default-index.md).

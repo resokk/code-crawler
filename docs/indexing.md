@@ -1,6 +1,7 @@
 # Индексация
 
-Статус: реализована часть требований.
+Статус: canonical UCM — backend стандартной команды `index`;
+контракт и explicit legacy режим: [default-index.md](default-index.md).
 
 | Сделано | Ещё нет |
 | --- | --- |
@@ -56,7 +57,7 @@ rm src/code_crawler/{plplus,groovy}/*.interp src/code_crawler/{plplus,groovy}/*.
 Canonical `index-sources` использует `PlplusSourceAdapter`: symbols/scopes/occurrences,
 CFT class/attribute selectors, bounded call candidates и structured diagnostics.
 Контракт и ограничения: [plplus-ucm.md](plplus-ucm.md). Описание ниже относится
-к существующему legacy `index`; canonical adapter не угадывает physical таблицы
+к существующему `index --backend legacy`; canonical adapter не угадывает physical таблицы
 по имени класса и не делает runtime proof из восстановленного дерева с ошибками.
 
 Что извлекается legacy pipeline из файлов `.plp`:
@@ -204,8 +205,9 @@ UCM. При исправлении ошибки соответствующий �
 UCM API поддерживает fingerprints tracked-файлов, Git diff, invalidation зависимых
 файлов и перенос facts неизменённых файлов в новый snapshot. Контракт analyzer,
 ownership manifests и границы описаны в [ucm-incremental.md](ucm-incremental.md).
-Текущая команда `index` по-прежнему использует legacy writer и полную индексацию;
-управляемый переход чтения и миграция доступны через команды из
+Стандартная команда `index` использует canonical registry и atomic publication.
+Старый writer доступен только через `--backend legacy`; его миграция и
+compatibility reader доступны через команды из
 [ucm-legacy-migration.md](ucm-legacy-migration.md).
 
 

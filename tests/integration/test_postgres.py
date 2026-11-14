@@ -157,7 +157,7 @@ def test_cli_db_and_local_index(database_url: str, tmp_path: Path) -> None:
         await repos.git("add", "A.java", cwd=tmp_path)
         await repos.git("commit", "-m", "fixture", cwd=tmp_path)
         for _ in range(2):
-            code, output = await command("index", str(tmp_path))
+            code, output = await command("index", str(tmp_path), "--backend", "legacy")
             assert code == 0, output
         conn = await asyncpg.connect(database_url)
         try:
