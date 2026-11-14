@@ -1097,5 +1097,13 @@ async def _ingest_records(
             f"INSERT INTO public.{table} ({columns}) SELECT {columns} FROM pg_temp.{stage}"
         )
         tick("Запись в БД: перенос", len(stages))
-    tick("Запись в БД: проверка связей")
+    # По одному ограничению — только ради прогресса; итог тот же, что у ALL IMMEDIATE.
+    constraints = await conn.fetch(
+        "SELECT format('%I.%I', n.nspname, c.conname) AS name FROM pg_constraint c "
+        "JOIN pg_namespace n ON n.oid=c.connamespace "
+        "WHERE c.condeferrable AND n.nspname='public' ORDER BY 1"
+    )
+    for constraint in constraints:
+        await conn.execute(f"SET CONSTRAINTS {constraint['name']} IMMEDIATE")
+        tick("Запись в БД: проверка связей", len(constraints))
     await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")
