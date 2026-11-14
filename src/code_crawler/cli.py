@@ -32,6 +32,10 @@ from code_crawler.java_adapter import (
     JavaSourceAdapter,
     java_adapter_catalog,
 )
+from code_crawler.javascript_adapter import (
+    JavaScriptSourceAdapter,
+    TypeScriptSourceAdapter,
+)
 from code_crawler.kotlin_adapter import KotlinSourceAdapter
 from code_crawler.plplus_adapter import PlplusSourceAdapter
 from code_crawler.source_adapters import AdapterRegistry, index_sources
@@ -305,6 +309,8 @@ async def list_adapters() -> None:
                     KotlinSourceAdapter().descriptor,
                     PlplusSourceAdapter().descriptor,
                     BpmnSourceAdapter().descriptor,
+                    JavaScriptSourceAdapter().descriptor,
+                    TypeScriptSourceAdapter().descriptor,
                 )
             ],
             ensure_ascii=False,
@@ -504,6 +510,8 @@ async def index_registered(
                     PlplusSourceAdapter(),
                     BpmnSourceAdapter(),
                     KotlinSourceAdapter(),
+                    JavaScriptSourceAdapter(),
+                    TypeScriptSourceAdapter(),
                 )
             )
             repository = await snapshots.register_repository(

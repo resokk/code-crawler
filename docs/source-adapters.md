@@ -136,3 +136,8 @@ semantic linking не объявляются этим change.
 BPMN 2.0 XML включён через `BpmnSourceAdapter` (`.bpmn`, `.bpmn20.xml`, `.xml`);
 не-BPMN XML получает UNSUPPORTED. XML facts, typed control-flow links, deferred
 engine selectors и ограничения описаны в [bpmn-schema.md](bpmn-schema.md).
+
+JavaScript (`.js/.jsx`) и TypeScript (`.ts/.tsx`, `.json` для captured tsconfig)
+активированы отдельными versioned adapters. Symbols, imports/reexports,
+conservative CALLS и fetch/axios HTTP selectors:
+[javascript-typescript-ucm.md](javascript-typescript-ucm.md).

@@ -37,3 +37,20 @@ No network lookups by default, no execution, no trust in input code or metadata.
 
 ## Compatibility and tests
 Add new UCM EntityType/RelationKind only if necessary, using forward migrations. Preserve existing Java/SQL/BPMN facts and compare full vs incremental output on same fixture.
+
+## Implemented contract
+
+Normative model, detector/parser versions, routing, captured strict-JSON tsconfig,
+local export catalog and conservative resolution rules are documented in
+[JavaScript / TypeScript UCM adapters](../../../docs/javascript-typescript-ucm.md).
+The implementation reuses existing UCM Symbol/Scope/Occurrence, typed relations,
+HttpSelector and SymbolSelector; no storage migration or second graph is needed.
+All semantic capabilities are explicitly PARTIAL. Package resolution,
+TypeScript compiler inference and dynamic runtime dispatch remain outside coverage.
+
+PostgreSQL 15 fixtures cover publication with Evidence/SourceAnalysis, unchanged
+reuse, config dependency invalidation, exact full/incremental equality and
+per-adapter fingerprint invalidation without rebuilding Java.
+
+Registered JS/TS captured inventories are shared through the registry prepare_inventory
+contract added by D10; canonical fact output ownership remains per adapter.
