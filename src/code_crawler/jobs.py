@@ -1,9 +1,13 @@
 """Persistent ingest job state, safe retry and snapshot garbage collection."""
 
 import json
+import math
+from typing import TypedDict
 from uuid import UUID, uuid4
 
 import asyncpg
+
+from code_crawler import db, snapshots
 
 # Первый ключ пары advisory-блокировки; второй — hashtext(id задания).
 _JOB_LOCK = 4_217_002
@@ -135,25 +139,161 @@ async def finish(
 
 
 async def reap(conn: asyncpg.Connection) -> list[UUID]:
-    """Mark RUNNING jobs whose owning process is gone as FAILED."""
+    """Reap abandoned jobs transactionally; leases release even after cancellation."""
     reaped = []
-    for row in await conn.fetch(
-        "SELECT id FROM public.ingest_jobs WHERE state='RUNNING'"
-    ):
-        if await conn.fetchval(_LOCK, _JOB_LOCK, str(row["id"])):
-            await finish(
-                conn, row["id"], RuntimeError("process ended without reporting")
-            )
-            reaped.append(row["id"])
+    async with conn.transaction():
+        for row in await conn.fetch(
+            "SELECT j.id FROM public.ingest_jobs j WHERE j.state='RUNNING' "
+            "AND NOT EXISTS(SELECT 1 FROM pg_locks l WHERE l.locktype='advisory' "
+            "AND l.pid=pg_backend_pid() AND l.classid=$1::oid "
+            "AND l.objid=hashtext(j.id::text)::oid AND l.objsubid=2 AND l.granted)",
+            _JOB_LOCK,
+        ):
+            if await conn.fetchval(
+                "SELECT pg_try_advisory_xact_lock($1, hashtext($2::text))",
+                _JOB_LOCK,
+                str(row["id"]),
+            ):
+                updated = await conn.fetchval(
+                    "UPDATE public.ingest_jobs SET state='FAILED',failure=$2,updated_at=now() "
+                    "WHERE id=$1 AND state='RUNNING' RETURNING id",
+                    row["id"],
+                    json.dumps(
+                        {
+                            "type": "RuntimeError",
+                            "message": "process ended without reporting",
+                        }
+                    ),
+                )
+                if updated is not None:
+                    reaped.append(updated)
     return reaped
 
 
-async def _delete_snapshots(conn: asyncpg.Connection, ids: list[UUID]) -> None:
-    # shortcut: row-by-row guarded deletes, slow on huge snapshots; partition by
-    # snapshot and drop partitions when GC time starts to matter.
+class GCDiagnostic(TypedDict):
+    stage: str
+    type: str
+    sqlstate: str | None
+    constraint: str | None
+    message: str
+
+
+class GCReport(TypedDict):
+    reaped_jobs: list[UUID]
+    building: list[UUID]
+    retired: list[UUID]
+    deleted_rows: dict[str, int]
+    skipped: list[UUID]
+    skipped_repositories: list[UUID]
+    ignored_tables: list[str]
+    errors: list[GCDiagnostic]
+
+
+class GCError(ValueError):
+    """A rolled-back cleanup with a safe, machine-readable diagnostic report."""
+
+    def __init__(self, report: GCReport) -> None:
+        self.report = report
+        error = report["errors"][0]
+        super().__init__(
+            f"snapshot GC rolled back during {error['stage']}: {error['message']}"
+        )
+
+
+async def _preflight(conn: asyncpg.Connection) -> list[str]:
+    pending, unknown = await db.schema_state(conn)
+    if pending or unknown:
+        raise ValueError(
+            f"GC requires current known migrations; pending={pending}, unknown={unknown}"
+        )
+    tables = {
+        row["name"]: row["uuid_column"]
+        for row in await conn.fetch(
+            "SELECT c.relname AS name, a.atttypid='uuid'::regtype AS uuid_column "
+            "FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid "
+            "JOIN pg_namespace n ON n.oid=c.relnamespace "
+            "WHERE n.nspname='public' AND c.relkind IN ('r','p','f') "
+            "AND a.attname='snapshot_id' AND a.attnum>0 AND NOT a.attisdropped"
+        )
+    }
+    retained = {"ingest_jobs", "ucm_repository_publications"}
+    expected = set(_SNAPSHOT_TABLES) | retained
+    invalid = sorted(name for name in expected if not tables.get(name))
+    if invalid:
+        raise ValueError(f"missing or non-UUID managed snapshot columns: {invalid}")
+    managed = [*_SNAPSHOT_TABLES, "ucm_snapshots"]
+    await conn.execute(
+        "LOCK TABLE "
+        + ",".join(f"public.{name}" for name in managed)
+        + " IN ROW EXCLUSIVE MODE"
+    )
+    if await conn.fetchval(
+        "SELECT EXISTS(SELECT 1 FROM pg_inherits i "
+        "JOIN pg_class p ON p.oid=i.inhparent JOIN pg_namespace pn ON pn.oid=p.relnamespace "
+        "JOIN pg_class c ON c.oid=i.inhrelid JOIN pg_namespace cn ON cn.oid=c.relnamespace "
+        "WHERE (pn.nspname='public' AND p.relname=ANY($1)) "
+        "OR (cn.nspname='public' AND c.relname=ANY($1)))",
+        managed,
+    ):
+        raise ValueError(
+            "snapshot table inheritance/partitioning requires explicit GC support"
+        )
+    order = {name: i for i, name in enumerate(managed)}
+    for fk in await conn.fetch(
+        "SELECT k.conname AS name, n.nspname AS child_schema, c.relname AS child, "
+        "p.relname AS parent, k.condeferrable AS deferred, k.confdeltype::text AS action, "
+        "ARRAY(SELECT a.attname FROM unnest(k.conkey) AS col(num) "
+        "JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=col.num) AS columns "
+        "FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid "
+        "JOIN pg_namespace n ON n.oid=c.relnamespace "
+        "JOIN pg_class p ON p.oid=k.confrelid JOIN pg_namespace pn ON pn.oid=p.relnamespace "
+        "WHERE k.contype='f' AND pn.nspname='public' AND p.relname=ANY($1)",
+        managed,
+    ):
+        child, parent = fk["child"], fk["parent"]
+        if fk["child_schema"] != "public" or child not in order:
+            job_link = (
+                child == "ingest_jobs"
+                and fk["action"] == "n"
+                and set(fk["columns"]) == {"snapshot_id"}
+            )
+            pointer = (
+                child == "ucm_repository_publications"
+                and fk["action"] in ("a", "r")
+                and set(fk["columns"]) == {"repository_id", "snapshot_id"}
+            )
+            if (
+                fk["child_schema"] == "public"
+                and parent == "ucm_snapshots"
+                and (job_link or pointer)
+            ):
+                continue
+            raise ValueError(
+                f"unmanaged inbound FK: {fk['child_schema']}.{child}.{fk['name']}"
+            )
+        if (not fk["deferred"] or fk["action"] in ("c", "n", "d")) and order[
+            child
+        ] >= order[parent]:
+            raise ValueError(f"unsafe GC FK order: {fk['name']} ({child} -> {parent})")
+    return sorted(set(tables) - expected)
+
+
+async def _delete_snapshots(
+    conn: asyncpg.Connection, ids: list[UUID]
+) -> dict[str, int]:
+    counts = {}
     for table in _SNAPSHOT_TABLES:
-        await conn.execute(f"DELETE FROM public.{table} WHERE snapshot_id=ANY($1)", ids)
-    await conn.execute("DELETE FROM public.ucm_snapshots WHERE id=ANY($1)", ids)
+        status = await conn.execute(
+            f"DELETE FROM public.{table} WHERE snapshot_id=ANY($1)", ids
+        )
+        counts[table] = int(status.removeprefix("DELETE "))
+    status = await conn.execute(
+        "DELETE FROM public.ucm_snapshots WHERE id=ANY($1)", ids
+    )
+    counts["ucm_snapshots"] = int(status.removeprefix("DELETE "))
+    if counts["ucm_snapshots"] != len(ids):
+        raise ValueError("not every selected snapshot was deleted")
+    return counts
 
 
 async def collect_garbage(
@@ -161,46 +301,130 @@ async def collect_garbage(
     *,
     building_older_than_hours: float | None = None,
     keep_retired: int | None = None,
-) -> dict[str, list[UUID]]:
-    """Delete abandoned BUILDING snapshots and RETIRED ones beyond the kept count.
+) -> GCReport:
+    """Atomically collect eligible, unpinned UCM snapshots after schema preflight.
 
-    PUBLISHED, READY and VALIDATING snapshots are never touched.
+    Existing snapshot lists remain compatible; counts/skips/diagnostics are additive.
+    Errors expose an empty committed-result report through GCError.report.
     """
-    result: dict[str, list[UUID]] = {"reaped_jobs": await reap(conn)}
-    async with conn.transaction():
-        await conn.execute("SET CONSTRAINTS ALL DEFERRED")
-        await conn.execute("SET LOCAL code_crawler.gc = 'on'")
-        building = []
-        if building_older_than_hours is not None:
-            if building_older_than_hours < 0:
-                raise ValueError("building age must not be negative")
-            # FOR UPDATE: параллельная validation не успеет увести snapshot из BUILDING.
+    if conn.is_in_transaction():
+        raise ValueError("GC requires a connection without an active transaction")
+    if building_older_than_hours is None and keep_retired is None:
+        raise ValueError("GC requires a building age and/or retired retention")
+    if building_older_than_hours is not None and (
+        isinstance(building_older_than_hours, bool)
+        or not isinstance(building_older_than_hours, (int, float))
+        or not math.isfinite(building_older_than_hours)
+        or building_older_than_hours < 0
+    ):
+        raise ValueError("building age must be finite and nonnegative")
+    if keep_retired is not None and (type(keep_retired) is not int or keep_retired < 0):
+        raise ValueError("kept RETIRED count must be a nonnegative integer")
+    report: GCReport = {
+        "reaped_jobs": [],
+        "building": [],
+        "retired": [],
+        "deleted_rows": {},
+        "skipped": [],
+        "skipped_repositories": [],
+        "ignored_tables": [],
+        "errors": [],
+    }
+    stage = "preflight"
+    try:
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT pg_advisory_xact_lock_shared($1)", db._MIGRATION_LOCK
+            )
+            report["ignored_tables"] = await _preflight(conn)
+            await conn.execute("SET CONSTRAINTS ALL DEFERRED")
+            await conn.execute("SET LOCAL code_crawler.gc = 'on'")
+            stage = "reap"
+            report["reaped_jobs"] = await reap(conn)
+            stage = "select"
+            candidates = await conn.fetch(
+                "SELECT DISTINCT repository_id FROM public.ucm_snapshots "
+                "WHERE (state='BUILDING' AND $1::double precision IS NOT NULL "
+                "AND created_at<=now()-make_interval(secs=>$1*3600)) "
+                "OR (state='RETIRED' AND $2::integer IS NOT NULL)",
+                building_older_than_hours,
+                keep_retired,
+            )
+            potential = {r["repository_id"] for r in candidates}
+            repos = [
+                r["id"]
+                for r in await conn.fetch(
+                    "SELECT id FROM public.ucm_repositories WHERE id=ANY($1) ORDER BY id FOR UPDATE SKIP LOCKED",
+                    list(potential),
+                )
+            ]
+            report["skipped_repositories"] = sorted(potential - set(repos))
             building = [
                 r["id"]
                 for r in await conn.fetch(
-                    "SELECT s.id FROM public.ucm_snapshots s WHERE s.state='BUILDING' "
-                    "AND s.created_at <= now() - make_interval(secs => $1) "
-                    "AND NOT EXISTS (SELECT 1 FROM public.ingest_jobs j WHERE "
-                    "j.repository_id=s.repository_id AND j.state='RUNNING') FOR UPDATE",
-                    building_older_than_hours * 3600,
+                    "SELECT s.id FROM public.ucm_snapshots s WHERE s.repository_id=ANY($1) "
+                    "AND s.state='BUILDING' AND $2::double precision IS NOT NULL "
+                    "AND s.created_at<=now()-make_interval(secs=>$2*3600)",
+                    repos,
+                    building_older_than_hours,
                 )
             ]
-        retired = []
-        if keep_retired is not None:
-            if keep_retired < 0:
-                raise ValueError("kept RETIRED count must not be negative")
-            retired = [
-                r["id"]
-                for r in await conn.fetch(
-                    "SELECT id FROM public.ucm_snapshots WHERE id IN (SELECT id FROM ("
-                    "SELECT id, row_number() OVER (PARTITION BY repository_id "
-                    "ORDER BY created_at DESC, id) AS position FROM public.ucm_snapshots "
-                    "WHERE state='RETIRED') ranked WHERE position > $1) FOR UPDATE",
-                    keep_retired,
-                )
-            ]
-        if building or retired:
-            await _delete_snapshots(conn, building + retired)
-    result["building"] = building
-    result["retired"] = retired
-    return result
+            retired = (
+                [
+                    r["id"]
+                    for r in await conn.fetch(
+                        "SELECT id FROM (SELECT id,row_number() OVER (PARTITION BY repository_id "
+                        "ORDER BY created_at DESC,id) AS position FROM public.ucm_snapshots "
+                        "WHERE state='RETIRED' AND repository_id=ANY($1)) ranked WHERE position>$2",
+                        repos,
+                        keep_retired,
+                    )
+                ]
+                if keep_retired is not None
+                else []
+            )
+            locked = await conn.fetch(
+                "SELECT s.id,s.state FROM public.ucm_snapshots s "
+                "WHERE ((s.id=ANY($1) AND s.state='BUILDING') OR (s.id=ANY($2) AND s.state='RETIRED')) "
+                "AND NOT EXISTS(SELECT 1 FROM public.ucm_repository_publications p WHERE p.snapshot_id=s.id) "
+                "AND NOT EXISTS(SELECT 1 FROM public.ingest_jobs j WHERE j.state='RUNNING' "
+                "AND (j.snapshot_id=s.id OR (s.state='BUILDING' AND j.repository_id=s.repository_id))) "
+                "ORDER BY s.id FOR UPDATE OF s SKIP LOCKED",
+                building,
+                retired,
+            )
+            selected = set()
+            for row in locked:
+                if await conn.fetchval(
+                    snapshots._TRY_GC_LEASE, snapshots._SNAPSHOT_LOCK, str(row["id"])
+                ):
+                    selected.add(row["id"])
+                    report[
+                        "building" if row["state"] == "BUILDING" else "retired"
+                    ].append(row["id"])
+            report["skipped"] = sorted(set(building + retired) - selected)
+            stage = "delete"
+            if selected:
+                report["deleted_rows"] = await _delete_snapshots(conn, sorted(selected))
+            stage = "commit"
+    except (
+        asyncpg.PostgresError,
+        asyncpg.InterfaceError,
+        ValueError,
+        RuntimeError,
+    ) as error:
+        report.update(reaped_jobs=[], building=[], retired=[], deleted_rows={})
+        report["errors"] = [
+            {
+                "stage": stage,
+                "type": type(error).__name__,
+                "sqlstate": getattr(error, "sqlstate", None),
+                "constraint": getattr(error, "constraint_name", None),
+                "message": type(error).__name__
+                if isinstance(error, (asyncpg.PostgresError, asyncpg.InterfaceError))
+                else str(error),
+            }
+        ]
+        # PostgreSQL DETAIL and exception messages may contain source bytes.
+        raise GCError(report) from None
+    return report

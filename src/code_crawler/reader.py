@@ -12,6 +12,7 @@ import asyncpg
 from pydantic import TypeAdapter
 
 from code_crawler.publication import _AUXILIARY, _SUBTYPES, _restore_documents
+from code_crawler.snapshots import pin_snapshot
 from code_crawler.source_evidence import (
     SourceFragment,
     SourceUnavailableError,
@@ -244,6 +245,7 @@ async def published_reader(
         )
         if row is None:
             raise ValueError("repository has no published snapshot")
+        await pin_snapshot(conn, row["id"])
         reader = PublishedReader(
             conn, row["repository_id"], row["id"], _token=_CONTEXT_TOKEN
         )

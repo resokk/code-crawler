@@ -69,3 +69,18 @@ async def published_snapshot(
         "(p.repository_id, p.snapshot_id) WHERE p.repository_id=$1",
         repository_id,
     )
+
+
+_SNAPSHOT_LOCK = 4_217_003
+_TRY_GC_LEASE = "SELECT pg_try_advisory_xact_lock($1, hashtext($2::text))"
+
+
+async def pin_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> None:
+    """Keep a snapshot out of GC until this read transaction ends or disconnects."""
+    if not conn.is_in_transaction():
+        raise ValueError("snapshot pin requires an active transaction")
+    await conn.execute(
+        "SELECT pg_advisory_xact_lock_shared($1, hashtext($2::text))",
+        _SNAPSHOT_LOCK,
+        str(snapshot_id),
+    )

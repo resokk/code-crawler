@@ -3,8 +3,11 @@
 `reader.published_reader(conn, repository_key)` открывает read-only REPEATABLE READ
 transaction и выбирает publication pointer ровно один раз. Контекст возвращает
 PublishedReader с repository_id/snapshot_id. Все методы читают только этот snapshot,
-даже при конкурентной публикации/retention. После выхода из контекста reader
-не используется. Передаётся free connection, вложенная transaction запрещена.
+даже при конкурентной публикации/retention. Контекст держит shared transaction
+advisory lease выбранного snapshot: GC пропускает версию до завершения чтения,
+включая concurrent publication. После выхода из контекста reader не используется;
+lease освобождается автоматически. Передаётся free connection, вложенная transaction
+запрещена.
 В памяти процесса не сохраняется ни session state, ни snapshot graph cache.
 
 ```python

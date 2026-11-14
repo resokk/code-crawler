@@ -5,6 +5,8 @@ from uuid import UUID
 
 import asyncpg
 
+from code_crawler.snapshots import pin_snapshot
+
 MAX_LIMIT = 200
 MAX_DEPTH = 6
 
@@ -34,6 +36,8 @@ async def _snapshot(
             snapshot_id,
         ):
             raise ValueError("snapshot is not a published version of the repository")
+        if conn.is_in_transaction():
+            await pin_snapshot(conn, snapshot_id)
         return snapshot_id
     snapshot_id = await conn.fetchval(
         "SELECT p.snapshot_id FROM public.ucm_repository_publications p "
@@ -42,6 +46,8 @@ async def _snapshot(
     )
     if snapshot_id is None:
         raise ValueError("repository has no published snapshot")
+    if conn.is_in_transaction():
+        await pin_snapshot(conn, snapshot_id)
     return snapshot_id
 
 

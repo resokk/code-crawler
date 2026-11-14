@@ -52,3 +52,8 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 Один tool call читает согласованную MVCC версию, включая concurrent publication/GC.
 Полный типизированный библиотечный reader и source proof retrieval описаны в
 [canonical-read.md](canonical-read.md); формат существующих MCP tools не меняется.
+
+Поиск внутри MCP-транзакции держит shared snapshot lease до завершения tool call.
+GC пропускает используемую версию; следующий вызов GC может удалить её после
+освобождения lease. Прямым SQL-читателям доступен `snapshots.pin_snapshot` внутри
+транзакции. Подробности и отчёт очистки: [ingest-jobs.md](ingest-jobs.md).

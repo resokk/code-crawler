@@ -43,3 +43,52 @@ The change MUST preserve repository-scoped immutable published UCM facts and ret
 - GIVEN an existing published snapshot
 - WHEN this feature encounters an invalid input or a storage error
 - THEN the publication pointer and previously published facts remain unchanged
+
+### Requirement: Schema and FK preflight
+The system MUST serialize GC with managed migrations and reject pending or unknown
+migrations, missing/wrongly typed managed snapshot columns, unsafe immediate FK
+order, and unmanaged inbound FKs before reaping jobs or deleting facts.
+
+#### Scenario: Unknown migration or missing managed table
+- GIVEN pending/unknown migrations or a missing managed snapshot table
+- WHEN GC runs
+- THEN it fails during preflight with no changed jobs, facts or publication pointer.
+
+#### Scenario: Unmanaged cascade or inheritance
+- GIVEN a foreign table referencing UCM with ON DELETE CASCADE or inheriting a managed table
+- WHEN GC runs
+- THEN it rejects unknown ownership before any deletion and preserves foreign rows.
+
+#### Scenario: Concurrent migration
+- GIVEN a managed migration holds its advisory lock
+- WHEN GC starts
+- THEN it waits and checks the committed migration state after that lock is released.
+
+### Requirement: Active snapshot leases
+The system MUST skip snapshots held by a reader lease or a live ingest job and
+skip repository/snapshot rows locked by concurrent lifecycle operations.
+
+#### Scenario: Retired version remains in use
+- GIVEN a RETIRED snapshot pinned by a read transaction or referenced by a live job
+- WHEN GC runs
+- THEN it reports the version as skipped; a later GC can collect it after release.
+
+#### Scenario: Concurrent publication or validation
+- GIVEN a repository or eligible snapshot row locked by another transaction
+- WHEN GC runs
+- THEN the busy object is skipped without changing the publication pointer.
+
+### Requirement: Cancellation and safe reports
+The system MUST roll back reaping and deletion together and report only committed
+counts, with errors that exclude PostgreSQL source-row/DETAIL bytes.
+
+#### Scenario: Cancellation after a partial delete
+- GIVEN an in-progress GC that has deleted some fact rows
+- WHEN its task is cancelled
+- THEN rows and jobs are restored and transaction advisory leases are released.
+
+#### Scenario: Mid-delete storage failure
+- GIVEN a simulated FK failure after earlier tables have been deleted
+- WHEN GC fails
+- THEN its report has empty deleted-snapshot lists and counts, safe SQLSTATE diagnostics,
+  and the original facts and publication pointer remain unchanged.
