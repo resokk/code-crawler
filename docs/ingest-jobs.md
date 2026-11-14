@@ -69,3 +69,8 @@ DELETE для RETIRED только в транзакции с `SET LOCAL code_cr
 Удаление идёт построчно через guard-триггеры и на очень больших snapshots будет
 медленным. Этапы внутри INDEX (capture, analyze, load) в задании не различаются —
 их показывает прогресс CLI.
+
+Saved resolver contexts and registered deployment mappings retain their selected
+retired snapshots until explicitly released. GC excludes these retention owners
+from deletion and serializes pin changes using a transaction advisory lock.
+See [resolver-contexts.md](resolver-contexts.md).

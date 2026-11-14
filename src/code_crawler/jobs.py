@@ -202,6 +202,11 @@ async def collect_garbage(
                     building_older_than_hours * 3600,
                 )
             ]
+        await conn.execute("SELECT pg_advisory_xact_lock($1)", 4_217_003)
+        pin_predicate = ""
+        for table in ("resolver_context_selections", "resolver_deployment_bindings"):
+            if await conn.fetchval("SELECT to_regclass($1)", "public." + table):
+                pin_predicate += f" AND NOT EXISTS (SELECT 1 FROM public.{table} pin WHERE pin.selected_snapshot_id=ucm_snapshots.id)"
         retired = []
         if keep_retired is not None:
             if keep_retired < 0:
@@ -212,7 +217,9 @@ async def collect_garbage(
                     "SELECT id FROM public.ucm_snapshots WHERE id IN (SELECT id FROM ("
                     "SELECT id, row_number() OVER (PARTITION BY repository_id "
                     "ORDER BY created_at DESC, id) AS position FROM public.ucm_snapshots "
-                    "WHERE state='RETIRED') ranked WHERE position > $1) FOR UPDATE",
+                    "WHERE state='RETIRED') ranked WHERE position > $1)"
+                    + pin_predicate
+                    + " FOR UPDATE",
                     keep_retired,
                 )
             ]
