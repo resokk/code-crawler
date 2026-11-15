@@ -38,3 +38,13 @@ src/code_crawler/migrations/; src/code_crawler/search.py; src/code_crawler/publi
 
 ## Dependencies
 C02,C03,C04
+
+## Implemented contract
+
+The normative API, cache key, TTL/capacity bounds, read-only lifecycle and
+verification rules are documented in [resolver-cache.md](../../../docs/resolver-cache.md).
+The cache is filled by CLI/maintenance only; MCP misses recompute C04 without a
+write, preserving AGENTS.md's read-only server contract. CandidateResolution is
+unchanged; INFO events provide hit/miss/bypass instrumentation without shared worker
+state. Snapshot/generation cascades and the explicit safe-GC registry remove stale
+derivatives; context verification always precedes a hit.

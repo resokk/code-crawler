@@ -9,9 +9,10 @@ from uuid import UUID
 import asyncpg
 from pydantic import Field, model_validator
 
-from code_crawler import discovery
+from code_crawler import discovery, resolver_cache
 from code_crawler.reader import selected_reader
 from code_crawler.resolver_context import ResolverContext, verify_context
+from code_crawler.snapshots import pin_snapshot
 from code_crawler.ucm import (
     Certainty,
     ContractModel,
@@ -255,10 +256,20 @@ async def _database_lookup(conn, selector, source, origin_file_id):
     ), None
 
 
-async def _resolve(conn, source_key, reference_id, context, grants, limit):
+async def _resolve(conn, source_key, reference_id, context, grants, limit, cache_read):
     unavailable = await verify_context(conn, context, allowed_repositories=grants)
+    for selection in sorted(context.selections, key=lambda s: s.snapshot_id):
+        await pin_snapshot(conn, selection.snapshot_id)
     selections = {s.repository_key: s for s in context.selections}
     source = selections[source_key]
+    if cache_read and not unavailable:
+        cached = await resolver_cache._read_cached_resolution(
+            conn, source_key, reference_id, context, limit, VERSION
+        )
+        if cached is not None:
+            return cached
+    elif cache_read:
+        resolver_cache.event("BYPASS", "GENERATION_UNAVAILABLE", context)
     async with selected_reader(
         conn, source_key, source.snapshot_id, allowed_repositories=grants
     ) as view:
@@ -452,7 +463,7 @@ async def _resolve(conn, source_key, reference_id, context, grants, limit):
     )
 
 
-async def resolve_external_reference(
+async def _resolve_request(
     conn: asyncpg.Connection,
     source_repository_key: str,
     reference_id: str,
@@ -460,6 +471,7 @@ async def resolve_external_reference(
     *,
     allowed_repositories: frozenset[str],
     limit: int = 50,
+    cache_read: bool,
 ) -> CandidateResolution:
     """Resolve declaration candidates within exact authorized versions; never create runtime edges."""
     context = ResolverContext.model_validate_json(context.model_dump_json())
@@ -492,6 +504,7 @@ async def resolve_external_reference(
             context,
             allowed_repositories,
             limit,
+            cache_read,
         )
     async with conn.transaction(isolation="repeatable_read", readonly=True):
         return await _resolve(
@@ -501,4 +514,26 @@ async def resolve_external_reference(
             context,
             allowed_repositories,
             limit,
+            cache_read,
         )
+
+
+async def resolve_external_reference(
+    conn: asyncpg.Connection,
+    source_repository_key: str,
+    reference_id: str,
+    context: ResolverContext,
+    *,
+    allowed_repositories: frozenset[str],
+    limit: int = 50,
+) -> CandidateResolution:
+    """Resolve authorized versions, reading a verified derivative cache or computing C04."""
+    return await _resolve_request(
+        conn,
+        source_repository_key,
+        reference_id,
+        context,
+        allowed_repositories=allowed_repositories,
+        limit=limit,
+        cache_read=True,
+    )

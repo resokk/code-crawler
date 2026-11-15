@@ -57,7 +57,9 @@ Evidence paths include repository/snapshot/entity/generation, archived source fi
 hash/path/range and the matching rule. Source bytes can be obtained explicitly with
 `source_evidence.read_source_fragment`; search does not copy entire files into every
 candidate. Legacy/unavailable source is explicit and prevents conclusive resolution.
-There is no resolver cache (C05) and no new storage schema in C04.
+The disposable [C05 resolver cache](resolver-cache.md) can reuse a verified result;
+authorization and generation checks remain mandatory. Misses still compute C04
+without writes from a read-only request. C04 itself introduces no storage schema.
 
 Example (trusted backend; grants come from authorization, not request parameters):
 

@@ -101,3 +101,7 @@ OpenAPI 3.0/3.1/3.2 YAML/JSON автоматически включены в can
 Canonical `index`/`index-sources` also enable Kafka Java message intelligence
 through the selected Java profile. No broker connections or runtime execution:
 [Kafka facts, configuration candidates and limitations](kafka-message-intelligence.md).
+
+`resolver-cache warm CONTEXT_JSON REPOSITORY_KEY REFERENCE_ID` administratively
+precomputes a C04 result; `resolver-cache prune` removes expired/oldest entries.
+MCP requests remain read-only: [resolver-cache.md](resolver-cache.md).

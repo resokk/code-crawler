@@ -19,6 +19,8 @@ _UNLOCK = "SELECT pg_advisory_unlock($1, hashtext($2::text))"
 # Search generations go first: cascading deletion removes their sealed documents.
 # Otherwise alphabetical order keeps source links ahead of source files (immediate FK).
 _SNAPSHOT_TABLES = (
+    "resolver_cache_dependencies",
+    "resolver_cache_entries",
     "ingest_file_dependencies",
     "ingest_file_entities",
     "ingest_legacy_edges",

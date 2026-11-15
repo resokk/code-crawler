@@ -22,6 +22,7 @@ from code_crawler import (
     legacy,
     publication,
     repos,
+    resolver_cache,
     snapshots,
     source_evidence,
 )
@@ -41,7 +42,9 @@ from code_crawler.kafka_adapter import KafkaSourceAdapter
 from code_crawler.kotlin_adapter import KotlinSourceAdapter
 from code_crawler.openapi_adapter import OpenApiSourceAdapter
 from code_crawler.plplus_adapter import PlplusSourceAdapter
+from code_crawler.resolver_context import ResolverContext
 from code_crawler.source_adapters import AdapterRegistry, index_sources
+from code_crawler.ucm import EntityId
 from code_crawler.vbscript_adapter import VbscriptSourceAdapter
 
 console = Console()
@@ -607,6 +610,60 @@ async def discovery_refresh(repository_key: str) -> None:
         await conn.close()
 
 
+async def resolver_cache_warm(
+    context_path: str,
+    repository_key: str,
+    reference_id: str,
+    limit: int = 50,
+    ttl_seconds: int = 300,
+) -> None:
+    """Administratively warm one exact manifest; never accept grants from a public request."""
+    TypeAdapter(EntityId).validate_python(reference_id)
+    if not 1 <= limit <= 200 or not 1 <= ttl_seconds <= resolver_cache.MAX_TTL:
+        raise ValueError("invalid candidate limit/cache TTL")
+    content = await asyncio.to_thread(Path(context_path).read_bytes)
+    context = await asyncio.to_thread(ResolverContext.model_validate_json, content)
+    conn = await db.connect()
+    try:
+        warmed = await resolver_cache.warm_resolver_cache(
+            conn,
+            repository_key,
+            reference_id,
+            context,
+            allowed_repositories=frozenset(
+                s.repository_key for s in context.selections
+            ),
+            limit=limit,
+            ttl_seconds=ttl_seconds,
+        )
+        console.print_json(
+            json.dumps(
+                {
+                    "stored": warmed.stored,
+                    "reason": warmed.reason,
+                    "cache_key": warmed.cache_key,
+                    "expires_at": str(warmed.expires_at) if warmed.expires_at else None,
+                    "evicted_entries": warmed.evicted_entries,
+                    "resolution": warmed.result.status,
+                    "candidate_count": len(warmed.result.candidates),
+                    "context_fingerprint": warmed.result.context_fingerprint,
+                }
+            )
+        )
+    finally:
+        await conn.close()
+
+
+async def resolver_cache_prune() -> None:
+    """Remove disposable expired/oldest entries using the administrative connection."""
+    conn = await db.connect()
+    try:
+        removed = await resolver_cache.prune_resolver_cache(conn)
+        console.print_json(json.dumps({"removed_entries": removed}))
+    finally:
+        await conn.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="code-crawler", description="Управление индексами code-crawler."
@@ -650,6 +707,23 @@ def main() -> None:
     )
     refresh_parser.add_argument("repository_key")
     refresh_parser.set_defaults(run=discovery_refresh)
+    cache_commands = commands.add_parser(
+        "resolver-cache", help="кэш разрешения внешних ссылок"
+    ).add_subparsers(metavar="действие", required=True)
+    cache_warm = cache_commands.add_parser(
+        "warm", help="пересчитать и сохранить результат для context manifest"
+    )
+    cache_warm.add_argument("context_path")
+    cache_warm.add_argument("repository_key")
+    cache_warm.add_argument("reference_id")
+    cache_warm.add_argument("--limit", type=int, default=50)
+    cache_warm.add_argument(
+        "--ttl-seconds", type=int, default=resolver_cache.DEFAULT_TTL
+    )
+    cache_warm.set_defaults(run=resolver_cache_warm)
+    cache_commands.add_parser(
+        "prune", help="удалить просроченные и старейшие записи"
+    ).set_defaults(run=resolver_cache_prune)
     adapter_commands = commands.add_parser(
         "adapters", help="versioned source adapter capabilities"
     ).add_subparsers(metavar="действие", required=True)

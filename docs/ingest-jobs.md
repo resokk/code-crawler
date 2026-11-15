@@ -99,3 +99,9 @@ Saved resolver contexts and registered deployment mappings retain their selected
 retired snapshots until explicitly released. GC excludes these retention owners
 from deletion and serializes pin changes using a transaction advisory lock.
 See [resolver-contexts.md](resolver-contexts.md).
+
+Resolver-cache dependencies and entries are explicitly registered before their
+canonical parents in the safe GC allowlist. Deleting any selected snapshot or
+catalog generation invalidates dependent cache entries; these derivatives never
+retain a snapshot. Active C04 cache hits use the same transaction snapshot leases
+as uncached reads. See [resolver-cache.md](resolver-cache.md).
