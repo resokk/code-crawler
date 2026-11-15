@@ -207,6 +207,8 @@ def _parse(source: SourceInput) -> _Document:
 
 
 def _target(path: str, reference: str) -> tuple[str, tuple[str, ...]] | None:
+    if any(ord(char) < 32 for char in reference):
+        raise ValueError("control character in reference")
     uri = urlsplit(reference)
     if uri.scheme or uri.netloc:
         return None
@@ -220,7 +222,7 @@ def _target(path: str, reference: str) -> tuple[str, tuple[str, ...]] | None:
         if relative
         else path
     )
-    if target == ".." or target.startswith(("../", "/")):
+    if target in (".", "..") or target.startswith(("../", "/")):
         raise ValueError("reference escapes repository")
     fragment = unquote(uri.fragment)
     if fragment and not fragment.startswith("/"):

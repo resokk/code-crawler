@@ -40,3 +40,9 @@ Migration is 0025 after incorporating concurrent upstream migrations. The exact
 storage, dialect, parser, coverage and unsupported semantics contract is in
 docs/openapi-contracts.md. No runtime HTTP/Java binding or remote resolution is
 claimed; D06 stays independent.
+
+Final reference-boundary regression: directory-only references and URI control
+characters are diagnosed without aborting the producer. Focused PG15 suite:
+27 passed. Full final PG15 suite: **1028 passed in 132.53s**; lint and formatting
+passed. Initial implementation CI also passed (run 43681365700); final fix CI
+is recorded in completion.md after verification.

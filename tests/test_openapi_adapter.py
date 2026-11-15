@@ -223,6 +223,9 @@ components:
         "..%2f..%2fsecret",
         "bad\\file.yaml",
         "#/~2bad",
+        ".",
+        "%2e",
+        "bad\nfile.yaml",
     ],
 )
 def test_unsafe_refs_remain_unresolved(reference):
