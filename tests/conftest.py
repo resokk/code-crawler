@@ -200,3 +200,63 @@ def ucm_batch_factory() -> Callable[[UUID], UcmBatch]:
         )
 
     return build
+
+
+@pytest.fixture
+def mcp_credentials(monkeypatch):
+    """Explicit authenticated request identity for in-process MCP wiring tests."""
+    import hashlib
+    import json
+
+    from fastmcp.server.auth import AccessToken
+
+    from code_crawler import server
+
+    token = "test-credential-for-in-process-tools"
+    monkeypatch.setenv(
+        "MCP_ACCESS_POLICY",
+        json.dumps(
+            {
+                "principals": [
+                    {
+                        "id": "test-client",
+                        "token_sha256": hashlib.sha256(token.encode()).hexdigest(),
+                        "expires_at": 2000000000,
+                        "repositories": ["app", "missing", "one", "two", "repo"],
+                        "permissions": ["read", "evidence", "source", "discover"],
+                    }
+                ]
+            }
+        ),
+    )
+    access_token = AccessToken(token=token, client_id="test-client", scopes=[])
+    monkeypatch.setattr(server, "get_access_token", lambda: access_token)
+    return access_token
+
+
+@pytest.fixture
+def access_policy_config(monkeypatch):
+    """Two request identities with disjoint repository memberships."""
+    import json
+
+    tokens = {
+        "alice": "alice-bearer-secret-with-32-random-bytes",
+        "bob": "bob-bearer-secret-with-32-random-bytes",
+    }
+    policy = {
+        "principals": [
+            {
+                "id": name,
+                "token_sha256": hashlib.sha256(token.encode()).hexdigest(),
+                "expires_at": 2000000000,
+                "repositories": [repo],
+                "permissions": ["read", "evidence", "source", "discover"],
+            }
+            for (name, token), repo in zip(
+                tokens.items(), ("app", "other"), strict=True
+            )
+        ]
+    }
+    monkeypatch.setenv("MCP_ACCESS_POLICY", json.dumps(policy))
+    monkeypatch.setenv("DISCOVERY_REPOSITORY_KEYS", '["app","other"]')
+    return tokens, policy

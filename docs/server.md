@@ -45,8 +45,9 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 - Неизвестный репозиторий, репозиторий без публикации и неизвестная связь
   возвращаются как ошибка инструмента, а не как пустой результат.
 
-Аутентификации и разграничения доступа к репозиториям нет: любой клиент сервера
-читает любой опубликованный репозиторий (change `repository-access-control`, R6).
+Аутентификация обязательна: bearer token и серверная repository policy.
+Отсутствующая identity или право отклоняются до получения соединения с БД.
+См. [mcp-access-control.md](mcp-access-control.md).
 
 Переходный stateless reader `code_crawler.legacy.read_graph` поддерживает
 выбранный в БД legacy/UCM backend и доступен через CLI `show-index`.
@@ -56,7 +57,8 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 [canonical-read.md](canonical-read.md); формат существующих MCP tools не меняется.
 
 Глобальный discovery выключен по умолчанию. `DISCOVERY_REPOSITORY_KEYS='["org/a","org/b"]'`
-задаёт явный trusted scope сервера. Отсутствующая политика запрещает discovery,
+задаёт явный trusted scope сервера, пересекаемый с правами principal.
+Отсутствующая политика запрещает discovery,
 клиентский `repository_keys` может только сузить scope. Discovery выдаёт кандидатов
 с UNKNOWN certainty, включая единственный match; snapshot/generation manifest,
 PARTIAL availability и pagination fingerprint возвращаются явно.

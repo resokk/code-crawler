@@ -190,7 +190,7 @@ def test_structural_queries_over_published_snapshot(
 
 
 def test_mcp_tool_reads_published_snapshot(
-    database_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    database_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mcp_credentials
 ) -> None:
     from fastmcp import Client
     from fastmcp.exceptions import ToolError
@@ -222,7 +222,7 @@ def test_mcp_tool_reads_published_snapshot(
                 "find_callers", {"repository_key": "app", "symbol_id": symbol["id"]}
             )
             assert callers.data["items"][0]["evidence"]
-            with pytest.raises(ToolError, match="no published snapshot"):
+            with pytest.raises(ToolError, match="query failed"):
                 await client.call_tool(
                     "search_symbols", {"repository_key": "missing", "name": "x"}
                 )
