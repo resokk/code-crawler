@@ -335,6 +335,13 @@ class Evidence(ContractModel):
 
 
 class RelationKind(StrEnum):
+    HTTP_ATTRIBUTE = "HTTP_ATTRIBUTE"
+    HTTP_REQUEST_DTO = "HTTP_REQUEST_DTO"
+    HTTP_RESPONSE_DTO = "HTTP_RESPONSE_DTO"
+    OPENAPI_HANDLER = "OPENAPI_HANDLER"
+    OPENAPI_REQUEST_DTO = "OPENAPI_REQUEST_DTO"
+    OPENAPI_RESPONSE_DTO = "OPENAPI_RESPONSE_DTO"
+    OPENAPI_JAVA_PARAMETER = "OPENAPI_JAVA_PARAMETER"
     BPMN_HANDLER = "BPMN_HANDLER"
     BPMN_INPUT_MAPPING = "BPMN_INPUT_MAPPING"
     BPMN_OUTPUT_MAPPING = "BPMN_OUTPUT_MAPPING"
@@ -406,6 +413,18 @@ def _pairs(sources: str, targets: str) -> frozenset[tuple[EntityType, EntityType
 
 _RELATION_ENDPOINTS = MappingProxyType(
     {
+        **{
+            kind: _pairs("SYMBOL", "SYMBOL")
+            for kind in (
+                RelationKind.HTTP_REQUEST_DTO,
+                RelationKind.HTTP_RESPONSE_DTO,
+                RelationKind.OPENAPI_HANDLER,
+                RelationKind.OPENAPI_REQUEST_DTO,
+                RelationKind.OPENAPI_RESPONSE_DTO,
+                RelationKind.OPENAPI_JAVA_PARAMETER,
+            )
+        },
+        RelationKind.HTTP_ATTRIBUTE: _pairs("SYMBOL", "VALUE"),
         **{
             kind: _pairs("SYMBOL", "SYMBOL")
             for kind in (
@@ -611,6 +630,40 @@ def validate_relation_endpoints(
         or not actual[0].symbol_kind.startswith("KAFKA_")
     ):
         raise ValueError("Kafka attribute requires a Kafka symbol")
+
+    if (
+        relation.relation_kind == RelationKind.HTTP_ATTRIBUTE
+        and actual[0].symbol_kind != "METHOD"
+    ):
+        raise ValueError("HTTP attributes must belong to a Java method")
+    if relation.relation_kind == RelationKind.OPENAPI_HANDLER and (
+        actual[0].symbol_kind != "OPENAPI_OPERATION"
+        or any(t.symbol_kind != "METHOD" for t in actual[1:])
+    ):
+        raise ValueError("OpenAPI handler requires an operation and Java methods")
+    if relation.relation_kind in (
+        RelationKind.HTTP_REQUEST_DTO,
+        RelationKind.HTTP_RESPONSE_DTO,
+    ) and (
+        actual[0].symbol_kind != "METHOD"
+        or any(t.symbol_kind != "CLASS" for t in actual[1:])
+    ):
+        raise ValueError("HTTP DTO relation requires a method and class types")
+    if relation.relation_kind in (
+        RelationKind.OPENAPI_REQUEST_DTO,
+        RelationKind.OPENAPI_RESPONSE_DTO,
+    ) and (
+        actual[0].symbol_kind not in ("OPENAPI_SCHEMA", "OPENAPI_FIELD")
+        or any(t.symbol_kind != "CLASS" for t in actual[1:])
+    ):
+        raise ValueError("OpenAPI DTO relation requires schema and class types")
+    if relation.relation_kind == RelationKind.OPENAPI_JAVA_PARAMETER and (
+        actual[0].symbol_kind != "OPENAPI_PARAMETER"
+        or any(t.symbol_kind != "PARAMETER" for t in actual[1:])
+    ):
+        raise ValueError(
+            "OpenAPI parameter relation requires contract and Java parameters"
+        )
     if relation.relation_kind == RelationKind.CALLS:
         for entity in actual:
             if isinstance(entity, Symbol) and entity.symbol_kind not in (

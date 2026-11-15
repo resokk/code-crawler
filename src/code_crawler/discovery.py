@@ -69,8 +69,7 @@ async def build_generation(conn: asyncpg.Connection, snapshot_id: UUID) -> UUID:
         json.dumps(COVERAGE),
     )
     # Known callable arity is represented even when it is zero; classes have no signature row.
-    await conn.execute(
-        """
+    projection_sql = """
         WITH symbols AS (
           SELECT s.*,COALESCE((SELECT jsonb_agg(t.name ORDER BY t.position)
               FROM public.ucm_type_refs t WHERE t.snapshot_id=s.snapshot_id
@@ -149,10 +148,17 @@ async def build_generation(conn: asyncpg.Connection, snapshot_id: UUID) -> UUID:
         SELECT e.snapshot_id,$2,e.repository_id,e.entity_id,e.entity_type,p.kind,p.key,p.qualifier,
                e.source_file_id,e.start_line,e.start_byte_column,e.end_line,e.end_byte_column,'canonical.declaration/1'
         FROM projections p JOIN public.ucm_entities e ON e.snapshot_id=$1 AND e.entity_id=p.entity_id
-        """,
-        snapshot_id,
-        generation,
-    )
+    """
+    # Fresh snapshot IDs are absent from statistics; a custom multi-join plan can
+    # underestimate them catastrophically. Keep this choice local to the projection.
+    async with conn.transaction():
+        plan_mode = await conn.fetchval("SHOW plan_cache_mode")
+        await conn.execute(
+            "SELECT set_config('plan_cache_mode','force_generic_plan',true)"
+        )
+        await conn.execute(projection_sql, snapshot_id, generation)
+        await conn.execute("SELECT set_config('plan_cache_mode',$1,true)", plan_mode)
+
     await conn.execute(
         "UPDATE public.search_discovery_generations SET state='READY' WHERE generation=$1",
         generation,

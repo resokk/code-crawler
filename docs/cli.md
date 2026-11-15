@@ -105,3 +105,8 @@ through the selected Java profile. No broker connections or runtime execution:
 `resolver-cache warm CONTEXT_JSON REPOSITORY_KEY REFERENCE_ID` administratively
 precomputes a C04 result; `resolver-cache prune` removes expired/oldest entries.
 MCP requests remain read-only: [resolver-cache.md](resolver-cache.md).
+
+Canonical `index`/`index-sources` also produce local OpenAPI → Spring handler
+bindings and deferred Feign selectors, using the selected Java profile. Binding
+adds no new CLI options; known captured context is used without runtime lookup.
+See [openapi-java-bindings.md](openapi-java-bindings.md).

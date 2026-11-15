@@ -3,7 +3,8 @@
 `OpenApiSourceAdapter` discovers OpenAPI 3.0/3.1/3.2 by the root `openapi`
 field in captured UTF-8 YAML/JSON. It emits existing typed UCM Symbols, Values,
 Relations and ExternalReferences; central ingestion owns persistence/publication.
-No Java bindings or source execution are inferred (D06 remains separate).
+Source execution is never inferred. Optional local Java bindings are described in
+[openapi-java-bindings.md](openapi-java-bindings.md).
 
 Inputs are bounded; unsafe YAML tags/aliases, duplicate keys,
 path escapes and network reads are forbidden. References form edges rather than
@@ -87,7 +88,8 @@ in 3.0, and QUERY/additionalOperations/querystring before 3.2 have dialect
 warnings. `$ref` siblings, composition, discriminator, required, defaults and
 security are preserved without computing an effective validation schema or
 runtime authorization. OAuth URLs, server templates, callbacks and webhooks are
-never invoked. D06 Java bindings remain deferred.
+never invoked. Local Java binding is provided by D06 through a frozen captured Java catalog;
+[limits and evidence](openapi-java-bindings.md) remain explicit.
 
 Parser budgets per file: 4 MiB, depth 64, 20,000 YAML scalar/collection events.
 JSON must be strict (no duplicate keys/NaN/Infinity). YAML uses PyYAML's safe

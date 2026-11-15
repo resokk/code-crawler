@@ -34,3 +34,9 @@ qualifiers and BPMN targetNamespace precision, preserving the existing JSON-key
 schema and C03 generation contract. The read-only MCP and identifier-oriented API,
 explicit server allowlist, coherent manifests and fingerprint pagination are
 specified in [global-discovery-catalog.md](global-discovery-catalog.md).
+
+
+Discovery publication scopes generic planning to its declaration projection: fresh
+snapshot IDs absent from statistics can otherwise get pathological custom join
+plans after repeated publication. The caller's plan_cache_mode is restored within
+a savepoint; projection identities and sealed generation semantics are unchanged.

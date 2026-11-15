@@ -7,10 +7,12 @@ from typing import Literal
 from code_crawler import java
 from code_crawler.database_resolution import ConnectionAssignment
 from code_crawler.database_schema import SchemaImport
+from code_crawler.http_facts import HTTP_COVERAGE, emit_java_http
 from code_crawler.incremental import FileAnalysis, SourceInput, tick
 from code_crawler.java_calls import JavaCallAnalyzer
 from code_crawler.java_database import JavaDatabaseAnalyzer
 from code_crawler.java_execution import JavaExecutionAnalyzer
+from code_crawler.java_http_catalog import java_http_catalog, mentions_http
 from code_crawler.java_lineage import JavaLineageAnalyzer
 from code_crawler.java_orm import JavaOrmAnalyzer
 from code_crawler.java_semantic import JavaSemanticAnalyzer
@@ -159,18 +161,30 @@ class JavaSourceAdapter:
         )
         return AdapterDescriptor(
             key="java." + self.profile,
-            version="1",
+            version="2",
             routes=(SourceRoute(suffix=".java", language="java"),),
-            capabilities=capabilities,
+            capabilities=(*capabilities, HTTP_COVERAGE),
             entity_types=tuple(
-                kind for group in _ENTITY_GROUPS[: index + 1] for kind in group
+                dict.fromkeys(
+                    (
+                        *[
+                            kind
+                            for group in _ENTITY_GROUPS[: index + 1]
+                            for kind in group
+                        ],
+                        EntityType.VALUE,
+                        EntityType.EXTERNAL_REFERENCE,
+                    )
+                )
             ),
         )
 
     async def prepare(self, sources: tuple[SourceInput, ...]) -> "_PreparedJava":
         """Build the existing catalog without filesystem/database IO in the adapter."""
         if self.profile == "symbols":
-            return _PreparedJava(self, None, sources)
+            prepared = _PreparedJava(self, None, sources)
+            await prepared.prepare_http()
+            return prepared
 
         def build() -> JavaCallAnalyzer:
             factories = {
@@ -214,7 +228,9 @@ class JavaSourceAdapter:
                     self.descriptor.key, "prepare", tuple(issues)
                 ) from error
             raise
-        return _PreparedJava(self, analyzer, sources)
+        prepared = _PreparedJava(self, analyzer, sources)
+        await prepared.prepare_http()
+        return prepared
 
 
 class _PreparedJava:
@@ -232,33 +248,46 @@ class _PreparedJava:
             analyzer.analysis_version if analyzer else "java.symbols/1"
         )
 
-    async def symbol_results(self) -> tuple[tuple[SourceInput, JavaSymbolsResult], ...]:
-        """Share already parsed canonical ASTs with optional local producers."""
-
-        def collect():
-            if self.analyzer is None:
-                for source in self.sources:
-                    if source.file.path not in self._symbol_catalog:
-                        self._symbol_catalog[source.file.path] = extract(source)
-                return tuple(
-                    (source, self._symbol_catalog[source.file.path])
-                    for source in self.sources
-                )
+    def _pairs(self):
+        if self.analyzer is None:
+            for source in self.sources:
+                if source.file.path not in self._symbol_catalog:
+                    self._symbol_catalog[source.file.path] = extract(source)
             return tuple(
-                (source, self.analyzer.files[source.file.path].result)
+                (source, self._symbol_catalog[source.file.path])
                 for source in self.sources
             )
+        return tuple(
+            (source, self.analyzer.files[source.file.path].result)
+            for source in self.sources
+        )
 
-        return await asyncio.to_thread(collect)
+    async def prepare_http(self) -> None:
+        def build():
+            if mentions_http(self.sources):
+                self._http_catalog = java_http_catalog(
+                    self._pairs(), self.adapter.profile
+                )
+                self.analysis_version += ":" + self._http_catalog.version
+            else:
+                self._http_catalog = None
+
+        await asyncio.to_thread(build)
 
     async def export_catalogs(self) -> tuple["AdapterCatalog", ...]:
         from code_crawler.bpmn_java_catalog import java_binding_catalog
 
-        pairs = await self.symbol_results()
-        catalog = await asyncio.to_thread(
-            java_binding_catalog, pairs, self.adapter.profile
-        )
-        return (catalog,)
+        def collect():
+            pairs = self._pairs()
+            http = self._http_catalog or java_http_catalog(pairs, self.adapter.profile)
+            self._http_catalog = http
+            return (java_binding_catalog(pairs, self.adapter.profile), http)
+
+        return await asyncio.to_thread(collect)
+
+    async def symbol_results(self) -> tuple[tuple[SourceInput, JavaSymbolsResult], ...]:
+        """Share already parsed canonical ASTs with optional local producers."""
+        return await asyncio.to_thread(self._pairs)
 
     async def __call__(
         self, sources: tuple[SourceInput, ...]
@@ -271,13 +300,23 @@ class _PreparedJava:
                     result = self._symbol_catalog.get(source.file.path) or extract(
                         source
                     )
+                    analysis = result.analysis
+                    diagnostics = ()
+                    if self._http_catalog is not None:
+                        analysis, diagnostics = emit_java_http(
+                            source, analysis, self._http_catalog
+                        )
                     results.append(
                         AdapterFileResult(
-                            analysis=result.analysis,
-                            diagnostics=_diagnostics(source, result.diagnostics),
+                            analysis=analysis,
+                            diagnostics=(
+                                *_diagnostics(source, result.diagnostics),
+                                *diagnostics,
+                            ),
                             capabilities=(
                                 self.adapter.descriptor.capabilities[0],
                                 result.coverage,
+                                HTTP_COVERAGE,
                             ),
                         )
                     )
@@ -307,12 +346,19 @@ class _PreparedJava:
                     coverage = getattr(self.analyzer, attribute, None)
                     if coverage is not None:
                         capabilities.append(coverage)
+                diagnostics = ()
+                if self._http_catalog is not None:
+                    analysis, diagnostics = emit_java_http(
+                        file.source, analysis, self._http_catalog
+                    )
+                capabilities.append(HTTP_COVERAGE)
                 results.append(
                     AdapterFileResult(
                         analysis=analysis,
                         diagnostics=(
                             *_diagnostics(file.source, file.result.diagnostics),
                             *_semantic_diagnostics(file.source, analysis),
+                            *diagnostics,
                         ),
                         capabilities=tuple(capabilities),
                     )

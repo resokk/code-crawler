@@ -6,7 +6,8 @@ import json
 import math
 import posixpath
 import re
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from urllib.parse import unquote, urlsplit
 
 import yaml
@@ -20,6 +21,7 @@ from yaml.nodes import MappingNode, ScalarNode, SequenceNode
 
 from code_crawler.incremental import FileAnalysis, SourceInput
 from code_crawler.source_adapters import (
+    AdapterCatalog,
     AdapterDescriptor,
     AdapterFileResult,
     PreparedAdapter,
@@ -37,6 +39,7 @@ from code_crawler.ucm import (
     RelationKind,
     Resolution,
     SourceDiagnostic,
+    SourceFile,
     SourceRange,
     Symbol,
     SymbolSelector,
@@ -325,14 +328,16 @@ def _kind(parts: tuple[str, ...], nodes: dict) -> str:
 class OpenApiSourceAdapter:
     @property
     def descriptor(self) -> AdapterDescriptor:
+        from code_crawler.openapi_bindings import COVERAGE
+
         return AdapterDescriptor(
             key="openapi",
-            version=VERSION,
+            version="openapi/2",
             routes=tuple(
                 SourceRoute(suffix=suffix, language="openapi")
                 for suffix in (".json", ".yaml", ".yml")
             ),
-            capabilities=(CAPABILITY,),
+            capabilities=(CAPABILITY, COVERAGE),
             entity_types=(
                 EntityType.SYMBOL,
                 EntityType.VALUE,
@@ -349,10 +354,70 @@ class OpenApiSourceAdapter:
 class _Prepared:
     results: dict[str, AdapterFileResult]
     analysis_version: str = VERSION
+    documents: dict = field(default_factory=dict)
+    bound: bool = False
+    binding_requested: bool = False
+    source_files: tuple[SourceFile, ...] = ()
+
+    @property
+    def catalog_keys(self) -> tuple[str, ...]:
+        from code_crawler.java_http_catalog import CATALOG_KEY
+
+        return (CATALOG_KEY,) if self.binding_requested else ()
+
+    async def with_catalogs(
+        self, catalogs: Mapping[str, AdapterCatalog]
+    ) -> "_Prepared":
+        from code_crawler.java_http_catalog import CATALOG_KEY, JavaHttpCatalog
+        from code_crawler.openapi_bindings import VERSION as BINDINGS_VERSION
+        from code_crawler.openapi_bindings import bind_results
+
+        catalog = catalogs.get(CATALOG_KEY)
+        if catalog is not None and not isinstance(catalog, JavaHttpCatalog):
+            raise TypeError("OpenAPI requires a typed JavaHttpCatalog")
+        results = await asyncio.to_thread(
+            bind_results, self.results, self.documents, catalog
+        )
+        config_hash = hashlib.sha256(
+            json.dumps(
+                [
+                    (file.path, file.content_sha256)
+                    for file in self.source_files
+                    if posixpath.basename(file.path).startswith("application")
+                ]
+            ).encode()
+        ).hexdigest()
+        version = (
+            self.analysis_version
+            + ":"
+            + BINDINGS_VERSION
+            + ":"
+            + (catalog.version if catalog else "no-java")
+            + ":"
+            + config_hash
+        )
+        return _Prepared(
+            results,
+            version,
+            self.documents,
+            True,
+            self.binding_requested,
+            self.source_files,
+        )
 
     async def __call__(
         self, sources: tuple[SourceInput, ...]
     ) -> tuple[AdapterFileResult, ...]:
+        if not self.bound:
+            from code_crawler.openapi_bindings import bind_results
+
+            results = await asyncio.to_thread(
+                bind_results,
+                {s.file.path: self.results[s.file.path] for s in sources},
+                self.documents,
+                None,
+            )
+            return tuple(results[s.file.path] for s in sources)
         return tuple(self.results[s.file.path] for s in sources)
 
 
@@ -432,14 +497,21 @@ def _prepare(sources: tuple[SourceInput, ...]) -> _Prepared:
                 qualified_name=path + "#" + _pointer(parts),
             )
     identity = json.dumps([(path, docs[path].version) for path in sorted(active)])
+    from code_crawler.openapi_bindings import has_operations
+
+    results = {
+        source.file.path: _emit(
+            source, docs, errors, active, dependencies, symbols, base
+        )
+        for source in sources
+    }
     return _Prepared(
-        {
-            source.file.path: _emit(
-                source, docs, errors, active, dependencies, symbols, base
-            )
-            for source in sources
-        },
-        VERSION + ":" + hashlib.sha256(identity.encode()).hexdigest(),
+        results,
+        "openapi/2:" + hashlib.sha256(identity.encode()).hexdigest(),
+        docs,
+        False,
+        has_operations(results),
+        tuple(s.file for s in sources),
     )
 
 

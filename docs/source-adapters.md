@@ -176,3 +176,10 @@ through inventory without claiming OpenAPI's suffixes. Topic/context/type/serde
 facts and conservative boundaries: [kafka-message-intelligence.md](kafka-message-intelligence.md).
 Standalone JavaSourceAdapter remains available; do not register it alongside its
 Kafka wrapper on the same `.java` route.
+
+OpenAPI/Java bindings use the same local catalog phase as BPMN. Java exports both
+`java.bpmn.handlers` and `java.http.routes` from its canonical AST; Feign facts are
+emitted by the Java adapter even without OpenAPI input. Java descriptor version 2
+adds PARTIAL java.http and typed HTTP metadata/DTO relations to every Java profile.
+OpenAPI descriptor openapi/2 adds optional PARTIAL openapi.java.bindings. Details:
+[openapi-java-bindings.md](openapi-java-bindings.md).

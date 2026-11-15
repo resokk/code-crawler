@@ -1781,6 +1781,13 @@
     },
     "RelationKind": {
       "enum": [
+        "HTTP_ATTRIBUTE",
+        "HTTP_REQUEST_DTO",
+        "HTTP_RESPONSE_DTO",
+        "OPENAPI_HANDLER",
+        "OPENAPI_REQUEST_DTO",
+        "OPENAPI_RESPONSE_DTO",
+        "OPENAPI_JAVA_PARAMETER",
         "BPMN_HANDLER",
         "BPMN_INPUT_MAPPING",
         "BPMN_OUTPUT_MAPPING",
