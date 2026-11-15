@@ -43,6 +43,22 @@ paths filters, которые оставят required check отсутствую
 Контракт OpenSpec: mandatory-postgres-ci; порядок разработки:
 [development-plan-v2.md](development-plan-v2.md).
 
+## Обязательная проверка в main
+
+С 2026-11-15 ветка `main` защищена classic branch protection: обязательный status
+check `PostgreSQL 15` от GitHub Actions (app ID 15368) с требованием актуальной
+ветки. Без зелёной проверки PR в `main` не сливается и push от неадминистратора
+отклоняется. Администраторы репозитория правило обходят (`enforce_admins=false`):
+прямой push владельца в `main` по-прежнему проходит и проверкой не блокируется.
+Обязательный PR и запрет bypass не включены — это остаётся в A05 ниже.
+
+```sh
+gh api repos/resokk/code-crawler/branches/main \
+  --jq '{protected, required: .protection.required_status_checks}'
+# {"protected":true,"required":{"checks":[{"app_id":15368,"context":"PostgreSQL 15"}],
+#  "contexts":["PostgreSQL 15"],"enforcement_level":"non_admins"}}
+```
+
 ## A05: настройка required check администратором
 
 Проверка 2026-11-15: `GET /repos/resokk/code-crawler/branches/main/protection`

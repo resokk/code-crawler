@@ -23,3 +23,9 @@ A05 remains active. No new application types, schema migration or UCM behavior.
 Local documentation-change validation: Ruff check and format check passed;
 pytest: 958 passed, 167 skipped without TEST_DATABASE_URL. This run does not
 constitute mandatory PostgreSQL or branch-enforcement acceptance.
+
+Update 2026-11-15: an administrator token enabled classic branch protection on
+`main` with required check `PostgreSQL 15` (app ID 15368), strict, and
+`enforce_admins=false` (`enforcement_level: non_admins`). This is weaker than the
+A05 ruleset: administrators bypass it and no pull request is required. The
+no-bypass ruleset and the failing/missing/successful PR checks remain open.
