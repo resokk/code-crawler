@@ -106,7 +106,12 @@ def test_search_generations(
                 )
             await rebuild(conn, repo, new)
             assert {d["snapshot_id"] for d in await read(conn, repo)} == {new}
+            retired_documents = await conn.fetchval(
+                "SELECT count(*) FROM search_documents WHERE snapshot_id=$1", snapshot
+            )
+            assert retired_documents > 0
             removed = await jobs.collect_garbage(conn, keep_retired=0)
+            assert removed["deleted_rows"]["search_documents"] == retired_documents
             assert snapshot in removed["retired"]
             assert (
                 await conn.fetchval(

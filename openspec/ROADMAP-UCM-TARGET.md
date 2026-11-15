@@ -6,7 +6,7 @@ This directory contains **39 proposed, NOT implemented** changes with independen
 Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in PostgreSQL 15, Java/Groovy/PLPlus, SQL construction/execution/lineage, ORM, source archive, incremental CLI and publication, structural/lexical search, stateless read-only FastMCP. Confirmed recent GitHub Actions PG15 succeeded on baseline. Reuse these implementations; do not reimplement them.
 
 ## Stream A — correctness/security (before corporate deployment)
-- A01 safe-snapshot-gc: explicit UCM GC table allowlist and rollback
+- A01 safe-snapshot-gc: explicit UCM GC table allowlist and rollback — [completed](archive/2026-11-15-a01-safe-snapshot-gc/completion.md), PG15 CI 1112 passed
 - A02 mcp-repository-access-control: principal authentication and repository ACL
 - A03 database-qualified-structural-search: database/version/object scoped SQL access search
 - A04 sql-search-certainty-contract: discovered SQL versus proven execution and target identity
