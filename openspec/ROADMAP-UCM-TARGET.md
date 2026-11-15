@@ -46,7 +46,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - D09 graphql-java-bindings: GraphQL resolvers and DataFetchers
 - D10 kotlin-ucm-adapter: Kotlin symbols/calls/interoperability
 - D11 javascript-typescript-ucm-adapters: imports, symbols, HTTP clients
-- D12 vbscript-ucm-adapter: symbols, late binding and SQL patterns
+- D12 vbscript-ucm-adapter: symbols, late binding and SQL patterns — [completed](changes/archive/2026-11-15-d12-vbscript-ucm-adapter/completion.md), PG15 CI 1094 passed
 
 ## Stream E — production readiness
 - E01 observability-and-coverage-dashboard: job/adapter/search diagnostics
