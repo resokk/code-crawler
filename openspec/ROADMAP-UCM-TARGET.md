@@ -40,7 +40,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - D03 reference-data-json-adapter: type-data.json datasets, fields, records
 - D04 reference-data-loader-analysis: loader/field/SQL/column lineage
 - D05 openapi-contract-adapter: OAS 3.0/3.1/3.2 typed contracts, refs and operations — [completed](archive/2026-11-15-d05-openapi-contract-adapter/completion.md), PG15 CI 1028 passed
-- D06 openapi-java-bindings: Spring REST, Feign and ExternalReference
+- D06 openapi-java-bindings: Spring REST, Feign and ExternalReference — [completed](archive/2026-11-15-d06-openapi-java-bindings/completion.md), PG15 CI 1237 passed
 - D07 kafka-message-intelligence: producer/consumer/topic resources — [completed](archive/2026-11-15-d07-kafka-message-intelligence/completion.md), PG15 CI 1171 passed
 - D08 graphql-schema-adapter: SDL/introspection, types and operations
 - D09 graphql-java-bindings: GraphQL resolvers and DataFetchers
