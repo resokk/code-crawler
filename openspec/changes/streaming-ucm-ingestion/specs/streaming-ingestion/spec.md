@@ -23,3 +23,14 @@ loader memory for the larger stream is below 1.5 times the smaller one.
 
 GIVEN a streamed snapshot WHEN it is validated THEN the full UcmBatch rules apply
 before it can become READY.
+
+## Requirement: validation without the whole snapshot in memory
+
+GIVEN a valid stored snapshot WHEN it is validated in slices of any size THEN it
+becomes READY with the same entity count as the whole-batch validator accepts.
+
+GIVEN a stored snapshot the whole-batch validator rejects WHEN it is validated in
+slices THEN it is rejected too and stays VALIDATING without a receipt.
+
+GIVEN snapshots of 4 000 and 16 000 entities WHEN validated THEN peak validator
+memory for the larger one is below 1.5 times the smaller one.

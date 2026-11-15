@@ -88,8 +88,9 @@ FK после переноса. Загрузка — одна транзакци
 
 Межсущностные семантические правила `UcmBatch` при потоковой загрузке не
 проверяются; их проверяет `validate_snapshot` до READY, поэтому невалидный
-snapshot опубликовать нельзя. Сама validation по-прежнему читает snapshot целиком,
-`index_incremental` использует те же шаги staging, что и `ingest_stream`.
+snapshot опубликовать нельзя. Validation тоже идёт порциями и не держит snapshot в
+памяти целиком (см. [ucm-publication.md](ucm-publication.md)); `index_incremental`
+использует те же шаги staging, что и `ingest_stream`.
 
 ### Куда уходит память индексации
 

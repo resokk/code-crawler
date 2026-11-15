@@ -1,5 +1,6 @@
 import asyncio
-from collections.abc import Callable
+import tracemalloc
+from collections.abc import AsyncIterator, Callable
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -7,14 +8,15 @@ import pytest
 
 from code_crawler import db, snapshots
 from code_crawler.incremental import SourceInput
-from code_crawler.ingestion import UcmBatch, ingest_batch
+from code_crawler.ingestion import UcmBatch, ingest_batch, ingest_stream
 from code_crawler.publication import (
+    load_snapshot_batch,
     publish_snapshot,
     rollback_publication,
     validate_snapshot,
 )
 from code_crawler.source_evidence import archive_sources
-from code_crawler.ucm import EntityType, SourceFile, logical_id
+from code_crawler.ucm import Entity, EntityType, SourceFile, Symbol, logical_id
 
 pytestmark = pytest.mark.integration
 
@@ -96,6 +98,76 @@ def test_validation_publication_and_rollback(
     asyncio.run(scenario())
 
 
+@pytest.mark.parametrize("size", [1, 3, 2_000])
+def test_sliced_validation_accepts_what_the_whole_batch_accepts(
+    database_url: str,
+    ucm_batch_factory: Callable[[UUID], UcmBatch],
+    size: int,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("code_crawler.publication._SLICE", size)
+    monkeypatch.setattr("code_crawler.publication._CACHE", 2)
+
+    async def scenario() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            repo = await setup(conn)
+            batch = ucm_batch_factory(repo)
+            snap = await create(conn, repo, batch)
+            assert await validate_snapshot(conn, snap) == len(batch.entities)
+            assert set((await load_snapshot_batch(conn, snap)).entities) == set(
+                batch.entities
+            )
+        finally:
+            await conn.close()
+
+    asyncio.run(scenario())
+
+
+def test_validation_memory_does_not_grow_with_entity_count(
+    database_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Пределы меньше обоих snapshots: иначе меньший целиком помещается в кэш.
+    monkeypatch.setattr("code_crawler.publication._SLICE", 500)
+    monkeypatch.setattr("code_crawler.publication._CACHE", 1_000)
+
+    async def scenario() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            repo = await setup(conn)
+
+            async def classes(total: int) -> AsyncIterator[tuple[Entity, ...]]:
+                for start in range(0, total, 1000):
+                    yield tuple(
+                        Symbol(
+                            repository_id=str(repo),
+                            logical_key=f"java:type:app.C{i}",
+                            id=logical_id(
+                                str(repo), EntityType.SYMBOL, f"java:type:app.C{i}"
+                            ),
+                            name=f"C{i}",
+                            symbol_kind="CLASS",
+                            qualified_name=f"app.C{i}",
+                        )
+                        for i in range(start, min(start + 1000, total))
+                    )
+
+            peaks = []
+            for total in (4_000, 16_000):
+                snap = await create(conn, repo)
+                await ingest_stream(conn, snap, repo, classes(total))
+                tracemalloc.start()
+                assert await validate_snapshot(conn, snap) == total
+                peaks.append(tracemalloc.get_traced_memory()[1])
+                tracemalloc.stop()
+            # Вчетверо больше сущностей не должны требовать вчетверо больше памяти.
+            assert peaks[1] < peaks[0] * 1.5, peaks
+        finally:
+            await conn.close()
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize(
     "problem",
     [
@@ -112,8 +184,15 @@ def test_validation_publication_and_rollback(
     ],
 )
 def test_readiness_gate_rejects_incomplete_storage(
-    database_url: str, ucm_batch_factory: Callable[[UUID], UcmBatch], problem: str
+    database_url: str,
+    ucm_batch_factory: Callable[[UUID], UcmBatch],
+    problem: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # По одной сущности и почти без кэша: каждая ссылка читается из snapshot.
+    monkeypatch.setattr("code_crawler.publication._SLICE", 1)
+    monkeypatch.setattr("code_crawler.publication._CACHE", 2)
+
     async def scenario() -> None:
         conn = await asyncpg.connect(database_url)
         try:
@@ -181,6 +260,9 @@ def test_readiness_gate_rejects_incomplete_storage(
                 await conn.fetchval("SELECT state FROM ucm_snapshots WHERE id=$1", snap)
                 == "VALIDATING"
             )
+            # Проверка порциями и проверка целого batch решают одинаково.
+            with pytest.raises(ValueError):
+                await load_snapshot_batch(conn, snap)
             assert not await conn.fetchval(
                 "SELECT EXISTS(SELECT 1 FROM ucm_snapshot_validations WHERE snapshot_id=$1)",
                 snap,

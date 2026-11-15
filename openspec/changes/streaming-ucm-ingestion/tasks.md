@@ -9,7 +9,7 @@
 - [x] index_incremental analyzes in slices, stages as it goes and clones reused facts in SQL:
       indexing peak 653 MB -> 278 MB (first run), 190 MB (incremental) at 124k entities.
 - [x] Share equal value objects while restoring: 936k -> 336k model objects, pipeline peak 639 MB.
-- [ ] Validate without holding all models (port UcmBatch rules to SQL or streamed checks).
+- [x] Validate without holding all models (streamed checks): peak 688 MiB -> 170 MiB at 141k entities on PG15.
 - [ ] Load test at 1M entities; 930k entities did not finish in 50 minutes with the batch loader.
 - [x] Integration suite on PostgreSQL 15.
 

@@ -3,7 +3,14 @@
 import asyncio
 import json
 from collections import defaultdict
-from collections.abc import AsyncIterable, Callable, Iterator, Sequence
+from collections.abc import (
+    AsyncIterable,
+    Callable,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+)
 from contextvars import ContextVar
 from uuid import UUID, uuid4
 
@@ -57,6 +64,442 @@ def tick(stage: str, total: int | None = None) -> None:
         callback(stage, total)
 
 
+def check_entities(
+    repository_id: UUID,
+    entities: Iterable[Entity],
+    catalog: Mapping[str, Entity],
+    paths: set[str],
+    producers: set[str],
+) -> None:
+    """Check each entity against the entities it refers to.
+
+    `paths` and `producers` carry uniqueness state between calls, so a snapshot
+    can be checked slice by slice.
+    """
+
+    def require(entity_id: str | None, kind: type) -> None:
+        if entity_id is not None and not isinstance(catalog.get(entity_id), kind):
+            raise ValueError(
+                f"missing or wrongly typed {kind.__name__} reference: {entity_id}"
+            )
+
+    def type_ref(ref: TypeRef | None) -> None:
+        if ref is not None:
+            require(ref.target_symbol_id, Symbol)
+
+    for entity in entities:
+        if entity.repository_id != str(repository_id):
+            raise ValueError("batch entity belongs to a different repository")
+        if entity.source_range is not None:
+            require(entity.source_range.source_file_id, SourceFile)
+        if isinstance(entity, SourceFile):
+            if entity.path in paths:
+                raise ValueError("duplicate source file path")
+            paths.add(entity.path)
+        elif isinstance(entity, SourceAnalysis):
+            require(entity.source_file_id, SourceFile)
+        elif isinstance(entity, Symbol):
+            require(entity.scope_id, Scope)
+            type_ref(entity.type_ref)
+            if entity.signature is not None:
+                for ref in entity.signature.parameter_types:
+                    type_ref(ref)
+                type_ref(entity.signature.return_type)
+        elif isinstance(entity, Scope):
+            require(entity.parent_scope_id, Scope)
+            require(entity.owner_symbol_id, Symbol)
+        elif isinstance(entity, Occurrence):
+            require(entity.scope_id, Scope)
+            require(entity.target_symbol_id, Symbol)
+        elif isinstance(entity, Operation):
+            require(entity.scope_id, Scope)
+            type_ref(entity.callee)
+            for value_id in (*entity.input_value_ids, *entity.output_value_ids):
+                require(value_id, Value)
+            for value_id in entity.output_value_ids:
+                if value_id in producers:
+                    raise ValueError("value has multiple producers")
+                producers.add(value_id)
+        elif isinstance(entity, Value):
+            type_ref(entity.type_ref)
+        elif isinstance(entity, OrmMapping):
+            require(entity.symbol_id, Symbol)
+            require(entity.owner_symbol_id, Symbol)
+            if catalog[entity.owner_symbol_id].symbol_kind != "CLASS":
+                raise ValueError("ORM mapping owner must be a class")
+            if (
+                entity.mapping_kind == "ENTITY"
+                and catalog[entity.symbol_id].symbol_kind != "CLASS"
+            ):
+                raise ValueError("ORM entity mapping must use a class symbol")
+            if entity.mapping_kind == "ATTRIBUTE" and catalog[
+                entity.symbol_id
+            ].symbol_kind not in ("FIELD", "METHOD"):
+                raise ValueError("ORM attribute requires field/getter symbol")
+            if entity.mapping_kind == "ATTRIBUTE":
+                symbol = catalog[entity.symbol_id]
+                owner = catalog[entity.owner_symbol_id]
+                if (
+                    symbol.symbol_kind == "METHOD"
+                    and symbol.owner_key != owner.logical_key
+                ):
+                    raise ValueError("ORM getter must belong to its entity class")
+                if (
+                    symbol.symbol_kind == "FIELD"
+                    and catalog[symbol.scope_id].owner_symbol_id != owner.id
+                ):
+                    raise ValueError("ORM field must belong to its entity class")
+        elif isinstance(entity, OrmQuery):
+            require(entity.owner_symbol_id, Symbol)
+            if catalog[entity.owner_symbol_id].symbol_kind not in (
+                "CLASS",
+                "METHOD",
+                "CONSTRUCTOR",
+            ):
+                raise ValueError("ORM query owner must be a type or callable")
+        elif isinstance(entity, OrmOperation):
+            require(entity.owner_symbol_id, Symbol)
+            require(entity.call_operation_id, Operation)
+            require(entity.query_id, OrmQuery)
+            require(entity.context_id, DatabaseContext)
+            operation = catalog[entity.call_operation_id]
+            if (
+                catalog[entity.owner_symbol_id].symbol_kind
+                not in ("METHOD", "CONSTRUCTOR")
+                or operation.operation_kind != "CALL"
+                or operation.callee is None
+                or operation.callee.name != entity.api
+            ):
+                raise ValueError("ORM invocation must use its callable/CALL API")
+            scope = catalog.get(operation.scope_id)
+            seen = set()
+            owner = None
+            while isinstance(scope, Scope) and scope.id not in seen:
+                seen.add(scope.id)
+                symbol = catalog.get(scope.owner_symbol_id)
+                if isinstance(symbol, Symbol) and symbol.symbol_kind in (
+                    "METHOD",
+                    "CONSTRUCTOR",
+                ):
+                    owner = symbol.id
+                    break
+                scope = catalog.get(scope.parent_scope_id)
+            if owner != entity.owner_symbol_id:
+                raise ValueError("ORM CALL scope must belong to its invocation owner")
+        elif isinstance(entity, (DatabaseContext, DatabaseObject)):
+            require(entity.projection_file_id, SourceFile)
+            if (
+                entity.source_range is not None
+                and entity.source_range.source_file_id != entity.projection_file_id
+            ):
+                raise ValueError("database projection must belong to its source file")
+        elif isinstance(entity, DatabaseAccess):
+            require(entity.access_id, DataAccess)
+            require(entity.context_id, DatabaseContext)
+            require(entity.execution_id, SqlExecute)
+        elif isinstance(entity, SqlPlaceholder):
+            require(entity.statement_id, SqlStatement)
+            statement = catalog[entity.statement_id]
+            if (
+                statement.parse_status != "COMPLETE"
+                or statement.text[entity.text_start : entity.text_end]
+                != entity.token_text
+            ):
+                raise ValueError(
+                    "SQL placeholder must match a complete statement slice"
+                )
+        elif isinstance(entity, SqlBinding):
+            require(entity.execution_id, SqlExecute)
+            require(entity.value_id, Value)
+            require(entity.setter_operation_id, Operation)
+            if entity.setter_operation_id is not None:
+                setter = catalog[entity.setter_operation_id]
+                if (
+                    setter.operation_kind != "CALL"
+                    or setter.callee is None
+                    or setter.callee.name != entity.api
+                ):
+                    raise ValueError("SQL binding setter must match a CALL API")
+                if entity.api.startswith("java.sql."):
+                    if len(setter.input_value_ids) < 2:
+                        raise ValueError(
+                            "JDBC setter requires selector and value/type inputs"
+                        )
+                    selector = catalog[setter.input_value_ids[0]]
+                    if entity.binding_kind == "POSITIONAL" and (
+                        selector.value_kind != "LITERAL"
+                        or type(selector.literal) is not int
+                        or selector.literal != entity.position
+                    ):
+                        raise ValueError(
+                            "binding selector must match JDBC setter input"
+                        )
+                    if entity.binding_kind == "NAMED" and (
+                        selector.value_kind != "LITERAL"
+                        or selector.literal != entity.parameter_name
+                    ):
+                        raise ValueError(
+                            "binding selector must match JDBC setter input"
+                        )
+                    value = catalog[entity.value_id]
+                    if entity.api.endswith(".setNull"):
+                        if value.value_kind != "LITERAL" or value.literal is not None:
+                            raise ValueError("setNull binding requires literal null")
+                    elif setter.input_value_ids[1] != entity.value_id:
+                        raise ValueError("binding value must match JDBC setter input")
+        elif isinstance(entity, SqlStatement):
+            candidate = catalog.get(entity.candidate_id)
+            if candidate is None or candidate.entity_type.value != "SQL_CANDIDATE":
+                raise ValueError("SQL statement requires local SQL candidate")
+        elif isinstance(entity, DataAccess):
+            require(entity.statement_id, SqlStatement)
+            if catalog[entity.statement_id].parse_status not in (
+                "COMPLETE",
+                "PARTIAL",
+            ):
+                raise ValueError("failed SQL statement cannot assert accesses")
+        elif isinstance(entity, SqlExecute):
+            require(entity.owner_symbol_id, Symbol)
+            require(entity.operation_id, Operation)
+            owner = catalog[entity.owner_symbol_id]
+            operation = catalog[entity.operation_id]
+            if owner.symbol_kind not in ("METHOD", "CONSTRUCTOR"):
+                raise ValueError("SQL execution owner must be callable")
+            if operation.operation_kind != "CALL":
+                raise ValueError("SQL execution requires CALL operation")
+            if operation.callee is None or operation.callee.name != entity.api:
+                raise ValueError("SQL execution API must match CALL callee")
+            scope = catalog.get(operation.scope_id)
+            visited: set[str] = set()
+            callable_owner = None
+            while isinstance(scope, Scope) and scope.id not in visited:
+                visited.add(scope.id)
+                symbol = catalog.get(scope.owner_symbol_id)
+                if isinstance(symbol, Symbol) and symbol.symbol_kind in (
+                    "METHOD",
+                    "CONSTRUCTOR",
+                ):
+                    callable_owner = symbol.id
+                    break
+                scope = catalog.get(scope.parent_scope_id)
+            if callable_owner != entity.owner_symbol_id:
+                raise ValueError("SQL execution CALL must be in its owner scope")
+            if (
+                entity.sql_argument_index is not None
+                and entity.sql_argument_index >= len(operation.input_value_ids)
+            ):
+                raise ValueError("SQL execution argument index outside CALL inputs")
+        elif isinstance(entity, SqlConstruction):
+            require(entity.owner_symbol_id, Symbol)
+            if catalog[entity.owner_symbol_id].symbol_kind not in (
+                "CLASS",
+                "METHOD",
+                "CONSTRUCTOR",
+            ):
+                raise ValueError("SQL construction owner must be a type or callable")
+            for variant in entity.variants:
+                candidate = catalog.get(variant.candidate_id)
+                if candidate is None or candidate.entity_type.value != "SQL_CANDIDATE":
+                    raise ValueError("SQL variant requires local SQL_CANDIDATE")
+                for fragment in variant.fragments:
+                    if fragment.source_range is not None:
+                        require(fragment.source_range.source_file_id, SourceFile)
+        elif isinstance(entity, Relation):
+            validate_relation_endpoints(entity, catalog)
+        elif isinstance(entity, ExternalReference):
+            validate_external_reference(entity, catalog)
+
+
+def check_unique_reports(source_file_ids: Iterable[str]) -> None:
+    seen: set[str] = set()
+    for source_file_id in source_file_ids:
+        if source_file_id in seen:
+            raise ValueError(
+                "source file cannot have multiple adapter analysis reports"
+            )
+        seen.add(source_file_id)
+
+
+def check_semantics(entities: Sequence[Entity], catalog: Mapping[str, Entity]) -> None:
+    """Check SQL rules that span entities; `entities` must hold every SQL fact."""
+    sql_candidates = [
+        variant.candidate_id
+        for e in entities
+        if isinstance(e, SqlConstruction)
+        for variant in e.variants
+    ]
+    if len(set(sql_candidates)) != len(sql_candidates):
+        raise ValueError("SQL candidate has multiple construction owners")
+    variants = {
+        v.candidate_id: v
+        for e in entities
+        if isinstance(e, SqlConstruction)
+        for v in e.variants
+    }
+    statement_keys: set[tuple[str, int]] = set()
+    for entity in entities:
+        if not isinstance(entity, SqlStatement):
+            continue
+        key = (entity.candidate_id, entity.statement_index)
+        if key in statement_keys:
+            raise ValueError("duplicate SQL statement position")
+        statement_keys.add(key)
+        variant = variants.get(entity.candidate_id)
+        if (
+            variant is None
+            or variant.text[entity.text_start : entity.text_end] != entity.text
+        ):
+            raise ValueError("SQL statement text must match candidate slice")
+        if variant.partial and entity.parse_status != "PARTIAL":
+            raise ValueError(
+                "partial SQL construction cannot assert complete semantics"
+            )
+        if variant.partial and any(
+            isinstance(a, DataAccess) and a.statement_id == entity.id for a in entities
+        ):
+            raise ValueError("partial SQL construction cannot assert accesses")
+    usages = {
+        e.source.id: e
+        for e in entities
+        if isinstance(e, Relation)
+        and e.relation_kind == RelationKind.USES_SQL_CONSTRUCTION
+    }
+    for relation in entities:
+        if (
+            not isinstance(relation, Relation)
+            or relation.relation_kind != RelationKind.EXECUTES_STATEMENT
+        ):
+            continue
+        targets = (
+            (relation.resolution.target,)
+            if relation.resolution.target
+            else relation.resolution.candidates
+        )
+        usage = usages.get(relation.source.id)
+        origins = (
+            (
+                (usage.resolution.target,)
+                if usage.resolution.target
+                else usage.resolution.candidates
+            )
+            if usage
+            else ()
+        )
+        allowed = {
+            variant.candidate_id
+            for ref in origins
+            for variant in catalog[ref.id].variants
+        }
+        for ref in targets:
+            statement = catalog[ref.id]
+            if statement.candidate_id not in allowed:
+                raise ValueError(
+                    "execution statement must originate in its SQL construction"
+                )
+            if relation.resolution.status == "RESOLVED" and (
+                usage.resolution.status != "RESOLVED"
+                or len(allowed) != 1
+                or statement.parse_status != "COMPLETE"
+            ):
+                raise ValueError(
+                    "definite execution statement requires complete unambiguous origin"
+                )
+    parameter_keys: set[tuple[str, int]] = set()
+    executable = {}
+    for relation in entities:
+        if (
+            isinstance(relation, Relation)
+            and relation.relation_kind == RelationKind.EXECUTES_STATEMENT
+        ):
+            refs = (
+                (relation.resolution.target,)
+                if relation.resolution.target
+                else relation.resolution.candidates
+            )
+            executable.setdefault(relation.source.id, set()).update(
+                ref.id for ref in refs
+            )
+    for entity in entities:
+        if isinstance(entity, SqlPlaceholder):
+            key = (entity.statement_id, entity.ordinal)
+            if key in parameter_keys:
+                raise ValueError("duplicate SQL placeholder ordinal")
+            parameter_keys.add(key)
+        if (
+            isinstance(entity, Relation)
+            and entity.relation_kind == RelationKind.BINDS_PARAMETER
+        ):
+            binding = catalog[entity.source.id]
+            targets = (
+                (entity.resolution.target,)
+                if entity.resolution.target
+                else entity.resolution.candidates
+            )
+            for ref in targets:
+                parameter = catalog[ref.id]
+                if parameter.statement_id not in executable.get(
+                    binding.execution_id, set()
+                ):
+                    raise ValueError(
+                        "binding placeholder must belong to an execution statement"
+                    )
+                if binding.binding_kind == "POSITIONAL" and (
+                    parameter.parameter_kind != "POSITIONAL"
+                    or binding.position != parameter.position
+                ):
+                    raise ValueError("binding position must match the SQL placeholder")
+                if binding.binding_kind == "NAMED" and (
+                    parameter.parameter_kind != "NAMED"
+                    or binding.parameter_name != parameter.parameter_name
+                ):
+                    raise ValueError("binding name must match the SQL placeholder")
+                if entity.resolution.status == "RESOLVED" and binding.status != "BOUND":
+                    raise ValueError(
+                        "incomplete SQL binding cannot assert definite parameter link"
+                    )
+    database_choices = {}
+    for relation in entities:
+        if (
+            isinstance(relation, Relation)
+            and relation.relation_kind == RelationKind.USES_DATABASE_CONTEXT
+        ):
+            refs = (
+                (relation.resolution.target,)
+                if relation.resolution.target
+                else relation.resolution.candidates
+            )
+            database_choices.setdefault(relation.source.id, set()).update(
+                ref.id for ref in refs
+            )
+    for entity in entities:
+        if not isinstance(entity, DatabaseAccess) or entity.execution_id is None:
+            continue
+        access = catalog[entity.access_id]
+        if access.statement_id not in executable.get(entity.execution_id, set()):
+            raise ValueError(
+                "contextual database access must belong to an execution statement"
+            )
+        if (
+            entity.context_id is not None
+            and entity.context_id
+            not in database_choices.get(entity.execution_id, set())
+        ):
+            raise ValueError("contextual database access must use an execution context")
+
+
+def check_scope_cycles(parents: Mapping[str, str | None]) -> None:
+    checked: set[str] = set()
+    for scope_id in parents:
+        visiting: set[str] = set()
+        current: str | None = scope_id
+        while current is not None and current not in checked:
+            if current in visiting:
+                raise ValueError("cyclic parent_scope references")
+            visiting.add(current)
+            current = parents.get(current)
+        checked.update(visiting)
+
+
 class UcmBatch(ContractModel):
     repository_id: UUID
     entities: tuple[Entity, ...]
@@ -66,446 +509,14 @@ class UcmBatch(ContractModel):
         catalog = {entity.id: entity for entity in self.entities}
         if len(catalog) != len(self.entities):
             raise ValueError("duplicate batch entity ID")
-        paths: set[str] = set()
-        producers: set[str] = set()
-
-        def require(entity_id: str | None, kind: type) -> None:
-            if entity_id is not None and not isinstance(catalog.get(entity_id), kind):
-                raise ValueError(
-                    f"missing or wrongly typed {kind.__name__} reference: {entity_id}"
-                )
-
-        def type_ref(ref: TypeRef | None) -> None:
-            if ref is not None:
-                require(ref.target_symbol_id, Symbol)
-
-        for entity in self.entities:
-            if entity.repository_id != str(self.repository_id):
-                raise ValueError("batch entity belongs to a different repository")
-            if entity.source_range is not None:
-                require(entity.source_range.source_file_id, SourceFile)
-            if isinstance(entity, SourceFile):
-                if entity.path in paths:
-                    raise ValueError("duplicate source file path")
-                paths.add(entity.path)
-            elif isinstance(entity, SourceAnalysis):
-                require(entity.source_file_id, SourceFile)
-            elif isinstance(entity, Symbol):
-                require(entity.scope_id, Scope)
-                type_ref(entity.type_ref)
-                if entity.signature is not None:
-                    for ref in entity.signature.parameter_types:
-                        type_ref(ref)
-                    type_ref(entity.signature.return_type)
-            elif isinstance(entity, Scope):
-                require(entity.parent_scope_id, Scope)
-                require(entity.owner_symbol_id, Symbol)
-            elif isinstance(entity, Occurrence):
-                require(entity.scope_id, Scope)
-                require(entity.target_symbol_id, Symbol)
-            elif isinstance(entity, Operation):
-                require(entity.scope_id, Scope)
-                type_ref(entity.callee)
-                for value_id in (*entity.input_value_ids, *entity.output_value_ids):
-                    require(value_id, Value)
-                for value_id in entity.output_value_ids:
-                    if value_id in producers:
-                        raise ValueError("value has multiple producers")
-                    producers.add(value_id)
-            elif isinstance(entity, Value):
-                type_ref(entity.type_ref)
-            elif isinstance(entity, OrmMapping):
-                require(entity.symbol_id, Symbol)
-                require(entity.owner_symbol_id, Symbol)
-                if catalog[entity.owner_symbol_id].symbol_kind != "CLASS":
-                    raise ValueError("ORM mapping owner must be a class")
-                if (
-                    entity.mapping_kind == "ENTITY"
-                    and catalog[entity.symbol_id].symbol_kind != "CLASS"
-                ):
-                    raise ValueError("ORM entity mapping must use a class symbol")
-                if entity.mapping_kind == "ATTRIBUTE" and catalog[
-                    entity.symbol_id
-                ].symbol_kind not in ("FIELD", "METHOD"):
-                    raise ValueError("ORM attribute requires field/getter symbol")
-                if entity.mapping_kind == "ATTRIBUTE":
-                    symbol = catalog[entity.symbol_id]
-                    owner = catalog[entity.owner_symbol_id]
-                    if (
-                        symbol.symbol_kind == "METHOD"
-                        and symbol.owner_key != owner.logical_key
-                    ):
-                        raise ValueError("ORM getter must belong to its entity class")
-                    if (
-                        symbol.symbol_kind == "FIELD"
-                        and catalog[symbol.scope_id].owner_symbol_id != owner.id
-                    ):
-                        raise ValueError("ORM field must belong to its entity class")
-            elif isinstance(entity, OrmQuery):
-                require(entity.owner_symbol_id, Symbol)
-                if catalog[entity.owner_symbol_id].symbol_kind not in (
-                    "CLASS",
-                    "METHOD",
-                    "CONSTRUCTOR",
-                ):
-                    raise ValueError("ORM query owner must be a type or callable")
-            elif isinstance(entity, OrmOperation):
-                require(entity.owner_symbol_id, Symbol)
-                require(entity.call_operation_id, Operation)
-                require(entity.query_id, OrmQuery)
-                require(entity.context_id, DatabaseContext)
-                operation = catalog[entity.call_operation_id]
-                if (
-                    catalog[entity.owner_symbol_id].symbol_kind
-                    not in ("METHOD", "CONSTRUCTOR")
-                    or operation.operation_kind != "CALL"
-                    or operation.callee is None
-                    or operation.callee.name != entity.api
-                ):
-                    raise ValueError("ORM invocation must use its callable/CALL API")
-                scope = catalog.get(operation.scope_id)
-                seen = set()
-                owner = None
-                while isinstance(scope, Scope) and scope.id not in seen:
-                    seen.add(scope.id)
-                    symbol = catalog.get(scope.owner_symbol_id)
-                    if isinstance(symbol, Symbol) and symbol.symbol_kind in (
-                        "METHOD",
-                        "CONSTRUCTOR",
-                    ):
-                        owner = symbol.id
-                        break
-                    scope = catalog.get(scope.parent_scope_id)
-                if owner != entity.owner_symbol_id:
-                    raise ValueError(
-                        "ORM CALL scope must belong to its invocation owner"
-                    )
-            elif isinstance(entity, (DatabaseContext, DatabaseObject)):
-                require(entity.projection_file_id, SourceFile)
-                if (
-                    entity.source_range is not None
-                    and entity.source_range.source_file_id != entity.projection_file_id
-                ):
-                    raise ValueError(
-                        "database projection must belong to its source file"
-                    )
-            elif isinstance(entity, DatabaseAccess):
-                require(entity.access_id, DataAccess)
-                require(entity.context_id, DatabaseContext)
-                require(entity.execution_id, SqlExecute)
-            elif isinstance(entity, SqlPlaceholder):
-                require(entity.statement_id, SqlStatement)
-                statement = catalog[entity.statement_id]
-                if (
-                    statement.parse_status != "COMPLETE"
-                    or statement.text[entity.text_start : entity.text_end]
-                    != entity.token_text
-                ):
-                    raise ValueError(
-                        "SQL placeholder must match a complete statement slice"
-                    )
-            elif isinstance(entity, SqlBinding):
-                require(entity.execution_id, SqlExecute)
-                require(entity.value_id, Value)
-                require(entity.setter_operation_id, Operation)
-                if entity.setter_operation_id is not None:
-                    setter = catalog[entity.setter_operation_id]
-                    if (
-                        setter.operation_kind != "CALL"
-                        or setter.callee is None
-                        or setter.callee.name != entity.api
-                    ):
-                        raise ValueError("SQL binding setter must match a CALL API")
-                    if entity.api.startswith("java.sql."):
-                        if len(setter.input_value_ids) < 2:
-                            raise ValueError(
-                                "JDBC setter requires selector and value/type inputs"
-                            )
-                        selector = catalog[setter.input_value_ids[0]]
-                        if entity.binding_kind == "POSITIONAL" and (
-                            selector.value_kind != "LITERAL"
-                            or type(selector.literal) is not int
-                            or selector.literal != entity.position
-                        ):
-                            raise ValueError(
-                                "binding selector must match JDBC setter input"
-                            )
-                        if entity.binding_kind == "NAMED" and (
-                            selector.value_kind != "LITERAL"
-                            or selector.literal != entity.parameter_name
-                        ):
-                            raise ValueError(
-                                "binding selector must match JDBC setter input"
-                            )
-                        value = catalog[entity.value_id]
-                        if entity.api.endswith(".setNull"):
-                            if (
-                                value.value_kind != "LITERAL"
-                                or value.literal is not None
-                            ):
-                                raise ValueError(
-                                    "setNull binding requires literal null"
-                                )
-                        elif setter.input_value_ids[1] != entity.value_id:
-                            raise ValueError(
-                                "binding value must match JDBC setter input"
-                            )
-            elif isinstance(entity, SqlStatement):
-                candidate = catalog.get(entity.candidate_id)
-                if candidate is None or candidate.entity_type.value != "SQL_CANDIDATE":
-                    raise ValueError("SQL statement requires local SQL candidate")
-            elif isinstance(entity, DataAccess):
-                require(entity.statement_id, SqlStatement)
-                if catalog[entity.statement_id].parse_status not in (
-                    "COMPLETE",
-                    "PARTIAL",
-                ):
-                    raise ValueError("failed SQL statement cannot assert accesses")
-            elif isinstance(entity, SqlExecute):
-                require(entity.owner_symbol_id, Symbol)
-                require(entity.operation_id, Operation)
-                owner = catalog[entity.owner_symbol_id]
-                operation = catalog[entity.operation_id]
-                if owner.symbol_kind not in ("METHOD", "CONSTRUCTOR"):
-                    raise ValueError("SQL execution owner must be callable")
-                if operation.operation_kind != "CALL":
-                    raise ValueError("SQL execution requires CALL operation")
-                if operation.callee is None or operation.callee.name != entity.api:
-                    raise ValueError("SQL execution API must match CALL callee")
-                scope = catalog.get(operation.scope_id)
-                visited: set[str] = set()
-                callable_owner = None
-                while isinstance(scope, Scope) and scope.id not in visited:
-                    visited.add(scope.id)
-                    symbol = catalog.get(scope.owner_symbol_id)
-                    if isinstance(symbol, Symbol) and symbol.symbol_kind in (
-                        "METHOD",
-                        "CONSTRUCTOR",
-                    ):
-                        callable_owner = symbol.id
-                        break
-                    scope = catalog.get(scope.parent_scope_id)
-                if callable_owner != entity.owner_symbol_id:
-                    raise ValueError("SQL execution CALL must be in its owner scope")
-                if (
-                    entity.sql_argument_index is not None
-                    and entity.sql_argument_index >= len(operation.input_value_ids)
-                ):
-                    raise ValueError("SQL execution argument index outside CALL inputs")
-            elif isinstance(entity, SqlConstruction):
-                require(entity.owner_symbol_id, Symbol)
-                if catalog[entity.owner_symbol_id].symbol_kind not in (
-                    "CLASS",
-                    "METHOD",
-                    "CONSTRUCTOR",
-                ):
-                    raise ValueError(
-                        "SQL construction owner must be a type or callable"
-                    )
-                for variant in entity.variants:
-                    candidate = catalog.get(variant.candidate_id)
-                    if (
-                        candidate is None
-                        or candidate.entity_type.value != "SQL_CANDIDATE"
-                    ):
-                        raise ValueError("SQL variant requires local SQL_CANDIDATE")
-                    for fragment in variant.fragments:
-                        if fragment.source_range is not None:
-                            require(fragment.source_range.source_file_id, SourceFile)
-            elif isinstance(entity, Relation):
-                validate_relation_endpoints(entity, catalog)
-            elif isinstance(entity, ExternalReference):
-                validate_external_reference(entity, catalog)
-        source_reports = [
+        check_entities(self.repository_id, self.entities, catalog, set(), set())
+        check_unique_reports(
             e.source_file_id for e in self.entities if isinstance(e, SourceAnalysis)
-        ]
-        if len(set(source_reports)) != len(source_reports):
-            raise ValueError(
-                "source file cannot have multiple adapter analysis reports"
-            )
-        sql_candidates = [
-            variant.candidate_id
-            for e in self.entities
-            if isinstance(e, SqlConstruction)
-            for variant in e.variants
-        ]
-        if len(set(sql_candidates)) != len(sql_candidates):
-            raise ValueError("SQL candidate has multiple construction owners")
-        variants = {
-            v.candidate_id: v
-            for e in self.entities
-            if isinstance(e, SqlConstruction)
-            for v in e.variants
-        }
-        statement_keys: set[tuple[str, int]] = set()
-        for entity in self.entities:
-            if not isinstance(entity, SqlStatement):
-                continue
-            key = (entity.candidate_id, entity.statement_index)
-            if key in statement_keys:
-                raise ValueError("duplicate SQL statement position")
-            statement_keys.add(key)
-            variant = variants.get(entity.candidate_id)
-            if (
-                variant is None
-                or variant.text[entity.text_start : entity.text_end] != entity.text
-            ):
-                raise ValueError("SQL statement text must match candidate slice")
-            if variant.partial and entity.parse_status != "PARTIAL":
-                raise ValueError(
-                    "partial SQL construction cannot assert complete semantics"
-                )
-            if variant.partial and any(
-                isinstance(a, DataAccess) and a.statement_id == entity.id
-                for a in self.entities
-            ):
-                raise ValueError("partial SQL construction cannot assert accesses")
-        usages = {
-            e.source.id: e
-            for e in self.entities
-            if isinstance(e, Relation)
-            and e.relation_kind == RelationKind.USES_SQL_CONSTRUCTION
-        }
-        for relation in self.entities:
-            if (
-                not isinstance(relation, Relation)
-                or relation.relation_kind != RelationKind.EXECUTES_STATEMENT
-            ):
-                continue
-            targets = (
-                (relation.resolution.target,)
-                if relation.resolution.target
-                else relation.resolution.candidates
-            )
-            usage = usages.get(relation.source.id)
-            origins = (
-                (
-                    (usage.resolution.target,)
-                    if usage.resolution.target
-                    else usage.resolution.candidates
-                )
-                if usage
-                else ()
-            )
-            allowed = {
-                variant.candidate_id
-                for ref in origins
-                for variant in catalog[ref.id].variants
-            }
-            for ref in targets:
-                statement = catalog[ref.id]
-                if statement.candidate_id not in allowed:
-                    raise ValueError(
-                        "execution statement must originate in its SQL construction"
-                    )
-                if relation.resolution.status == "RESOLVED" and (
-                    usage.resolution.status != "RESOLVED"
-                    or len(allowed) != 1
-                    or statement.parse_status != "COMPLETE"
-                ):
-                    raise ValueError(
-                        "definite execution statement requires complete unambiguous origin"
-                    )
-        parameter_keys: set[tuple[str, int]] = set()
-        executable = {}
-        for relation in self.entities:
-            if (
-                isinstance(relation, Relation)
-                and relation.relation_kind == RelationKind.EXECUTES_STATEMENT
-            ):
-                refs = (
-                    (relation.resolution.target,)
-                    if relation.resolution.target
-                    else relation.resolution.candidates
-                )
-                executable.setdefault(relation.source.id, set()).update(
-                    ref.id for ref in refs
-                )
-        for entity in self.entities:
-            if isinstance(entity, SqlPlaceholder):
-                key = (entity.statement_id, entity.ordinal)
-                if key in parameter_keys:
-                    raise ValueError("duplicate SQL placeholder ordinal")
-                parameter_keys.add(key)
-            if (
-                isinstance(entity, Relation)
-                and entity.relation_kind == RelationKind.BINDS_PARAMETER
-            ):
-                binding = catalog[entity.source.id]
-                targets = (
-                    (entity.resolution.target,)
-                    if entity.resolution.target
-                    else entity.resolution.candidates
-                )
-                for ref in targets:
-                    parameter = catalog[ref.id]
-                    if parameter.statement_id not in executable.get(
-                        binding.execution_id, set()
-                    ):
-                        raise ValueError(
-                            "binding placeholder must belong to an execution statement"
-                        )
-                    if binding.binding_kind == "POSITIONAL" and (
-                        parameter.parameter_kind != "POSITIONAL"
-                        or binding.position != parameter.position
-                    ):
-                        raise ValueError(
-                            "binding position must match the SQL placeholder"
-                        )
-                    if binding.binding_kind == "NAMED" and (
-                        parameter.parameter_kind != "NAMED"
-                        or binding.parameter_name != parameter.parameter_name
-                    ):
-                        raise ValueError("binding name must match the SQL placeholder")
-                    if (
-                        entity.resolution.status == "RESOLVED"
-                        and binding.status != "BOUND"
-                    ):
-                        raise ValueError(
-                            "incomplete SQL binding cannot assert definite parameter link"
-                        )
-        database_choices = {}
-        for relation in self.entities:
-            if (
-                isinstance(relation, Relation)
-                and relation.relation_kind == RelationKind.USES_DATABASE_CONTEXT
-            ):
-                refs = (
-                    (relation.resolution.target,)
-                    if relation.resolution.target
-                    else relation.resolution.candidates
-                )
-                database_choices.setdefault(relation.source.id, set()).update(
-                    ref.id for ref in refs
-                )
-        for entity in self.entities:
-            if not isinstance(entity, DatabaseAccess) or entity.execution_id is None:
-                continue
-            access = catalog[entity.access_id]
-            if access.statement_id not in executable.get(entity.execution_id, set()):
-                raise ValueError(
-                    "contextual database access must belong to an execution statement"
-                )
-            if (
-                entity.context_id is not None
-                and entity.context_id
-                not in database_choices.get(entity.execution_id, set())
-            ):
-                raise ValueError(
-                    "contextual database access must use an execution context"
-                )
-        checked: set[str] = set()
-        for entity in self.entities:
-            if not isinstance(entity, Scope):
-                continue
-            visiting: set[str] = set()
-            current: Scope | None = entity
-            while current is not None and current.id not in checked:
-                if current.id in visiting:
-                    raise ValueError("cyclic parent_scope references")
-                visiting.add(current.id)
-                current = catalog.get(current.parent_scope_id)
-            checked.update(visiting)
+        )
+        check_semantics(self.entities, catalog)
+        check_scope_cycles(
+            {e.id: e.parent_scope_id for e in self.entities if isinstance(e, Scope)}
+        )
         return self
 
 

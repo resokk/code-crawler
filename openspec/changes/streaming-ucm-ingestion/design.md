@@ -12,4 +12,10 @@ reference or cancellation leaves an empty BUILDING snapshot that can be retried.
 
 Cross-entity semantic rules of UcmBatch are not evaluated while streaming;
 `validate_snapshot` evaluates them before READY, so publication stays gated.
-Validation and index_incremental still hold a whole snapshot in memory.
+
+Validation is streamed too. The UcmBatch rules are plain functions shared by the
+batch model and `validate_snapshot`, which applies them to slices of 2 000 entities
+in entity_id order. Referenced entities are read on demand into a bounded cache;
+row totals per table replace the whole-snapshot "unconsumed rows" check. Only the
+cross-entity SQL rules see more than a slice: they receive every SQL fact of the
+snapshot. Porting those rules to SQL is change b02.
