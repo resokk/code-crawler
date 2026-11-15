@@ -67,8 +67,10 @@ exports, node_modules, CommonJS require/module.exports, custom module loaders,
 
 ## TS project configuration и incremental
 
-TS adapter также владеет `.json` route, чтобы `tsconfig.json` входил в captured
-inventory. Остальные JSON — metadata-only `SOURCE_ANALYSIS` с UNSUPPORTED coverage;
+Standalone TS adapter по умолчанию владеет `.json` route. В CLI маршрут принадлежит
+OpenAPI; TS создаётся с `include_json=False`, а `tsconfig.json` получает через
+captured inventory независимо от language. Зависимости от config сохраняются.
+Прочие JSON без OpenAPI root/ref — metadata-only `SOURCE_ANALYSIS` с UNSUPPORTED coverage;
 JSON не разбирается как TypeScript. Поддержан strict JSON `tsconfig.json`:
 `compilerOptions.baseUrl`, `compilerOptions.paths`, exact/one-wildcard aliases;
 выбирается ближайший ancestor config. Candidates остаются внутри repository root.

@@ -24,6 +24,7 @@
 - `tree-sitter` — разбор Kotlin, Java, TypeScript, JavaScript, Python; грамматика каждого языка — отдельный пакет `tree-sitter-<язык>`
 - ANTLR 4.13.2 (`antlr4-python3-runtime`) — разбор Groovy, PL/Plus и VBScript; грамматики в `grammars/`, сгенерированные лексеры и парсеры лежат в репозитории
 - `sqlglot` — разбор SQL (диалект PostgreSQL)
+- `PyYAML` — безопасный структурный разбор OpenAPI YAML/JSON без конструирования объектов
 - `rich` — вывод CLI: прогресс и статус операций
 - `pytest` — тесты
 - `ruff` — линтер и форматтер

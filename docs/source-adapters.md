@@ -137,7 +137,7 @@ BPMN 2.0 XML включён через `BpmnSourceAdapter` (`.bpmn`, `.bpmn20.xm
 не-BPMN XML получает UNSUPPORTED. XML facts, typed control-flow links, deferred
 engine selectors и ограничения описаны в [bpmn-schema.md](bpmn-schema.md).
 
-JavaScript (`.js/.jsx`) и TypeScript (`.ts/.tsx`, `.json` для captured tsconfig)
+JavaScript (`.js/.jsx`) и TypeScript (`.ts/.tsx`)
 активированы отдельными versioned adapters. Symbols, imports/reexports,
 conservative CALLS и fetch/axios HTTP selectors:
 [javascript-typescript-ucm.md](javascript-typescript-ucm.md).
@@ -153,3 +153,7 @@ analysis_version обязан учитывать использованный ca
 не передаются. Java → BPMN использует эту фазу для [handler bindings](bpmn-java-bindings.md)
 и invalidation при появлении/удалении Java candidates. Новая lifecycle-фаза не
 меняет контракты остальных producers и центрального UCM loader.
+OpenAPI 3.0/3.1/3.2 contracts включены через `OpenApiSourceAdapter`
+(`.json/.yaml/.yml`, discovery по root openapi). CLI использует
+`TypeScriptSourceAdapter(include_json=False)`; captured tsconfig всё равно передаётся
+JS/TS через prepare_inventory. [Контракт, безопасность и ограничения](openapi-contracts.md).

@@ -176,6 +176,18 @@ class Symbol(EntityEnvelope):
         "PARAMETER",
         "LOCAL_VARIABLE",
         "BPMN_ELEMENT",
+        "OPENAPI_DOCUMENT",
+        "OPENAPI_OPERATION",
+        "OPENAPI_PARAMETER",
+        "OPENAPI_SCHEMA",
+        "OPENAPI_FIELD",
+        "OPENAPI_RESPONSE",
+        "OPENAPI_BODY",
+        "OPENAPI_MEDIA_TYPE",
+        "OPENAPI_SECURITY",
+        "OPENAPI_CALLBACK",
+        "OPENAPI_WEBHOOK",
+        "OPENAPI_ELEMENT",
     ]
     qualified_name: Text
     scope_id: EntityId | None = None
@@ -329,6 +341,8 @@ class RelationKind(StrEnum):
     BPMN_CALLS_PROCESS = "BPMN_CALLS_PROCESS"
     BPMN_ATTRIBUTE = "BPMN_ATTRIBUTE"
     BPMN_TEXT = "BPMN_TEXT"
+    OPENAPI_ATTRIBUTE = "OPENAPI_ATTRIBUTE"
+    OPENAPI_REF = "OPENAPI_REF"
     ORM_DECLARES_MAPPING = "ORM_DECLARES_MAPPING"
     ORM_HAS_ATTRIBUTE = "ORM_HAS_ATTRIBUTE"
     ORM_DECLARES_QUERY = "ORM_DECLARES_QUERY"
@@ -401,6 +415,8 @@ _RELATION_ENDPOINTS = MappingProxyType(
                 RelationKind.BPMN_VARIABLE_BINDING,
             )
         },
+        RelationKind.OPENAPI_ATTRIBUTE: _pairs("SYMBOL", "VALUE"),
+        RelationKind.OPENAPI_REF: _pairs("SYMBOL", "SYMBOL"),
         RelationKind.ORM_DECLARES_MAPPING: _pairs("SYMBOL", "ORM_MAPPING"),
         RelationKind.ORM_HAS_ATTRIBUTE: _pairs("ORM_MAPPING", "ORM_MAPPING"),
         RelationKind.ORM_DECLARES_QUERY: _pairs("SYMBOL", "ORM_QUERY"),

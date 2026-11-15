@@ -295,3 +295,10 @@ candidates и unresolved CFT class/attribute ExternalReferences. Evidence.rule
 сохраняет access mode/role, без SQL_STATEMENT/DATA_ACCESS для CFT queries и без
 physical database identity по naming convention. SourceAnalysis отражает parser
 errors, macros и partial coverage. Контракт: [plplus-ucm.md](plplus-ucm.md).
+
+
+D05 adds OPENAPI_* Symbol kinds and OPENAPI_ATTRIBUTE/OPENAPI_REF relations;
+see [openapi-contracts.md](openapi-contracts.md). These are explicit contract
+syntax facts, not HTTP implementation or runtime dependency proofs. Migration
+0025 updates normalized symbol/relation registries; envelope/storage APIs remain
+unchanged. Values retain scalar facts, with containment and source Evidence.

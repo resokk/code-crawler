@@ -43,7 +43,7 @@ from code_crawler.ucm import (
     logical_id,
 )
 
-VERSION = "1"
+VERSION = "2"
 LIMITS = "syntax-only; no execution, package lookup, dynamic dispatch or compiler type inference"
 
 
@@ -74,17 +74,25 @@ class JavaScriptSourceAdapter:
     ) -> PreparedAdapter:
         """Resolve JS/TS imports using only registered captured source inventories."""
         sources = tuple(
-            s for s in inventory if s.file.language in ("javascript", "typescript")
+            s
+            for s in inventory
+            if s.file.language in ("javascript", "typescript")
+            or posixpath.basename(s.file.path) == "tsconfig.json"
         )
         return await asyncio.to_thread(_prepare, sources, "javascript")
 
 
 @dataclass(frozen=True)
 class TypeScriptSourceAdapter:
+    include_json: bool = True
+
     @property
     def descriptor(self) -> AdapterDescriptor:
         # Config bytes must participate in capture and incremental dependencies.
-        return _descriptor("typescript", (".ts", ".tsx", ".json"))
+        return _descriptor(
+            "typescript",
+            (".ts", ".tsx", ".json") if self.include_json else (".ts", ".tsx"),
+        )
 
     async def prepare(self, sources: tuple[SourceInput, ...]) -> PreparedAdapter:
         return await asyncio.to_thread(_prepare, sources, "typescript")
@@ -94,7 +102,10 @@ class TypeScriptSourceAdapter:
     ) -> PreparedAdapter:
         """Resolve JS/TS imports using only registered captured source inventories."""
         sources = tuple(
-            s for s in inventory if s.file.language in ("javascript", "typescript")
+            s
+            for s in inventory
+            if s.file.language in ("javascript", "typescript")
+            or posixpath.basename(s.file.path) == "tsconfig.json"
         )
         return await asyncio.to_thread(_prepare, sources, "typescript")
 

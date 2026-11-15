@@ -147,7 +147,7 @@ def test_js_ts_publication_incremental_config_and_fingerprint(
             # Rebuild the same repository after a detector version change, then compare exact canonical entities.
             import code_crawler.javascript_adapter as adapter_module
 
-            monkeypatch.setattr(adapter_module, "VERSION", "2")
+            monkeypatch.setattr(adapter_module, "VERSION", "test-upgrade")
             upgraded = AdapterRegistry(
                 (
                     JavaSourceAdapter(profile="symbols"),

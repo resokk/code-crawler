@@ -93,3 +93,5 @@ BPMN Java bindings включены в canonical `index`/`index-sources`;
 `--bpmn-profile auto|camunda7|camunda8|flowable6|flowable7` выбирает namespace/API
 profile и сохраняется в ingest job. Ограничения и typed facts:
 [bpmn-java-bindings.md](bpmn-java-bindings.md).
+OpenAPI 3.0/3.1/3.2 YAML/JSON автоматически включены в canonical `index` и
+`index-sources`: [discovery, refs, diagnostics и ограничения](openapi-contracts.md).

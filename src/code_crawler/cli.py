@@ -38,6 +38,7 @@ from code_crawler.javascript_adapter import (
     TypeScriptSourceAdapter,
 )
 from code_crawler.kotlin_adapter import KotlinSourceAdapter
+from code_crawler.openapi_adapter import OpenApiSourceAdapter
 from code_crawler.plplus_adapter import PlplusSourceAdapter
 from code_crawler.source_adapters import AdapterRegistry, index_sources
 
@@ -313,6 +314,7 @@ async def list_adapters() -> None:
                     KotlinSourceAdapter().descriptor,
                     PlplusSourceAdapter().descriptor,
                     BpmnSourceAdapter().descriptor,
+                    OpenApiSourceAdapter().descriptor,
                     JavaScriptSourceAdapter().descriptor,
                     TypeScriptSourceAdapter().descriptor,
                 )
@@ -515,9 +517,10 @@ async def index_registered(
                     GroovySourceAdapter(dialect=dialect),
                     PlplusSourceAdapter(),
                     BpmnSourceAdapter(profile=bpmn_profile),
+                    OpenApiSourceAdapter(),
                     KotlinSourceAdapter(),
                     JavaScriptSourceAdapter(),
-                    TypeScriptSourceAdapter(),
+                    TypeScriptSourceAdapter(include_json=False),
                 )
             )
             repository = await snapshots.register_repository(
