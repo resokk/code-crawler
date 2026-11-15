@@ -29,7 +29,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - C03 repository-version-context: [completed](archive/2026-11-15-c03-repository-version-context/completion.md), immutable latest/pinned/deployment manifests and retention
 - C04 external-reference-candidate-search: [completed](archive/2026-11-15-c04-external-reference-candidate-search/completion.md), bounded identity resolution with Evidence
 - C05 resolver-cache-and-invalidation: [completed](archive/2026-11-15-c05-resolver-cache-and-invalidation/completion.md), versioned PostgreSQL cache with read-only requests and bounded maintenance
-- C06 cross-repository-graph-query: bounded authorized multi-repo traversal
+- C06 cross-repository-graph-query: [completed](archive/2026-11-15-c06-cross-repository-graph-query/completion.md), bounded authorized traversal with explicit versions and evidence
 - C07 embedding-generation-pipeline: model choice, vector registry/cache and pgvector
 - C08 hybrid-retrieval: exact + FTS + vector + graph expansion
 - C09 mcp-multirepository-intelligence: global search/trace/impact tools

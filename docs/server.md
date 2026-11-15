@@ -29,6 +29,7 @@ Change `mcp-structural-tools` плана [2.0](development-plan-v2.md). Инст
 | `find_sql_executions` | места выполнения SQL и их тексты |
 | `find_table_readers` | запросы, читающие таблицу или колонку, и их исполнители |
 | `find_table_writers` | запросы, изменяющие таблицу или колонку, и их исполнители |
+| `trace_cross_repository` | ограниченный обход в явном контексте версий; [контракт C06](cross-repository-graph.md) |
 | `trace_dependency` | обход связей от сущности на глубину 1–6, наружу или внутрь |
 | `get_evidence` | Evidence, Coverage и candidates одной связи |
 

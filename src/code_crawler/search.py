@@ -5,7 +5,7 @@ from uuid import UUID
 
 import asyncpg
 
-from code_crawler import external_candidates
+from code_crawler import cross_repository, external_candidates
 from code_crawler.resolver_context import ResolverContext
 from code_crawler.snapshots import pin_snapshot
 
@@ -806,4 +806,36 @@ async def resolve_external_reference(
         context,
         allowed_repositories=allowed_repositories,
         limit=limit,
+    )
+
+
+async def trace_cross_repository(
+    conn: asyncpg.Connection,
+    repository_key: str,
+    entity_id: str,
+    context: ResolverContext,
+    *,
+    allowed_repositories: frozenset[str],
+    depth: int = 4,
+    fanout: int = 20,
+    max_nodes: int = 100,
+    max_repository_hops: int = 2,
+    max_results: int = 100,
+    timeout_ms: int = 5000,
+    relation_kinds: tuple[cross_repository.RelationKind, ...] = (),
+) -> cross_repository.GraphTrace:
+    """Traverse bounded local facts and external declaration identities in selected versions."""
+    return await cross_repository.trace_cross_repository(
+        conn,
+        repository_key,
+        entity_id,
+        context,
+        allowed_repositories=allowed_repositories,
+        depth=depth,
+        fanout=fanout,
+        max_nodes=max_nodes,
+        max_repository_hops=max_repository_hops,
+        max_results=max_results,
+        timeout_ms=timeout_ms,
+        relation_kinds=relation_kinds,
     )

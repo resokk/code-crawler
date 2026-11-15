@@ -11,9 +11,21 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.server.context import Context
 from fastmcp.server.lifespan import lifespan
-from pydantic import Field
+from pydantic import BeforeValidator, Field
 
 from code_crawler import search
+from code_crawler.resolver_context import ResolverContext
+from code_crawler.ucm import RelationKind
+
+
+def _resolver_context(value: ResolverContext | dict) -> ResolverContext:
+    # MCP validates Python JSON values; canonical strict models require JSON mode.
+    if isinstance(value, dict):
+        return ResolverContext.model_validate_json(json.dumps(value))
+    return value
+
+
+McpResolverContext = Annotated[ResolverContext, BeforeValidator(_resolver_context)]
 
 EntityId = Annotated[str, Field(pattern=r"^ucm:[0-9a-f]{64}$")]
 RepositoryKey = Annotated[str, Field(min_length=1, description="Ключ репозитория")]
@@ -52,6 +64,8 @@ async def _query(
             # Сервер индексы только читает: транзакция не даст запросу что-то записать.
             async with conn.transaction(isolation="repeatable_read", readonly=True):
                 return await run(conn)
+        except PermissionError as error:
+            raise ToolError("repository scope is not authorized") from error
         except ValueError as error:
             raise ToolError(str(error)) from error
 
@@ -293,6 +307,49 @@ async def search_discovery_entries(
             expected_fingerprint=expected_fingerprint,
         ),
     )
+
+
+@mcp.tool
+async def trace_cross_repository(
+    ctx: Context,
+    repository_key: RepositoryKey,
+    entity_id: EntityId,
+    context: McpResolverContext,
+    depth: Annotated[int, Field(ge=1, le=12)] = 4,
+    fanout: Annotated[int, Field(ge=1, le=50)] = 20,
+    max_nodes: Annotated[int, Field(ge=1, le=500)] = 100,
+    max_repository_hops: Annotated[int, Field(ge=0, le=8)] = 2,
+    max_results: Annotated[int, Field(ge=1, le=500)] = 100,
+    timeout_ms: Annotated[int, Field(ge=1, le=30000)] = 5000,
+    relation_kinds: list[RelationKind] | None = None,
+) -> dict:
+    """Обойти зависимости в явных версиях разрешённых репозиториев.
+
+    Неоднозначные кандидаты возвращаются без продолжения пути. Каждый переход
+    сохраняет Evidence и snapshots; лимиты возвращают частичный результат.
+    Права задаёт server DISCOVERY_REPOSITORY_KEYS.
+    """
+
+    async def run(conn):
+        result = await search.trace_cross_repository(
+            conn,
+            repository_key,
+            entity_id,
+            context,
+            allowed_repositories=frozenset(
+                ctx.lifespan_context.get("discovery_repository_keys", ())
+            ),
+            depth=depth,
+            fanout=fanout,
+            max_nodes=max_nodes,
+            max_repository_hops=max_repository_hops,
+            max_results=max_results,
+            timeout_ms=timeout_ms,
+            relation_kinds=tuple(relation_kinds or ()),
+        )
+        return result.model_dump(mode="json")
+
+    return await _query(ctx, run)
 
 
 def main() -> None:

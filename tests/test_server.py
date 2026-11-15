@@ -60,6 +60,7 @@ def test_server_exposes_structural_tools(pool: FakePool) -> None:
         "find_table_readers",
         "find_table_writers",
         "trace_dependency",
+        "trace_cross_repository",
         "get_evidence",
     }
     assert all(tool.description for tool in tools.values())
@@ -137,4 +138,48 @@ def test_discovery_passes_server_policy_and_client_narrowing(
     asyncio.run(run())
     assert received[0][2]["allowed_repository_keys"] == ["one", "two"]
     assert received[0][2]["repository_keys"] == ["one"]
+    assert pool.transactions == [(True, "repeatable_read")]
+
+
+def test_cross_repository_tool_uses_server_grants(pool, monkeypatch):
+    from uuid import uuid4
+
+    from code_crawler.resolver_context import ResolverContext, Selection
+
+    context = ResolverContext(
+        mode="LATEST_INDEXED",
+        selections=(
+            Selection(
+                repository_key="repo",
+                repository_id=uuid4(),
+                snapshot_id=uuid4(),
+                generation=None,
+                commit_hash="fixture",
+            ),
+        ),
+    )
+    monkeypatch.setenv("DISCOVERY_REPOSITORY_KEYS", '["repo"]')
+    calls = []
+
+    async def trace(conn, repository_key, entity_id, selected, **options):
+        assert selected == context
+        calls.append(options)
+        raise PermissionError("private repository secret must not escape")
+
+    monkeypatch.setattr(search, "trace_cross_repository", trace)
+
+    async def run():
+        async with Client(mcp) as client:
+            with pytest.raises(ToolError, match="repository scope is not authorized"):
+                await client.call_tool(
+                    "trace_cross_repository",
+                    {
+                        "repository_key": "repo",
+                        "entity_id": ID,
+                        "context": context.model_dump(mode="json"),
+                    },
+                )
+
+    asyncio.run(run())
+    assert calls[0]["allowed_repositories"] == frozenset(("repo",))
     assert pool.transactions == [(True, "repeatable_read")]

@@ -38,3 +38,12 @@ src/code_crawler/search.py; src/code_crawler/server.py; src/code_crawler/reader.
 
 ## Dependencies
 C03,C04,C05
+
+## Implemented contract
+
+See [cross-repository-graph.md](../../../docs/cross-repository-graph.md) for the
+version-1 response and bounds. A per-request deterministic breadth-first queue
+coordinates bounded SQL projections and C04/C05 calls in one read-only transaction.
+Pareto depth/hop visit state stops dominated expansion; branch ancestors identify
+cycles. No persisted graph or DDL is introduced. MCP grants come only from the
+server configuration. Ambiguous and partial candidates are report-only.

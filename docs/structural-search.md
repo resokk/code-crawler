@@ -57,3 +57,7 @@ TABLE, с `column` — уровня COLUMN.
 модуля сохраняют прежний контракт; внутри published_reader transaction их запросы
 также видят один MVCC snapshot. get_evidence здесь возвращает метаданные связи;
 точные archived source bytes восстанавливает typed reader.
+
+Межрепозиторный `trace_cross_repository` использует явный C03 context и доверенные
+repository grants. Контракт C06, лимиты и правила неопределённости:
+[cross-repository-graph.md](cross-repository-graph.md).
