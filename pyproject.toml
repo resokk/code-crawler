@@ -39,6 +39,7 @@ dev = [
 # Сгенерировано ANTLR из grammars/, руками не правится.
 extend-exclude = [
     "src/code_crawler/plplus",
+    "src/code_crawler/vbscript",
     "src/code_crawler/groovy/GroovyLexer.py",
     "src/code_crawler/groovy/GroovyParser.py",
     "src/code_crawler/groovy/GroovyParserVisitor.py",

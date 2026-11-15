@@ -6,10 +6,13 @@
 | Сделано | Ещё нет |
 | --- | --- |
 | команда `index`, регистрация и клонирование репозиториев | удаление и просмотр индексов, обновление только изменённых файлов |
-| Java: классы, методы, вложенность | TypeScript, JavaScript, Python, VBScript, BPMN |
+| Java: классы, методы, вложенность | Python |
 | PL/Plus: классы и операции ЦФТ, функции, запросы, вызовы | PL/Plus: раскрытие макросов, SQL из `execute immediate` |
 | Kotlin: canonical symbols/calls, explicit Java static interop и JDBC/Spring SQL ([kotlin-ucm.md](kotlin-ucm.md)) | Kotlin: compiler inference, virtual dispatch и script host bindings |
 | Groovy: canonical symbols, lexical references, SQL constructions/accesses через `index-sources` | Groovy: runtime dispatch, SQL execution sinks |
+| VBScript: canonical symbols/calls, SQL constructions и bounded ADODB sinks | VBScript: runtime COM, host composition и interprocedural ByRef flow |
+| BPMN: schema и local Java handler bindings ([bpmn-java-bindings.md](bpmn-java-bindings.md)) | BPMN: runtime engine dispatch |
+| JavaScript/TypeScript: canonical symbols/imports/calls/HTTP selectors | JS/TS: compiler/runtime type inference |
 | SQL из строк Java-кода с восстановлением и полным разбором | файлы `.sql`; вызовы, наследование и импорты между символами |
 | native SQL (включая `@Query(nativeQuery = true)`) | Spring Data, Hibernate, JPA; эмбеддинги |
 
@@ -38,8 +41,8 @@
 
 ## Парсеры ANTLR
 
-- Грамматики лежат в `grammars/<язык>/`. Сейчас есть PL/Plus и Groovy; грамматики VBScript пока нет.
-- Лексеры и парсеры генерируются из них под Python и коммитятся: `src/code_crawler/plplus/`, `src/code_crawler/groovy/`. Сгенерированные файлы руками не правятся и исключены из `ruff`.
+- Грамматики лежат в `grammars/<язык>/`. Сейчас есть PL/Plus, Groovy и ограниченная грамматика VBScript v1.
+- Лексеры и парсеры генерируются из них под Python и коммитятся: `src/code_crawler/plplus/`, `src/code_crawler/groovy/`, `src/code_crawler/vbscript/`. Сгенерированные файлы руками не правятся и исключены из `ruff`.
 - Изменил грамматику — перегенерируй и закоммить результат в том же изменении.
 - В рантайме используется только Python-рантайм ANTLR (`antlr4-python3-runtime`); Java нужна лишь для генерации. Версия генератора должна совпадать с версией рантайма — сейчас 4.13.2.
 
@@ -50,7 +53,8 @@ ANTLR="java -jar /path/to/antlr4-4.13.2-complete.jar -Dlanguage=Python3 -visitor
 
 (cd grammars/plplus && $ANTLR -o ../../src/code_crawler/plplus PlpLexer.g4 PlpParser.g4)
 (cd grammars/groovy && $ANTLR -o ../../src/code_crawler/groovy GroovyLexer.g4 GroovyParser.g4)
-rm src/code_crawler/{plplus,groovy}/*.interp src/code_crawler/{plplus,groovy}/*.tokens
+(cd grammars/vbscript && $ANTLR -o ../../src/code_crawler/vbscript VBScript.g4)
+rm src/code_crawler/{plplus,groovy,vbscript}/*.interp src/code_crawler/{plplus,groovy,vbscript}/*.tokens
 ```
 
 ### PL/Plus
@@ -304,3 +308,12 @@ index_java_* APIs и legacy `index` сохраняются. Новый adapter �
 изменения PostgreSQL loader. Kotlin, Groovy и PL/Plus подключены к `index-sources` по умолчанию;
 PL/Plus контракт: [plplus-ucm.md](plplus-ucm.md);
 контракт и ограничения: [groovy-ucm.md](groovy-ucm.md). Общий контракт: [source-adapters.md](source-adapters.md).
+
+
+### VBScript
+
+Canonical `index`/`index-sources` извлекает symbols/scopes/occurrences, локальные
+case-insensitive calls, deferred COM/host selectors и SQL constructions/execution
+sites с Evidence. Контракт и ограничения: [vbscript-ucm.md](vbscript-ucm.md).
+Строка SQL без распознанного sink не считается выполнением. VBScript adapter не
+исполняет код или COM и не добавляет facts в legacy writer.

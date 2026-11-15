@@ -157,3 +157,11 @@ OpenAPI 3.0/3.1/3.2 contracts включены через `OpenApiSourceAdapter`
 (`.json/.yaml/.yml`, discovery по root openapi). CLI использует
 `TypeScriptSourceAdapter(include_json=False)`; captured tsconfig всё равно передаётся
 JS/TS через prepare_inventory. [Контракт, безопасность и ограничения](openapi-contracts.md).
+
+## VBScript
+
+`VbscriptSourceAdapter` активирован в `adapters list`, `index` и `index-sources`.
+Все регистровые варианты `.vbs` используют VBScript/ANTLR 4.13.2; `.vbe`, HTML/ASP
+и WSF контейнеры не декодируются. SQL dialect общий с Java/Groovy. Контракт,
+регистр имён, ограничения COM/data flow, fail-closed diagnostics и ресурсы описаны
+в [vbscript-ucm.md](vbscript-ucm.md). Новые типы UCM или миграции не нужны.

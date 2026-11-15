@@ -42,6 +42,7 @@ from code_crawler.kotlin_adapter import KotlinSourceAdapter
 from code_crawler.openapi_adapter import OpenApiSourceAdapter
 from code_crawler.plplus_adapter import PlplusSourceAdapter
 from code_crawler.source_adapters import AdapterRegistry, index_sources
+from code_crawler.vbscript_adapter import VbscriptSourceAdapter
 
 console = Console()
 
@@ -318,6 +319,7 @@ async def list_adapters() -> None:
                     OpenApiSourceAdapter().descriptor,
                     JavaScriptSourceAdapter().descriptor,
                     TypeScriptSourceAdapter().descriptor,
+                    VbscriptSourceAdapter().descriptor,
                 )
             ],
             ensure_ascii=False,
@@ -522,6 +524,7 @@ async def index_registered(
                     KotlinSourceAdapter(),
                     JavaScriptSourceAdapter(),
                     TypeScriptSourceAdapter(include_json=False),
+                    VbscriptSourceAdapter(dialect=dialect),
                 )
             )
             repository = await snapshots.register_repository(

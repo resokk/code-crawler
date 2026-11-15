@@ -37,3 +37,42 @@ No network lookups by default, no execution, no trust in input code or metadata.
 
 ## Compatibility and tests
 Add new UCM EntityType/RelationKind only if necessary, using forward migrations. Preserve existing Java/SQL/BPMN facts and compare full vs incremental output on same fixture.
+
+## Implemented profile v1
+
+The adapter uses the dedicated ANTLR 4.13.2 grammar in `grammars/vbscript/` and
+existing UCM Symbol/Scope/Occurrence/Operation/Value/SQL/Relation models; no schema
+migration is needed. All plaintext `.vbs` case variants are explicit registry
+routes. Parser failures, duplicate canonical declarations and resource limits raise
+structured AdapterError diagnostics; no recovered syntax facts replace publication.
+
+Names/keys use casefold, while occurrences and archived bytes retain source spelling.
+A synthetic script class and `<run>` callable own top-level work. Property accessors
+are separate `.get/.let/.set` methods. Local class instances and same-file callable
+arity support lexical INFERRED links. Files do not implicitly share a host/global
+namespace: external calls and missing classes stay deferred selectors. Dynamic code
+is a dispatch barrier, never a target guess.
+
+Only local, straight-line object/string definitions are propagated. Static strings,
+`&`, and `+` of known strings produce constructions; unknown pieces are partial.
+SQLGlot is reused one candidate at a time, with VBScript-origin Evidence. ADODB
+Connection.Execute / Recordset.Open require literal CreateObject receiver provenance;
+Command.Execute also requires captured CommandText and CommandType=1. Rebinding,
+unknown calls/ByRef outputs, class initialization and control-flow merges invalidate
+unsafe definitions. No unused literal or unproven `.Execute` receiver becomes an
+execution fact. Statement links remain INFERRED or PARTIAL, never STATIC_PROVEN.
+
+Parsing is capped at 2 MiB, 100,000 tokens and 64 parentheses nesting levels. SQL
+recovery has 65,536-character / 128-fragment/separator budgets and a 50,000-fact
+output budget. Version/grammar/dialect identifiers participate in registry scope
+fingerprints. There is no ambient I/O, repository-global semantic catalog or cache.
+
+Tests cover case/identity, class/property/parameter scopes, local shadowing,
+CreateObject shadowing, aliases, ADODB options, dynamic dispatch, unsafe argument
+side effects, unused/partial SQL, UTF-8/BOM/CRLF and parser budgets. PostgreSQL tests
+exercise CLI-to-publication with Java/Groovy/PLPlus/BPMN, exact archived Evidence,
+no-change reuse, file changes/deletion, descriptor-version invalidation, regenerated
+fact equivalence and failed-attempt rollback preserving the prior pointer.
+
+No GC, persistence or resolver changes are required for D12; it uses existing
+source registry and immutable snapshot publication contracts.
