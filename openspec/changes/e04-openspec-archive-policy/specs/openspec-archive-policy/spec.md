@@ -2,7 +2,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Define active openspec/changes versus completed openspec/changes/archive and a stable naming convention.
+### Requirement: Define active openspec/changes versus completed openspec/archive and a stable naming convention.
 The system MUST satisfy this requirement with auditable results and clear failure behavior.
 
 #### Scenario: Change fully implemented and tests passed

@@ -7,7 +7,7 @@ Completed changes were removed from active openspec/changes; Git history alone d
 Bring code-crawler to production readiness without changing canonical UCM semantics.
 
 ## Scope
-- Define active openspec/changes versus completed openspec/changes/archive and a stable naming convention.
+- Define active openspec/changes versus completed openspec/archive and a stable naming convention.
 - After implementation + CI + acceptance, archive proposal/design/specs/tasks with completion receipt and commit/CI link.
 - Maintain roadmap with dependencies, current baseline SHA, priority and explicit open criteria.
 - Provide agent execution instructions: implement one change at a time, do not invent new capabilities, preserve tests/docs, stop at scope boundary.

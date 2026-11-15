@@ -24,10 +24,10 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - B08 multi-repository-load-and-concurrency: >=100 independent repos
 
 ## Stream C — discovery/GraphRAG
-- C01 search-document-persistence: versioned derived document generations — [completed](changes/archive/2026-11-15-c01-search-document-persistence/completion.md), PG15 CI passed
-- C02 global-discovery-catalog: [completed](changes/archive/2026-11-15-c02-global-discovery-catalog/completion.md), versioned authorized declaration catalog
-- C03 repository-version-context: [completed](changes/archive/2026-11-15-c03-repository-version-context/completion.md), immutable latest/pinned/deployment manifests and retention
-- C04 external-reference-candidate-search: [completed](changes/archive/2026-11-15-c04-external-reference-candidate-search/completion.md), bounded identity resolution with Evidence
+- C01 search-document-persistence: versioned derived document generations — [completed](archive/2026-11-15-c01-search-document-persistence/completion.md), PG15 CI passed
+- C02 global-discovery-catalog: [completed](archive/2026-11-15-c02-global-discovery-catalog/completion.md), versioned authorized declaration catalog
+- C03 repository-version-context: [completed](archive/2026-11-15-c03-repository-version-context/completion.md), immutable latest/pinned/deployment manifests and retention
+- C04 external-reference-candidate-search: [completed](archive/2026-11-15-c04-external-reference-candidate-search/completion.md), bounded identity resolution with Evidence
 - C05 resolver-cache-and-invalidation: context and generation aware cache
 - C06 cross-repository-graph-query: bounded authorized multi-repo traversal
 - C07 embedding-generation-pipeline: model choice, vector registry/cache and pgvector
@@ -35,18 +35,18 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - C09 mcp-multirepository-intelligence: global search/trace/impact tools
 
 ## Stream D — source adapters (can run parallel with C after stable core)
-- D01 bpmn-schema-adapter: BPMN 2.0 processes, elements, flows and variables — [completed](changes/archive/2026-11-15-d01-bpmn-schema-adapter/completion.md), PG15 CI 882 passed
-- D02 bpmn-java-bindings: Camunda/Flowable delegates/workers — [completed](changes/archive/2026-11-15-d02-bpmn-java-bindings/completion.md), PG15 CI 997 passed
+- D01 bpmn-schema-adapter: BPMN 2.0 processes, elements, flows and variables — [completed](archive/2026-11-15-d01-bpmn-schema-adapter/completion.md), PG15 CI 882 passed
+- D02 bpmn-java-bindings: Camunda/Flowable delegates/workers — [completed](archive/2026-11-15-d02-bpmn-java-bindings/completion.md), PG15 CI 997 passed
 - D03 reference-data-json-adapter: type-data.json datasets, fields, records
 - D04 reference-data-loader-analysis: loader/field/SQL/column lineage
-- D05 openapi-contract-adapter: OAS 3.0/3.1/3.2 typed contracts, refs and operations — [completed](changes/archive/2026-11-15-d05-openapi-contract-adapter/completion.md), PG15 CI 1028 passed
+- D05 openapi-contract-adapter: OAS 3.0/3.1/3.2 typed contracts, refs and operations — [completed](archive/2026-11-15-d05-openapi-contract-adapter/completion.md), PG15 CI 1028 passed
 - D06 openapi-java-bindings: Spring REST, Feign and ExternalReference
 - D07 kafka-message-intelligence: producer/consumer/topic resources
 - D08 graphql-schema-adapter: SDL/introspection, types and operations
 - D09 graphql-java-bindings: GraphQL resolvers and DataFetchers
-- D10 kotlin-ucm-adapter: Kotlin symbols/calls/interoperability
-- D11 javascript-typescript-ucm-adapters: imports, symbols, HTTP clients
-- D12 vbscript-ucm-adapter: symbols, late binding and SQL patterns — [completed](changes/archive/2026-11-15-d12-vbscript-ucm-adapter/completion.md), PG15 CI 1094 passed
+- D10 kotlin-ucm-adapter: Kotlin symbols/calls/interoperability — [completed tasks](archive/2026-11-15-d10-kotlin-ucm-adapter/tasks.md)
+- D11 javascript-typescript-ucm-adapters: imports, symbols, HTTP clients — [completed tasks](archive/2026-11-15-d11-javascript-typescript-ucm-adapters/tasks.md)
+- D12 vbscript-ucm-adapter: symbols, late binding and SQL patterns — [completed](archive/2026-11-15-d12-vbscript-ucm-adapter/completion.md), PG15 CI 1094 passed
 
 ## Stream E — production readiness
 - E01 observability-and-coverage-dashboard: job/adapter/search diagnostics

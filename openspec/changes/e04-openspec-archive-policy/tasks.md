@@ -2,7 +2,7 @@
 
 - [ ] 1. Review current docs and migration/observability or retention implementations; reproduce missing behavior.
 - [ ] 2. Define minimal interfaces and durable typed contracts.
-- [ ] 3. Implement: Define active openspec/changes versus completed openspec/changes/archive and a stable naming convention.
+- [ ] 3. Implement: Define active openspec/changes versus completed openspec/archive and a stable naming convention.
 - [ ] 4. Implement: After implementation + CI + acceptance, archive proposal/design/specs/tasks with completion receipt and commit/CI link.
 - [ ] 5. Implement: Maintain roadmap with dependencies, current baseline SHA, priority and explicit open criteria.
 - [ ] 6. Implement: Provide agent execution instructions: implement one change at a time, do not invent new capabilities, preserve tests/docs, stop at scope boundary.

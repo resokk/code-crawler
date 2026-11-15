@@ -5,7 +5,7 @@ Completed changes were removed from active openspec/changes; Git history alone d
 
 ## Decisions
 ### Decision 1
-Define active openspec/changes versus completed openspec/changes/archive and a stable naming convention.
+Define active openspec/changes versus completed openspec/archive and a stable naming convention.
 
 Implementation must expose diagnostics, remain idempotent and preserve historical version pins. Treat canonical UCM and archived evidence as immutable source of truth; derived state can be rebuilt with explicit versioning.
 
