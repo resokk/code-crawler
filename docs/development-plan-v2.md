@@ -83,7 +83,10 @@ SourceAnalysis, Evidence, ingestion и lifecycle, без прямой завис
 D01 BPMN schema adapter завершён: XML facts, typed control-flow relations,
 отложенные selectors и incremental publication. [Контракт](bpmn-schema.md),
 [PG15 CI: 882 passed](https://github.com/resokk/code-crawler/actions/runs/43646257264).
-Java bindings остаются отдельным D02.
+D02 BPMN Java bindings завершён: локальные delegates/beans/workers, Evidence из
+BPMN и Java, typed variable mappings с явной неопределённостью.
+[Контракт](bpmn-java-bindings.md),
+[PG15 CI: 997 passed](https://github.com/resokk/code-crawler/actions/runs/43650283341).
 
 ## R6 — Production readiness (P1/P2)
 
