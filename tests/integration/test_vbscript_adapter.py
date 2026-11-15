@@ -9,6 +9,7 @@ from code_crawler import db, repos, snapshots
 from code_crawler.bpmn_adapter import BPMN, BpmnSourceAdapter
 from code_crawler.groovy_adapter import GroovySourceAdapter
 from code_crawler.java_adapter import JavaSourceAdapter
+from code_crawler.kafka_adapter import KafkaSourceAdapter
 from code_crawler.plplus_adapter import PlplusSourceAdapter
 from code_crawler.publication import (
     load_snapshot_batch,
@@ -56,7 +57,7 @@ class VersionTwo(VbscriptSourceAdapter):
 def registry(adapter=None):
     return AdapterRegistry(
         (
-            JavaSourceAdapter(profile="symbols"),
+            KafkaSourceAdapter(JavaSourceAdapter(profile="symbols")),
             GroovySourceAdapter(),
             PlplusSourceAdapter(),
             BpmnSourceAdapter(),

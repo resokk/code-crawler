@@ -32,12 +32,12 @@ from code_crawler.groovy_adapter import GroovySourceAdapter
 from code_crawler.java_adapter import (
     JAVA_PROFILES,
     JavaSourceAdapter,
-    java_adapter_catalog,
 )
 from code_crawler.javascript_adapter import (
     JavaScriptSourceAdapter,
     TypeScriptSourceAdapter,
 )
+from code_crawler.kafka_adapter import KafkaSourceAdapter
 from code_crawler.kotlin_adapter import KotlinSourceAdapter
 from code_crawler.openapi_adapter import OpenApiSourceAdapter
 from code_crawler.plplus_adapter import PlplusSourceAdapter
@@ -311,7 +311,12 @@ async def list_adapters() -> None:
             [
                 descriptor.manifest()
                 for descriptor in (
-                    *java_adapter_catalog(),
+                    *(
+                        KafkaSourceAdapter(
+                            JavaSourceAdapter(profile=profile)
+                        ).descriptor
+                        for profile in JAVA_PROFILES
+                    ),
                     GroovySourceAdapter().descriptor,
                     KotlinSourceAdapter().descriptor,
                     PlplusSourceAdapter().descriptor,
@@ -519,7 +524,7 @@ async def index_registered(
             )
             registry = AdapterRegistry(
                 (
-                    adapter,
+                    KafkaSourceAdapter(java_adapter=adapter),
                     GroovySourceAdapter(dialect=dialect),
                     PlplusSourceAdapter(),
                     BpmnSourceAdapter(profile=bpmn_profile),

@@ -302,3 +302,11 @@ see [openapi-contracts.md](openapi-contracts.md). These are explicit contract
 syntax facts, not HTTP implementation or runtime dependency proofs. Migration
 0025 updates normalized symbol/relation registries; envelope/storage APIs remain
 unchanged. Values retain scalar facts, with containment and source Evidence.
+
+
+D07 adds KAFKA_TOPIC/PRODUCER/CONSUMER/DECLARATION/CONFIGURATION Symbol kinds
+and KAFKA_HANDLER, KAFKA_ATTRIBUTE, KAFKA_MESSAGE_TYPE, KAFKA_SERDE,
+KAFKA_PRODUCES_TO, KAFKA_CONSUMES_FROM, KAFKA_DECLARES_TOPIC relations.
+Migration 0027 extends normalized registries; canonical validation enforces symbol
+subtypes. Resource selectors and configuration are source candidates, not runtime
+or cross-repository dependencies: [Kafka contract](kafka-message-intelligence.md).

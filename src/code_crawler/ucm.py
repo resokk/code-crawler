@@ -176,6 +176,11 @@ class Symbol(EntityEnvelope):
         "PARAMETER",
         "LOCAL_VARIABLE",
         "BPMN_ELEMENT",
+        "KAFKA_TOPIC",
+        "KAFKA_PRODUCER",
+        "KAFKA_CONSUMER",
+        "KAFKA_DECLARATION",
+        "KAFKA_CONFIGURATION",
         "OPENAPI_DOCUMENT",
         "OPENAPI_OPERATION",
         "OPENAPI_PARAMETER",
@@ -341,6 +346,13 @@ class RelationKind(StrEnum):
     BPMN_CALLS_PROCESS = "BPMN_CALLS_PROCESS"
     BPMN_ATTRIBUTE = "BPMN_ATTRIBUTE"
     BPMN_TEXT = "BPMN_TEXT"
+    KAFKA_ATTRIBUTE = "KAFKA_ATTRIBUTE"
+    KAFKA_HANDLER = "KAFKA_HANDLER"
+    KAFKA_MESSAGE_TYPE = "KAFKA_MESSAGE_TYPE"
+    KAFKA_SERDE = "KAFKA_SERDE"
+    KAFKA_PRODUCES_TO = "KAFKA_PRODUCES_TO"
+    KAFKA_CONSUMES_FROM = "KAFKA_CONSUMES_FROM"
+    KAFKA_DECLARES_TOPIC = "KAFKA_DECLARES_TOPIC"
     OPENAPI_ATTRIBUTE = "OPENAPI_ATTRIBUTE"
     OPENAPI_REF = "OPENAPI_REF"
     ORM_DECLARES_MAPPING = "ORM_DECLARES_MAPPING"
@@ -415,6 +427,18 @@ _RELATION_ENDPOINTS = MappingProxyType(
                 RelationKind.BPMN_VARIABLE_BINDING,
             )
         },
+        **{
+            kind: _pairs("SYMBOL", "SYMBOL")
+            for kind in (
+                RelationKind.KAFKA_HANDLER,
+                RelationKind.KAFKA_MESSAGE_TYPE,
+                RelationKind.KAFKA_SERDE,
+                RelationKind.KAFKA_PRODUCES_TO,
+                RelationKind.KAFKA_CONSUMES_FROM,
+                RelationKind.KAFKA_DECLARES_TOPIC,
+            )
+        },
+        RelationKind.KAFKA_ATTRIBUTE: _pairs("SYMBOL", "VALUE"),
         RelationKind.OPENAPI_ATTRIBUTE: _pairs("SYMBOL", "VALUE"),
         RelationKind.OPENAPI_REF: _pairs("SYMBOL", "SYMBOL"),
         RelationKind.ORM_DECLARES_MAPPING: _pairs("SYMBOL", "ORM_MAPPING"),
@@ -513,6 +537,25 @@ class Relation(EntityEnvelope):
         return self
 
 
+_KAFKA_SYMBOL_ENDPOINTS = {
+    RelationKind.KAFKA_HANDLER: (
+        {"KAFKA_PRODUCER", "KAFKA_CONSUMER", "KAFKA_DECLARATION"},
+        {"METHOD", "CONSTRUCTOR"},
+    ),
+    RelationKind.KAFKA_MESSAGE_TYPE: (
+        {"KAFKA_PRODUCER", "KAFKA_CONSUMER", "KAFKA_DECLARATION"},
+        {"CLASS"},
+    ),
+    RelationKind.KAFKA_SERDE: (
+        {"KAFKA_PRODUCER", "KAFKA_CONSUMER", "KAFKA_DECLARATION"},
+        {"CLASS"},
+    ),
+    RelationKind.KAFKA_PRODUCES_TO: ({"KAFKA_PRODUCER"}, {"KAFKA_TOPIC"}),
+    RelationKind.KAFKA_CONSUMES_FROM: ({"KAFKA_CONSUMER"}, {"KAFKA_TOPIC"}),
+    RelationKind.KAFKA_DECLARES_TOPIC: ({"KAFKA_DECLARATION"}, {"KAFKA_TOPIC"}),
+}
+
+
 def validate_relation_endpoints(
     relation: Relation, entities: Mapping[str, EntityEnvelope]
 ) -> None:
@@ -558,6 +601,16 @@ def validate_relation_endpoints(
         RelationKind.BPMN_OUTPUT_MAPPING,
     ) and any(target.symbol_kind != "BPMN_ELEMENT" for target in actual[1:]):
         raise ValueError("BPMN mapping target must be a BPMN element")
+    if (rule := _KAFKA_SYMBOL_ENDPOINTS.get(relation.relation_kind)) and (
+        actual[0].symbol_kind not in rule[0]
+        or any(e.symbol_kind not in rule[1] for e in actual[1:])
+    ):
+        raise ValueError("Kafka relation symbol kinds do not match its contract")
+    if relation.relation_kind == RelationKind.KAFKA_ATTRIBUTE and (
+        not isinstance(actual[0], Symbol)
+        or not actual[0].symbol_kind.startswith("KAFKA_")
+    ):
+        raise ValueError("Kafka attribute requires a Kafka symbol")
     if relation.relation_kind == RelationKind.CALLS:
         for entity in actual:
             if isinstance(entity, Symbol) and entity.symbol_kind not in (

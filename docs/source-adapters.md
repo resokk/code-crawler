@@ -165,3 +165,14 @@ JS/TS через prepare_inventory. [Контракт, безопасность 
 и WSF контейнеры не декодируются. SQL dialect общий с Java/Groovy. Контракт,
 регистр имён, ограничения COM/data flow, fail-closed diagnostics и ресурсы описаны
 в [vbscript-ucm.md](vbscript-ucm.md). Новые типы UCM или миграции не нужны.
+
+
+## Kafka Java augmentation
+
+Canonical CLI uses `KafkaSourceAdapter(JavaSourceAdapter(...))` for `.java` and
+`.properties`. It preserves selected Java profile output, shares the canonical AST
+and forwards immutable catalogs to BPMN. Captured application YAML is consumed
+through inventory without claiming OpenAPI's suffixes. Topic/context/type/serde
+facts and conservative boundaries: [kafka-message-intelligence.md](kafka-message-intelligence.md).
+Standalone JavaSourceAdapter remains available; do not register it alongside its
+Kafka wrapper on the same `.java` route.

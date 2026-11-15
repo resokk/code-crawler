@@ -109,3 +109,9 @@ storage, отсутствие ложных definite relations и поломок 
 проверяемое повторное индексирование, обязательный CI и явные Coverage limitations.
 Tasks завершаются только после тестов. R2 и R3 могут развиваться параллельно;
 R5 зависит от стабильных R1 contracts. Новые адаптеры и embeddings не опережают R1.
+
+
+D07 Kafka message intelligence augments canonical Java profiles with producer,
+listener/subscription, topic declaration, DTO/serde and configuration candidates.
+It preserves explicit uncertainty and deferred remote resource keys; broker/runtime
+and cross-repository linking are not inferred. [Contract](kafka-message-intelligence.md).

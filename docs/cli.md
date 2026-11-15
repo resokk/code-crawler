@@ -96,3 +96,8 @@ profile и сохраняется в ingest job. Ограничения и typed
 [bpmn-java-bindings.md](bpmn-java-bindings.md).
 OpenAPI 3.0/3.1/3.2 YAML/JSON автоматически включены в canonical `index` и
 `index-sources`: [discovery, refs, diagnostics и ограничения](openapi-contracts.md).
+
+
+Canonical `index`/`index-sources` also enable Kafka Java message intelligence
+through the selected Java profile. No broker connections or runtime execution:
+[Kafka facts, configuration candidates and limitations](kafka-message-intelligence.md).

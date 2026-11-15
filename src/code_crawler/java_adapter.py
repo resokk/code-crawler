@@ -15,14 +15,13 @@ from code_crawler.java_lineage import JavaLineageAnalyzer
 from code_crawler.java_orm import JavaOrmAnalyzer
 from code_crawler.java_semantic import JavaSemanticAnalyzer
 from code_crawler.java_sql import JavaSqlAnalyzer
-from code_crawler.java_symbols import extract
+from code_crawler.java_symbols import JavaSymbolsResult, extract
 from code_crawler.source_adapters import (
     AdapterCatalog,
     AdapterDescriptor,
     AdapterError,
     AdapterFileResult,
     AdapterIssue,
-    PreparedAdapter,
     SourceRoute,
 )
 from code_crawler.ucm import (
@@ -168,7 +167,7 @@ class JavaSourceAdapter:
             ),
         )
 
-    async def prepare(self, sources: tuple[SourceInput, ...]) -> PreparedAdapter:
+    async def prepare(self, sources: tuple[SourceInput, ...]) -> "_PreparedJava":
         """Build the existing catalog without filesystem/database IO in the adapter."""
         if self.profile == "symbols":
             return _PreparedJava(self, None, sources)
@@ -233,26 +232,33 @@ class _PreparedJava:
             analyzer.analysis_version if analyzer else "java.symbols/1"
         )
 
-    async def export_catalogs(self) -> tuple["AdapterCatalog", ...]:
-        from code_crawler.bpmn_java_catalog import java_binding_catalog
+    async def symbol_results(self) -> tuple[tuple[SourceInput, JavaSymbolsResult], ...]:
+        """Share already parsed canonical ASTs with optional local producers."""
 
         def collect():
             if self.analyzer is None:
-                self._symbol_catalog = {
-                    source.file.path: extract(source) for source in self.sources
-                }
-                pairs = tuple(
+                for source in self.sources:
+                    if source.file.path not in self._symbol_catalog:
+                        self._symbol_catalog[source.file.path] = extract(source)
+                return tuple(
                     (source, self._symbol_catalog[source.file.path])
                     for source in self.sources
                 )
-            else:
-                pairs = tuple(
-                    (source, self.analyzer.files[source.file.path].result)
-                    for source in self.sources
-                )
-            return (java_binding_catalog(pairs, self.adapter.profile),)
+            return tuple(
+                (source, self.analyzer.files[source.file.path].result)
+                for source in self.sources
+            )
 
         return await asyncio.to_thread(collect)
+
+    async def export_catalogs(self) -> tuple["AdapterCatalog", ...]:
+        from code_crawler.bpmn_java_catalog import java_binding_catalog
+
+        pairs = await self.symbol_results()
+        catalog = await asyncio.to_thread(
+            java_binding_catalog, pairs, self.adapter.profile
+        )
+        return (catalog,)
 
     async def __call__(
         self, sources: tuple[SourceInput, ...]
