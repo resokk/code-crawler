@@ -42,3 +42,98 @@ paths filters, которые оставят required check отсутствую
 
 Контракт OpenSpec: mandatory-postgres-ci; порядок разработки:
 [development-plan-v2.md](development-plan-v2.md).
+
+## A05: настройка required check администратором
+
+Проверка 2026-11-15: `GET /repos/resokk/code-crawler/branches/main/protection`
+возвращает `403 Resource not accessible by integration`; список repository rulesets
+через `GET /repos/resokk/code-crawler/rulesets` пуст (`[]`). Это не подтверждает
+отсутствие classic protection: её конфигурация недоступна текущей интеграции.
+Поле `permissions.admin=true` в metadata репозитория не гарантирует доступ токена
+к endpoint Administration. A05 остаётся открытым до проверки enforcement.
+
+Фактический check из успешного запуска PR #7:
+`PostgreSQL 15`, приложение `github-actions`, integration ID `15368`, workflow `CI`.
+[Успешный запуск](https://github.com/resokk/code-crawler/actions/runs/43684854325)
+подтверждает исполнение тестов, но не обязательность статуса для merge.
+
+Администратор с доступом **Administration: write** должен открыть
+[Settings → Rules → Rulesets](https://github.com/resokk/code-crawler/settings/rules),
+проверить существующие classic/organization rules и создать branch ruleset:
+
+- target: branch, include `refs/heads/main`, enforcement **Active**;
+- bypass list пуст, включая администраторов и интеграции;
+- require a pull request before merging;
+- require status checks: **PostgreSQL 15**, source **GitHub Actions**;
+- require branches to be up to date before merging;
+- не добавлять path filters к workflow CI.
+
+Эквивалентный payload для создания отдельного repository ruleset (сохранить как
+`/tmp/code-crawler-required-ci.json`; команда требует административного токена):
+
+```json
+{
+  "name": "main-required-postgres-ci",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {"include": ["refs/heads/main"], "exclude": []}
+  },
+  "rules": [
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": false,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": false
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "required_status_checks": [
+          {"context": "PostgreSQL 15", "integration_id": 15368}
+        ]
+      }
+    }
+  ]
+}
+```
+
+```sh
+gh api --method POST repos/resokk/code-crawler/rulesets \
+  --input /tmp/code-crawler-required-ci.json \
+  --jq '{id, name, enforcement, url: ._links.html.href}'
+gh api repos/resokk/code-crawler/rules/branches/main
+# Substitute the returned ruleset ID:
+gh api repos/resokk/code-crawler/rulesets/RULESET_ID
+```
+
+Создавать правило следует один раз, после сверки существующих ограничений;
+эти команды не запускаются самим CI и не заменяют существующие правила.
+Не сохранять токен или вывод environment в репозиторий.
+
+### Контролируемая проверка enforcement
+
+После настройки создать отдельный временный PR в main; **не выполнять merge**.
+Зафиксировать URL ruleset, PR, head SHA, check run и вывод
+`gh pr checks PR_NUMBER --required` для каждого состояния:
+
+1. Добавить в тестовую ветку завершающийся с `exit 1` шаг существующего job
+   `postgres15`. Дождаться красного **PostgreSQL 15**. Проверить, что GitHub UI
+   запрещает обычный merge и API PR показывает blocked merge state.
+2. В той же тестовой ветке временно переименовать job check, сохранив workflow
+   и исполнение тестов. Новый head SHA не должен иметь check **PostgreSQL 15**;
+   required check должен ожидаться, merge оставаться заблокированным.
+3. Восстановить workflow целиком. Дождаться успешного **PostgreSQL 15** на
+   актуальном head и подтвердить, что требование статуса выполнено. Другие
+   правила могут продолжать блокировать merge; это нужно указать отдельно.
+4. Закрыть временный PR без merge. Сохранить обезличенный вывод API и ссылки
+   в evidence A05; не считать прошлый зелёный PR проверкой отрицательных случаев.
+
+До получения этих результатов A05 не архивируется и enforcement не объявляется
+настроенным. Текущий workflow, UCM и PostgreSQL schema этим change не меняются.
