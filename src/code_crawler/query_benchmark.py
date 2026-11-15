@@ -205,7 +205,8 @@ async def _phase(
     snapshot_id: UUID,
     groups: int,
     repeats: int,
-    batch: UcmBatch,
+    batch: UcmBatch | None,
+    copies: int,
 ) -> dict:
     await conn.execute("VACUUM ANALYZE")
     counts = {
@@ -228,8 +229,8 @@ async def _phase(
     cleanup_mode = "explicit_historical_trial" if pending else "snapshot_gc"
     copy_times = []
     gc_times = []
-    for attempt in range(2):
-        logger.info("Committed batch copy %s/2 starting", attempt + 1)
+    for attempt in range(copies):
+        logger.info("Committed batch copy %s/%s starting", attempt + 1, copies)
         trial = await snapshots.create_snapshot(
             conn,
             batch.repository_id,
@@ -271,10 +272,21 @@ async def _phase(
     }
 
 
-async def benchmark(admin_url: str, groups: int = 200, repeats: int = 7) -> dict:
-    """Create and drop only a benchmark-owned PG15 database; return reproducible plans."""
-    if not 1 <= groups <= 5000 or not 1 <= repeats <= 50:
-        raise ValueError("invalid benchmark size/repeats")
+def _peak_rss_kib() -> float:
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return peak / (1024 if platform.system() == "Darwin" else 1)
+
+
+async def benchmark(
+    admin_url: str, groups: int = 200, repeats: int = 7, copies: int = 2
+) -> dict:
+    """Create and drop only a benchmark-owned PG15 database; return reproducible plans.
+
+    `copies` is the number of committed copy + GC trials per schema phase; 0 skips
+    them and never loads the whole snapshot into memory.
+    """
+    if not 1 <= groups <= 5000 or not 1 <= repeats <= 50 or not 0 <= copies <= 20:
+        raise ValueError("invalid benchmark size/repeats/copies")
     admin = await asyncpg.connect(admin_url)
     name = "crawler_benchmark_" + uuid4().hex
     created = False
@@ -316,27 +328,32 @@ async def benchmark(admin_url: str, groups: int = 200, repeats: int = 7) -> dict
                 conn, repo, root, AdapterRegistry((JavaSourceAdapter(profile="orm"),))
             )
             index_seconds = time.perf_counter() - start
+            start = time.perf_counter()
             await validate_snapshot(conn, indexed.snapshot_id)
+            validate_seconds = time.perf_counter() - start
+            pipeline_rss = _peak_rss_kib()
             await publish_snapshot(
                 conn, repo, indexed.snapshot_id, expected_snapshot_id=None
             )
-            batch = await load_snapshot_batch(conn, indexed.snapshot_id)
+            batch = (
+                await load_snapshot_batch(conn, indexed.snapshot_id) if copies else None
+            )
             phases = {}
             logger.info("Index complete in %.2fs; profiling before 0018", index_seconds)
             phases["before_0018"] = await _phase(
-                conn, indexed.snapshot_id, groups, repeats, batch
+                conn, indexed.snapshot_id, groups, repeats, batch, copies
             )
             await db.apply_migration(conn, "0018_ucm_query_indexes.sql")
             logger.info("Profiling after 0018")
             phases["after_0018"] = await _phase(
-                conn, indexed.snapshot_id, groups, repeats, batch
+                conn, indexed.snapshot_id, groups, repeats, batch, copies
             )
             for migration in await db.begin_migration(conn):
                 await db.apply_migration(conn, migration)
             await conn.execute("SELECT pg_advisory_unlock_all()")
             logger.info("Profiling current schema")
             phases["current"] = await _phase(
-                conn, indexed.snapshot_id, groups, repeats, batch
+                conn, indexed.snapshot_id, groups, repeats, batch, copies
             )
             baseline = phases["before_0018"]["queries"]
             if any(
@@ -359,9 +376,12 @@ async def benchmark(admin_url: str, groups: int = 200, repeats: int = 7) -> dict
                 "platform": platform.system() + " " + platform.machine(),
                 "groups": groups,
                 "repeats": repeats,
+                "copies": copies,
                 "index_seconds": index_seconds,
-                "peak_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                / (1024 if platform.system() == "Darwin" else 1),
+                "validate_seconds": validate_seconds,
+                # До загрузки целого batch для пробных копий: память самого конвейера.
+                "index_validate_peak_rss_kib": pipeline_rss,
+                "peak_rss_kib": _peak_rss_kib(),
                 "phases": phases,
             }
     finally:
@@ -377,6 +397,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--groups", type=int, default=200)
     parser.add_argument("--repeats", type=int, default=7)
+    parser.add_argument("--copies", type=int, default=2)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     url = os.environ.get("BENCHMARK_DATABASE_URL")
@@ -384,7 +405,7 @@ def main() -> None:
         parser.error(
             "BENCHMARK_DATABASE_URL must name a dedicated PostgreSQL 15 admin server"
         )
-    report = asyncio.run(benchmark(url, args.groups, args.repeats))
+    report = asyncio.run(benchmark(url, args.groups, args.repeats, args.copies))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, ensure_ascii=False, default=str, indent=2) + "\n"

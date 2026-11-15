@@ -1,6 +1,8 @@
+import asyncio
+
 import pytest
 
-from code_crawler.query_benchmark import fixture_sources, plan_nodes
+from code_crawler.query_benchmark import benchmark, fixture_sources, plan_nodes
 
 
 def test_workload_includes_calls_sql_and_duplicate_type_candidates():
@@ -31,3 +33,8 @@ def test_plan_traversal_includes_nested_and_hashed_subplans():
         "Seq Scan",
         "Index Scan",
     ]
+
+
+def test_benchmark_rejects_invalid_copies_before_connecting():
+    with pytest.raises(ValueError, match="copies"):
+        asyncio.run(benchmark("postgresql://unused.invalid/none", copies=21))

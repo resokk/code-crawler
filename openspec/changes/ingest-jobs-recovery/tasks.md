@@ -8,6 +8,7 @@
 - [x] Unit and integration suites pass (integration run on local PostgreSQL 18).
 - [x] Integration suite on PostgreSQL 15.
 - [x] P0: restrict GC to an explicit snapshot-table registry; foreign UUID/text tables remain intact; migrated-schema registry coverage and mandatory PG15 suite pass (849 tests).
-- [ ] GC timing on a large snapshot.
+- [x] GC timing on a large snapshot: 121-124 s for 141,424 entities on PG15 (load takes 25 s); cause and limits
+      in docs/ingest-jobs.md. Not run above 1M entities; speeding GC up is change b06.
 
 Verified by [CI / PostgreSQL 15](https://github.com/resokk/code-crawler/actions/runs/43612670068) at `e8e5f18` (842 tests passed).

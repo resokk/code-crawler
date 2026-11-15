@@ -1,0 +1,7106 @@
+{
+ "server_version": "PostgreSQL 15.20 (Homebrew) on aarch64-apple-darwin25.6.0, compiled by Apple clang version 21.0.0 (clang-2100.4.1.1), 64-bit",
+ "settings": {
+  "plan_cache_mode": "auto",
+  "shared_buffers": "128MB",
+  "work_mem": "4MB",
+  "lc_collate": "en_US.UTF-8"
+ },
+ "platform": "Darwin arm64",
+ "groups": 1500,
+ "repeats": 7,
+ "copies": 0,
+ "index_seconds": 405.42829291700036,
+ "validate_seconds": 213.21721483299916,
+ "index_validate_peak_rss_kib": 1036336.0,
+ "peak_rss_kib": 1036336.0,
+ "phases": {
+  "before_0018": {
+   "entity_count": 1060524,
+   "counts": {
+    "DATA_ACCESS": 34500,
+    "DATABASE_ACCESS": 34500,
+    "EXTERNAL_REFERENCE": 30000,
+    "OCCURRENCE": 207004,
+    "OPERATION": 22500,
+    "RELATION": 558004,
+    "SCOPE": 30008,
+    "SOURCE_ANALYSIS": 3002,
+    "SOURCE_FILE": 3002,
+    "SQL_BINDING": 15000,
+    "SQL_CANDIDATE": 7500,
+    "SQL_CONSTRUCTION": 7500,
+    "SQL_EXECUTE": 7500,
+    "SQL_PLACEHOLDER": 15000,
+    "SQL_STATEMENT": 7500,
+    "SYMBOL": 48004,
+    "VALUE": 30000
+   },
+   "index_sizes": [
+    {
+     "indexrelname": "data_columns_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_columns_table_id_name_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_foreign_keys_column_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_foreign_keys_ref_column_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_refs_node_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_refs_target_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_tables_name_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_tables_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_tables_schema_name_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "edges_dst_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "edges_src_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_file_dependencies_pkey",
+     "bytes": 458752
+    },
+    {
+     "indexrelname": "ingest_file_dependencies_reverse_idx",
+     "bytes": 270336
+    },
+    {
+     "indexrelname": "ingest_file_entities_path_idx",
+     "bytes": 14016512
+    },
+    {
+     "indexrelname": "ingest_file_entities_pkey",
+     "bytes": 159318016
+    },
+    {
+     "indexrelname": "ingest_jobs_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_jobs_repository_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_jobs_running_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_edges_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_nodes_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_refs_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_snapshots_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_snapshot_adapters_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ingest_snapshot_profiles_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "nodes_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "nodes_repo_kind_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "repos_name_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "repos_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "schema_migrations_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_coverage_reasons_pkey",
+     "bytes": 189456384
+    },
+    {
+     "indexrelname": "ucm_data_accesses_pkey",
+     "bytes": 5259264
+    },
+    {
+     "indexrelname": "ucm_database_accesses_pkey",
+     "bytes": 5193728
+    },
+    {
+     "indexrelname": "ucm_database_catalogs_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_contexts_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_objects_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_objects_database_key_version_key_object_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_objects_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_versions_database_key_version_key_finge_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_versions_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_search_paths_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_search_paths_snapshot_id_context_id_schema_nam_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_entities_pkey",
+     "bytes": 159318016
+    },
+    {
+     "indexrelname": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+     "bytes": 174514176
+    },
+    {
+     "indexrelname": "ucm_entities_snapshot_id_entity_type_logical_key_key",
+     "bytes": 238764032
+    },
+    {
+     "indexrelname": "ucm_entities_snapshot_type_idx",
+     "bytes": 7077888
+    },
+    {
+     "indexrelname": "ucm_entities_source_idx",
+     "bytes": 10592256
+    },
+    {
+     "indexrelname": "ucm_evidence_pkey",
+     "bytes": 97476608
+    },
+    {
+     "indexrelname": "ucm_external_references_pkey",
+     "bytes": 4587520
+    },
+    {
+     "indexrelname": "ucm_legacy_repositories_legacy_repo_id_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_legacy_repositories_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_occurrences_pkey",
+     "bytes": 31285248
+    },
+    {
+     "indexrelname": "ucm_one_published_snapshot_idx",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_operation_unique_output_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_operation_values_pkey",
+     "bytes": 4882432
+    },
+    {
+     "indexrelname": "ucm_operation_values_reverse_idx",
+     "bytes": 4546560
+    },
+    {
+     "indexrelname": "ucm_operations_pkey",
+     "bytes": 3358720
+    },
+    {
+     "indexrelname": "ucm_orm_mapping_names_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_mappings_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_operations_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_queries_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_relation_candidates_pkey",
+     "bytes": 1564672
+    },
+    {
+     "indexrelname": "ucm_relation_endpoints_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_relation_sources_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_relations_pkey",
+     "bytes": 83632128
+    },
+    {
+     "indexrelname": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+     "bytes": 106479616
+    },
+    {
+     "indexrelname": "ucm_relations_source_idx",
+     "bytes": 81223680
+    },
+    {
+     "indexrelname": "ucm_relations_target_idx",
+     "bytes": 59408384
+    },
+    {
+     "indexrelname": "ucm_repositories_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_repositories_repository_key_key",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_repository_publications_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_scopes_pkey",
+     "bytes": 4530176
+    },
+    {
+     "indexrelname": "ucm_snapshot_sources_pkey",
+     "bytes": 450560
+    },
+    {
+     "indexrelname": "ucm_snapshot_validations_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_snapshots_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_snapshots_repository_created_idx",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_snapshots_repository_id_id_key",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_source_analyses_pkey",
+     "bytes": 466944
+    },
+    {
+     "indexrelname": "ucm_source_analyses_snapshot_id_source_file_id_key",
+     "bytes": 450560
+    },
+    {
+     "indexrelname": "ucm_source_analysis_capabilities_pkey",
+     "bytes": 5054464
+    },
+    {
+     "indexrelname": "ucm_source_analysis_reasons_pkey",
+     "bytes": 8871936
+    },
+    {
+     "indexrelname": "ucm_source_blobs_pkey",
+     "bytes": 483328
+    },
+    {
+     "indexrelname": "ucm_source_diagnostics_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_source_evidence_legacy_snapshots_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_source_files_pkey",
+     "bytes": 450560
+    },
+    {
+     "indexrelname": "ucm_source_files_snapshot_id_path_key",
+     "bytes": 172032
+    },
+    {
+     "indexrelname": "ucm_sql_access_names_pkey",
+     "bytes": 8929280
+    },
+    {
+     "indexrelname": "ucm_sql_binding_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_sql_bindings_pkey",
+     "bytes": 2277376
+    },
+    {
+     "indexrelname": "ucm_sql_constructions_pkey",
+     "bytes": 1146880
+    },
+    {
+     "indexrelname": "ucm_sql_executions_pkey",
+     "bytes": 1130496
+    },
+    {
+     "indexrelname": "ucm_sql_fragments_pkey",
+     "bytes": 1236992
+    },
+    {
+     "indexrelname": "ucm_sql_partial_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_sql_placeholders_pkey",
+     "bytes": 2277376
+    },
+    {
+     "indexrelname": "ucm_sql_placeholders_snapshot_id_statement_id_ordinal_key",
+     "bytes": 2424832
+    },
+    {
+     "indexrelname": "ucm_sql_statement_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_sql_statements_pkey",
+     "bytes": 1163264
+    },
+    {
+     "indexrelname": "ucm_sql_statements_snapshot_id_candidate_id_statement_index_key",
+     "bytes": 1236992
+    },
+    {
+     "indexrelname": "ucm_sql_variants_pkey",
+     "bytes": 1138688
+    },
+    {
+     "indexrelname": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+     "bytes": 1236992
+    },
+    {
+     "indexrelname": "ucm_symbols_name_idx",
+     "bytes": 2629632
+    },
+    {
+     "indexrelname": "ucm_symbols_pkey",
+     "bytes": 7266304
+    },
+    {
+     "indexrelname": "ucm_type_refs_pkey",
+     "bytes": 19316736
+    },
+    {
+     "indexrelname": "ucm_values_pkey",
+     "bytes": 4546560
+    }
+   ],
+   "queries": {
+    "symbol_simple": {
+     "wall_ms": [
+      15.549499992630444,
+      15.05991599697154,
+      15.275875004590489,
+      15.176625005551614,
+      15.572707998217084,
+      15.332749986555427,
+      14.818499999819323
+     ],
+     "median_wall_ms": 15.275875004590489,
+     "sql_execution_ms": 15.054,
+     "sql_count": 3,
+     "result_sha256": "b3bcf77fba2689a1c4d6db753c018cdef975e976287d9b800b35393d6b396198",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Bitmap Heap Scan",
+       "Relation Name": "ucm_entities",
+       "Actual Rows": 1500,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 46504,
+       "Shared Hit Blocks": 6007,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_name_idx",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1500,
+       "Shared Hit Blocks": 6000,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 51,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 255,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 204,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 204,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "symbol_signature": {
+     "wall_ms": [
+      4.135916999075562,
+      4.061083003762178,
+      4.032374999951571,
+      4.021208005724475,
+      4.018250008812174,
+      4.028750001452863,
+      4.056124991620891
+     ],
+     "median_wall_ms": 4.032374999951571,
+     "sql_execution_ms": 3.707,
+     "sql_count": 3,
+     "result_sha256": "d5f72aac6009710388bee5a4e556d35ef26dbdab3340ea930a8de35ac30083f0",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Bitmap Heap Scan",
+       "Relation Name": "ucm_entities",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 48004,
+       "Shared Hit Blocks": 6007,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_name_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 2,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "callers": {
+     "wall_ms": [
+      1.1044999992009252,
+      1.0896669991780072,
+      1.3147919962648302,
+      1.0886249947361648,
+      1.0769170039566234,
+      1.0393750126240775,
+      1.056041000992991
+     ],
+     "median_wall_ms": 1.0886249947361648,
+     "sql_execution_ms": 0.367,
+     "sql_count": 6,
+     "result_sha256": "3cf4ed9366e0507d2a36bce5f2cba7dae900e658a715d353324fb4a70483adec",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 6000,
+       "Shared Hit Blocks": 154,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "callees": {
+     "wall_ms": [
+      1.1913329944945872,
+      1.203292005811818,
+      1.1902499973075464,
+      1.216250006109476,
+      1.12583399459254,
+      1.1340830096742138,
+      1.1330420093145221
+     ],
+     "median_wall_ms": 1.1902499973075464,
+     "sql_execution_ms": 0.391,
+     "sql_count": 6,
+     "result_sha256": "937caaf4a6f84fc35fe7681e810c931a235c52dbd4c318fc5fe6b08f64d3effe",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 6,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 6,
+       "Shared Hit Blocks": 30,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 6,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 25,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 6,
+       "Shared Hit Blocks": 18,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 12,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 30,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 18,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 7,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 34,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 28,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 21,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 14,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 28,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "executions_owner": {
+     "wall_ms": [
+      1.48862499918323,
+      1.4718750026077032,
+      1.4841249940218404,
+      2.3895000049378723,
+      1.92395799967926,
+      1.8775419885059819,
+      1.8822910060407594
+     ],
+     "median_wall_ms": 1.8775419885059819,
+     "sql_execution_ms": 0.429,
+     "sql_count": 7,
+     "result_sha256": "f2ff67619783dab625461c7943a3154763bf1693098cdfa95994097a04f9140b",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 7499,
+       "Shared Hit Blocks": 278,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "executions_page": {
+     "wall_ms": [
+      6.68516599398572,
+      6.653167001786642,
+      6.6151659993920475,
+      6.4939169969875365,
+      6.544582996866666,
+      6.511500003398396,
+      6.487291000667028
+     ],
+     "median_wall_ms": 6.544582996866666,
+     "sql_execution_ms": 5.413,
+     "sql_count": 7,
+     "result_sha256": "5c78b3be5041eae4bbab458e58d528fa0f2b14d7e624d7889f7377458038dea9",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_pkey",
+       "Actual Rows": 51,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 54,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 207,
+       "Shared Read Blocks": 48
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 204,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 153,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 50,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 250,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 50,
+       "Shared Hit Blocks": 200,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 50,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 250,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 100,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 250,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 150,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 100,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 500,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 100,
+       "Shared Hit Blocks": 300,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 100,
+       "Shared Hit Blocks": 300,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "table_readers": {
+     "wall_ms": [
+      3.710499993758276,
+      3.6776249908143654,
+      3.6772500025108457,
+      4.1225000022677705,
+      3.675666986964643,
+      3.6804999981541187,
+      3.6544169997796416
+     ],
+     "median_wall_ms": 3.6776249908143654,
+     "sql_execution_ms": 2.8859999999999997,
+     "sql_count": 4,
+     "result_sha256": "fa72346a57e882cf07b83ae50e4c8a6de5156036803feb74d8659f6a5e88d879",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Actual Rows": 18,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 53982,
+       "Shared Hit Blocks": 960,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_data_accesses",
+       "Index Name": "ucm_data_accesses_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 18,
+       "Rows Removed by Filter": 1,
+       "Shared Hit Blocks": 72,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 4,
+       "Shared Hit Blocks": 16,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 13,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_pkey",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Shared Hit Blocks": 15,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Shared Hit Blocks": 9,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "column_writers": {
+     "wall_ms": [
+      3.719915999681689,
+      3.699833992868662,
+      3.6993329995311797,
+      3.6890829942421988,
+      3.71429200458806,
+      3.6850420001428574,
+      3.6983750032959506
+     ],
+     "median_wall_ms": 3.6993329995311797,
+     "sql_execution_ms": 2.8659999999999997,
+     "sql_count": 4,
+     "result_sha256": "2cb713a3c899df537909faca2eaf28af2d691b5dee557359cf7033ad9043325d",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Actual Rows": 18,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 53982,
+       "Shared Hit Blocks": 960,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_data_accesses",
+       "Index Name": "ucm_data_accesses_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 18,
+       "Rows Removed by Filter": 1,
+       "Shared Hit Blocks": 84,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 9,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 7,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "trace_out": {
+     "wall_ms": [
+      5.583792008110322,
+      5.645375000312924,
+      5.606500009889714,
+      5.667625009664334,
+      5.568500011577271,
+      5.532541006687097,
+      5.5040840088622645
+     ],
+     "median_wall_ms": 5.583792008110322,
+     "sql_execution_ms": 4.654,
+     "sql_count": 6,
+     "result_sha256": "cbd66a42a0659f9ababb0a95fa13276bd7400f6f3acfbddaf2df989db94e3524",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 2,
+       "Actual Loops": 18,
+       "Rows Removed by Filter": 6,
+       "Shared Hit Blocks": 138,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 3,
+       "Actual Loops": 34,
+       "Rows Removed by Filter": 4,
+       "Shared Hit Blocks": 256,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 115,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 495,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 200,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 499,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 6000,
+       "Shared Hit Blocks": 154,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 46,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 226,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 46,
+       "Shared Hit Blocks": 161,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 46,
+       "Shared Hit Blocks": 161,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "trace_in": {
+     "wall_ms": [
+      0.9831669885898009,
+      0.9898749995045364,
+      0.987583989626728,
+      1.036499990732409,
+      0.9675830078776926,
+      0.9678329952294007,
+      0.9632910077925771
+     ],
+     "median_wall_ms": 0.9831669885898009,
+     "sql_execution_ms": 0.298,
+     "sql_count": 6,
+     "result_sha256": "ee221ce9dbc0ff88c962664232b3c3e2a60ebc3bf411ac42a3e9dfb34f023bc3",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 15,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 4,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 4,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 4,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 8,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 21,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 5,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 25,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 15,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "evidence": {
+     "wall_ms": [
+      0.6801669951528311,
+      0.6796249945182353,
+      0.6710000016028062,
+      0.6730000022798777,
+      0.6502909964183345,
+      0.6365830049617216,
+      0.5895419890293851
+     ],
+     "median_wall_ms": 0.6710000016028062,
+     "sql_execution_ms": 0.106,
+     "sql_count": 6,
+     "result_sha256": "b5c83c8bf4e8907bd7af055fc6725d8d2812e6405197d5e348018b88ea339d8d",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "typed_entity": {
+     "wall_ms": [
+      2.0760000043082982,
+      2.070082991849631,
+      1.927000004798174,
+      2.049542003078386,
+      1.8357090011704713,
+      1.7592910007806495,
+      1.7714169953251258
+     ],
+     "median_wall_ms": 1.927000004798174,
+     "sql_execution_ms": 0.08600000000000001,
+     "sql_count": 18,
+     "result_sha256": "ba0afb44571005a87ddc5bed808e8235ad6f6ce7dfbb46a91f947ff4f0b6f578",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_snapshots",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_capabilities",
+       "Index Name": "ucm_source_analysis_capabilities_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_reasons",
+       "Index Name": "ucm_source_analysis_reasons_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_diagnostics",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_mapping_names",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_database_search_paths",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_binding_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_statement_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_variants",
+       "Index Name": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_operation_values",
+       "Index Name": "ucm_operation_values_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "typed_incoming": {
+     "wall_ms": [
+      1.5824580041226,
+      1.600957999471575,
+      1.582541997777298,
+      1.6263330035144463,
+      1.5594169963151217,
+      1.5398750110762194,
+      2.009082993026823
+     ],
+     "median_wall_ms": 1.582541997777298,
+     "sql_execution_ms": 0.33799999999999997,
+     "sql_count": 20,
+     "result_sha256": "13629d942f007cdb74ef9ef7d8de54bf82167aff80df5e0d10b4b2c8b574c5fa",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_snapshots",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 7,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 6000,
+       "Shared Hit Blocks": 154,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 0,
+       "Actual Loops": 3,
+       "Rows Removed by Filter": 1,
+       "Shared Hit Blocks": 13,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_capabilities",
+       "Index Name": "ucm_source_analysis_capabilities_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_reasons",
+       "Index Name": "ucm_source_analysis_reasons_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_diagnostics",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_mapping_names",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_database_search_paths",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_binding_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_statement_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_variants",
+       "Index Name": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_operation_values",
+       "Index Name": "ucm_operation_values_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      }
+     ]
+    }
+   },
+   "committed_batch_copy_seconds": [],
+   "garbage_collection_seconds": [],
+   "cleanup_mode": "explicit_historical_trial"
+  },
+  "after_0018": {
+   "entity_count": 1060524,
+   "counts": {
+    "DATA_ACCESS": 34500,
+    "DATABASE_ACCESS": 34500,
+    "EXTERNAL_REFERENCE": 30000,
+    "OCCURRENCE": 207004,
+    "OPERATION": 22500,
+    "RELATION": 558004,
+    "SCOPE": 30008,
+    "SOURCE_ANALYSIS": 3002,
+    "SOURCE_FILE": 3002,
+    "SQL_BINDING": 15000,
+    "SQL_CANDIDATE": 7500,
+    "SQL_CONSTRUCTION": 7500,
+    "SQL_EXECUTE": 7500,
+    "SQL_PLACEHOLDER": 15000,
+    "SQL_STATEMENT": 7500,
+    "SYMBOL": 48004,
+    "VALUE": 30000
+   },
+   "index_sizes": [
+    {
+     "indexrelname": "data_columns_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_columns_table_id_name_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_foreign_keys_column_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_foreign_keys_ref_column_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_refs_node_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_refs_target_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_tables_name_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_tables_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_tables_schema_name_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "edges_dst_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "edges_src_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_file_dependencies_pkey",
+     "bytes": 458752
+    },
+    {
+     "indexrelname": "ingest_file_dependencies_reverse_idx",
+     "bytes": 270336
+    },
+    {
+     "indexrelname": "ingest_file_entities_path_idx",
+     "bytes": 14016512
+    },
+    {
+     "indexrelname": "ingest_file_entities_pkey",
+     "bytes": 159318016
+    },
+    {
+     "indexrelname": "ingest_jobs_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_jobs_repository_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_jobs_running_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_edges_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_nodes_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_refs_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_snapshots_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_snapshot_adapters_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ingest_snapshot_profiles_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "nodes_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "nodes_repo_kind_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "repos_name_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "repos_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "schema_migrations_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_coverage_reasons_pkey",
+     "bytes": 189456384
+    },
+    {
+     "indexrelname": "ucm_data_accesses_pkey",
+     "bytes": 5259264
+    },
+    {
+     "indexrelname": "ucm_database_accesses_pkey",
+     "bytes": 5193728
+    },
+    {
+     "indexrelname": "ucm_database_catalogs_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_contexts_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_objects_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_objects_database_key_version_key_object_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_objects_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_versions_database_key_version_key_finge_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_versions_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_search_paths_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_search_paths_snapshot_id_context_id_schema_nam_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_entities_pkey",
+     "bytes": 159318016
+    },
+    {
+     "indexrelname": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+     "bytes": 174514176
+    },
+    {
+     "indexrelname": "ucm_entities_snapshot_id_entity_type_logical_key_key",
+     "bytes": 238764032
+    },
+    {
+     "indexrelname": "ucm_entities_snapshot_type_idx",
+     "bytes": 7077888
+    },
+    {
+     "indexrelname": "ucm_entities_source_idx",
+     "bytes": 10592256
+    },
+    {
+     "indexrelname": "ucm_entities_symbol_name_idx",
+     "bytes": 483328
+    },
+    {
+     "indexrelname": "ucm_evidence_pkey",
+     "bytes": 97476608
+    },
+    {
+     "indexrelname": "ucm_external_references_pkey",
+     "bytes": 4587520
+    },
+    {
+     "indexrelname": "ucm_legacy_repositories_legacy_repo_id_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_legacy_repositories_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_occurrences_pkey",
+     "bytes": 31285248
+    },
+    {
+     "indexrelname": "ucm_one_published_snapshot_idx",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_operation_unique_output_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_operation_values_pkey",
+     "bytes": 4882432
+    },
+    {
+     "indexrelname": "ucm_operation_values_reverse_idx",
+     "bytes": 4546560
+    },
+    {
+     "indexrelname": "ucm_operations_pkey",
+     "bytes": 3358720
+    },
+    {
+     "indexrelname": "ucm_orm_mapping_names_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_mappings_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_operations_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_queries_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_relation_candidates_candidate_idx",
+     "bytes": 65536
+    },
+    {
+     "indexrelname": "ucm_relation_candidates_pkey",
+     "bytes": 1564672
+    },
+    {
+     "indexrelname": "ucm_relation_endpoints_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_relation_sources_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_relations_pkey",
+     "bytes": 83632128
+    },
+    {
+     "indexrelname": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+     "bytes": 106479616
+    },
+    {
+     "indexrelname": "ucm_relations_source_idx",
+     "bytes": 81223680
+    },
+    {
+     "indexrelname": "ucm_relations_target_idx",
+     "bytes": 59408384
+    },
+    {
+     "indexrelname": "ucm_repositories_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_repositories_repository_key_key",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_repository_publications_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_scopes_pkey",
+     "bytes": 4530176
+    },
+    {
+     "indexrelname": "ucm_snapshot_sources_pkey",
+     "bytes": 450560
+    },
+    {
+     "indexrelname": "ucm_snapshot_validations_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_snapshots_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_snapshots_repository_created_idx",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_snapshots_repository_id_id_key",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_source_analyses_pkey",
+     "bytes": 466944
+    },
+    {
+     "indexrelname": "ucm_source_analyses_snapshot_id_source_file_id_key",
+     "bytes": 450560
+    },
+    {
+     "indexrelname": "ucm_source_analysis_capabilities_pkey",
+     "bytes": 5054464
+    },
+    {
+     "indexrelname": "ucm_source_analysis_reasons_pkey",
+     "bytes": 8871936
+    },
+    {
+     "indexrelname": "ucm_source_blobs_pkey",
+     "bytes": 483328
+    },
+    {
+     "indexrelname": "ucm_source_diagnostics_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_source_evidence_legacy_snapshots_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_source_files_pkey",
+     "bytes": 450560
+    },
+    {
+     "indexrelname": "ucm_source_files_snapshot_id_path_key",
+     "bytes": 172032
+    },
+    {
+     "indexrelname": "ucm_sql_access_names_normalized_idx",
+     "bytes": 573440
+    },
+    {
+     "indexrelname": "ucm_sql_access_names_pkey",
+     "bytes": 8929280
+    },
+    {
+     "indexrelname": "ucm_sql_binding_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_sql_bindings_pkey",
+     "bytes": 2277376
+    },
+    {
+     "indexrelname": "ucm_sql_constructions_pkey",
+     "bytes": 1146880
+    },
+    {
+     "indexrelname": "ucm_sql_executions_owner_idx",
+     "bytes": 876544
+    },
+    {
+     "indexrelname": "ucm_sql_executions_pkey",
+     "bytes": 1130496
+    },
+    {
+     "indexrelname": "ucm_sql_fragments_pkey",
+     "bytes": 1236992
+    },
+    {
+     "indexrelname": "ucm_sql_partial_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_sql_placeholders_pkey",
+     "bytes": 2277376
+    },
+    {
+     "indexrelname": "ucm_sql_placeholders_snapshot_id_statement_id_ordinal_key",
+     "bytes": 2424832
+    },
+    {
+     "indexrelname": "ucm_sql_statement_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_sql_statements_pkey",
+     "bytes": 1163264
+    },
+    {
+     "indexrelname": "ucm_sql_statements_snapshot_id_candidate_id_statement_index_key",
+     "bytes": 1236992
+    },
+    {
+     "indexrelname": "ucm_sql_variants_pkey",
+     "bytes": 1138688
+    },
+    {
+     "indexrelname": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+     "bytes": 1236992
+    },
+    {
+     "indexrelname": "ucm_symbols_name_idx",
+     "bytes": 2629632
+    },
+    {
+     "indexrelname": "ucm_symbols_pkey",
+     "bytes": 7266304
+    },
+    {
+     "indexrelname": "ucm_type_refs_pkey",
+     "bytes": 19316736
+    },
+    {
+     "indexrelname": "ucm_values_pkey",
+     "bytes": 4546560
+    }
+   ],
+   "queries": {
+    "symbol_simple": {
+     "wall_ms": [
+      10.561582996160723,
+      10.346582988859154,
+      10.320291999960318,
+      10.397457997896709,
+      10.450750007294118,
+      10.2761250018375,
+      10.298291992512532
+     ],
+     "median_wall_ms": 10.346582988859154,
+     "sql_execution_ms": 10.284,
+     "sql_count": 3,
+     "result_sha256": "b3bcf77fba2689a1c4d6db753c018cdef975e976287d9b800b35393d6b396198",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_symbol_name_idx",
+       "Actual Rows": 1500,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1503,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_name_idx",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1500,
+       "Shared Hit Blocks": 6000,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 51,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 255,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 204,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 204,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "symbol_signature": {
+     "wall_ms": [
+      0.3577919997042045,
+      0.3528749948600307,
+      0.34237498766742647,
+      0.3464579931460321,
+      0.34133299777749926,
+      0.3476659912848845,
+      0.3412079968256876
+     ],
+     "median_wall_ms": 0.3464579931460321,
+     "sql_execution_ms": 0.065,
+     "sql_count": 3,
+     "result_sha256": "d5f72aac6009710388bee5a4e556d35ef26dbdab3340ea930a8de35ac30083f0",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_symbol_name_idx",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 2,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_name_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 2,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "callers": {
+     "wall_ms": [
+      0.7082080119289458,
+      0.70525000046473,
+      0.704874997609295,
+      0.7024579972494394,
+      0.7076250039972365,
+      0.7155409984989092,
+      0.7011670095380396
+     ],
+     "median_wall_ms": 0.70525000046473,
+     "sql_execution_ms": 0.118,
+     "sql_count": 6,
+     "result_sha256": "3cf4ed9366e0507d2a36bce5f2cba7dae900e658a715d353324fb4a70483adec",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_candidate_idx",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 2,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "callees": {
+     "wall_ms": [
+      0.9767080046003684,
+      0.9866659966064617,
+      0.9803749999264255,
+      0.9878749988274649,
+      0.9639159979997203,
+      0.9632500004954636,
+      0.97945801098831
+     ],
+     "median_wall_ms": 0.97945801098831,
+     "sql_execution_ms": 0.391,
+     "sql_count": 6,
+     "result_sha256": "937caaf4a6f84fc35fe7681e810c931a235c52dbd4c318fc5fe6b08f64d3effe",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 6,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 6,
+       "Shared Hit Blocks": 30,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 6,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 25,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 6,
+       "Shared Hit Blocks": 18,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 12,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 30,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 18,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 7,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 34,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 28,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 21,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 14,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 28,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "executions_owner": {
+     "wall_ms": [
+      1.6448329988634214,
+      1.6314579988829792,
+      1.614334003534168,
+      1.6329170030076057,
+      1.622458003112115,
+      1.628416997846216,
+      1.6134170000441372
+     ],
+     "median_wall_ms": 1.628416997846216,
+     "sql_execution_ms": 0.151,
+     "sql_count": 7,
+     "result_sha256": "f2ff67619783dab625461c7943a3154763bf1693098cdfa95994097a04f9140b",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_owner_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 3
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "executions_page": {
+     "wall_ms": [
+      6.2426659860648215,
+      6.246042001293972,
+      6.2719999987166375,
+      6.261041999096051,
+      6.242749994271435,
+      6.2399580056080595,
+      6.2323750025825575
+     ],
+     "median_wall_ms": 6.242749994271435,
+     "sql_execution_ms": 5.263,
+     "sql_count": 7,
+     "result_sha256": "5c78b3be5041eae4bbab458e58d528fa0f2b14d7e624d7889f7377458038dea9",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_pkey",
+       "Actual Rows": 51,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 54,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 255,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 204,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 153,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 50,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 250,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 50,
+       "Shared Hit Blocks": 200,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 50,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 250,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 100,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 250,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 150,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 100,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 500,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 100,
+       "Shared Hit Blocks": 300,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 100,
+       "Shared Hit Blocks": 300,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "table_readers": {
+     "wall_ms": [
+      0.9910829976433888,
+      0.9814999939408153,
+      0.9764579881448299,
+      0.9795420046430081,
+      0.9797079983400181,
+      0.971665998804383,
+      0.978374999249354
+     ],
+     "median_wall_ms": 0.9795420046430081,
+     "sql_execution_ms": 0.20700000000000002,
+     "sql_count": 4,
+     "result_sha256": "fa72346a57e882cf07b83ae50e4c8a6de5156036803feb74d8659f6a5e88d879",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_normalized_idx",
+       "Actual Rows": 18,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_data_accesses",
+       "Index Name": "ucm_data_accesses_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 18,
+       "Rows Removed by Filter": 1,
+       "Shared Hit Blocks": 72,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 4,
+       "Shared Hit Blocks": 16,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 13,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_pkey",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Shared Hit Blocks": 15,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Shared Hit Blocks": 9,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "column_writers": {
+     "wall_ms": [
+      0.98562499624677,
+      0.9718329965835437,
+      0.9680419898359105,
+      0.9477080020587891,
+      0.9582080092513934,
+      0.9528750088065863,
+      0.9677499911049381
+     ],
+     "median_wall_ms": 0.9677499911049381,
+     "sql_execution_ms": 0.187,
+     "sql_count": 4,
+     "result_sha256": "2cb713a3c899df537909faca2eaf28af2d691b5dee557359cf7033ad9043325d",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_normalized_idx",
+       "Actual Rows": 18,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_data_accesses",
+       "Index Name": "ucm_data_accesses_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 18,
+       "Rows Removed by Filter": 1,
+       "Shared Hit Blocks": 84,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 9,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 7,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "trace_out": {
+     "wall_ms": [
+      5.574082999373786,
+      5.647042009513825,
+      5.566499996348284,
+      5.569750006543472,
+      5.518624995602295,
+      5.586083992966451,
+      5.549666995648295
+     ],
+     "median_wall_ms": 5.569750006543472,
+     "sql_execution_ms": 4.63,
+     "sql_count": 6,
+     "result_sha256": "cbd66a42a0659f9ababb0a95fa13276bd7400f6f3acfbddaf2df989db94e3524",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 2,
+       "Actual Loops": 18,
+       "Rows Removed by Filter": 6,
+       "Shared Hit Blocks": 138,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 3,
+       "Actual Loops": 34,
+       "Rows Removed by Filter": 4,
+       "Shared Hit Blocks": 256,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 115,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 495,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 200,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 499,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 6000,
+       "Shared Hit Blocks": 154,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 46,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 226,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 46,
+       "Shared Hit Blocks": 161,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 46,
+       "Shared Hit Blocks": 161,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "trace_in": {
+     "wall_ms": [
+      0.9471660014241934,
+      0.9677499911049381,
+      0.9487920033279806,
+      0.9954590059351176,
+      0.9995840082410723,
+      0.9636250033508986,
+      0.9462080051889643
+     ],
+     "median_wall_ms": 0.9636250033508986,
+     "sql_execution_ms": 0.28500000000000003,
+     "sql_count": 6,
+     "result_sha256": "ee221ce9dbc0ff88c962664232b3c3e2a60ebc3bf411ac42a3e9dfb34f023bc3",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 15,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 4,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 4,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 4,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 8,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 21,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 5,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 25,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 15,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "evidence": {
+     "wall_ms": [
+      0.6451669905800372,
+      0.6442080048145726,
+      0.6422079895855859,
+      0.6422500009648502,
+      0.6412499933503568,
+      0.6196670001372695,
+      0.5874160124221817
+     ],
+     "median_wall_ms": 0.6422079895855859,
+     "sql_execution_ms": 0.097,
+     "sql_count": 6,
+     "result_sha256": "b5c83c8bf4e8907bd7af055fc6725d8d2812e6405197d5e348018b88ea339d8d",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "typed_entity": {
+     "wall_ms": [
+      2.0105419971514493,
+      1.9362919993000105,
+      1.901749987155199,
+      1.862250006524846,
+      1.7967910098377615,
+      1.8307080026715994,
+      1.7400829965481535
+     ],
+     "median_wall_ms": 1.862250006524846,
+     "sql_execution_ms": 0.084,
+     "sql_count": 18,
+     "result_sha256": "ba0afb44571005a87ddc5bed808e8235ad6f6ce7dfbb46a91f947ff4f0b6f578",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_snapshots",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_capabilities",
+       "Index Name": "ucm_source_analysis_capabilities_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_reasons",
+       "Index Name": "ucm_source_analysis_reasons_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_diagnostics",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_mapping_names",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_database_search_paths",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_binding_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_statement_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_variants",
+       "Index Name": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_operation_values",
+       "Index Name": "ucm_operation_values_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "typed_incoming": {
+     "wall_ms": [
+      1.4033329935045913,
+      1.3734579988522455,
+      1.3595420023193583,
+      1.3491249992512167,
+      1.3690420018974692,
+      1.3773340033367276,
+      1.3363330072024837
+     ],
+     "median_wall_ms": 1.3690420018974692,
+     "sql_execution_ms": 0.131,
+     "sql_count": 20,
+     "result_sha256": "13629d942f007cdb74ef9ef7d8de54bf82167aff80df5e0d10b4b2c8b574c5fa",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_snapshots",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 7,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_candidate_idx",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 2,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 0,
+       "Actual Loops": 3,
+       "Rows Removed by Filter": 1,
+       "Shared Hit Blocks": 13,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_capabilities",
+       "Index Name": "ucm_source_analysis_capabilities_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_reasons",
+       "Index Name": "ucm_source_analysis_reasons_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_diagnostics",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_mapping_names",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_database_search_paths",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_binding_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_statement_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_variants",
+       "Index Name": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_operation_values",
+       "Index Name": "ucm_operation_values_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      }
+     ]
+    }
+   },
+   "committed_batch_copy_seconds": [],
+   "garbage_collection_seconds": [],
+   "cleanup_mode": "explicit_historical_trial"
+  },
+  "current": {
+   "entity_count": 1060524,
+   "counts": {
+    "DATA_ACCESS": 34500,
+    "DATABASE_ACCESS": 34500,
+    "EXTERNAL_REFERENCE": 30000,
+    "OCCURRENCE": 207004,
+    "OPERATION": 22500,
+    "RELATION": 558004,
+    "SCOPE": 30008,
+    "SOURCE_ANALYSIS": 3002,
+    "SOURCE_FILE": 3002,
+    "SQL_BINDING": 15000,
+    "SQL_CANDIDATE": 7500,
+    "SQL_CONSTRUCTION": 7500,
+    "SQL_EXECUTE": 7500,
+    "SQL_PLACEHOLDER": 15000,
+    "SQL_STATEMENT": 7500,
+    "SYMBOL": 48004,
+    "VALUE": 30000
+   },
+   "index_sizes": [
+    {
+     "indexrelname": "data_columns_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_columns_table_id_name_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_foreign_keys_column_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_foreign_keys_ref_column_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_refs_node_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_refs_target_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_tables_name_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_tables_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "data_tables_schema_name_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "edges_dst_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "edges_src_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_file_dependencies_pkey",
+     "bytes": 458752
+    },
+    {
+     "indexrelname": "ingest_file_dependencies_reverse_idx",
+     "bytes": 270336
+    },
+    {
+     "indexrelname": "ingest_file_entities_path_idx",
+     "bytes": 14016512
+    },
+    {
+     "indexrelname": "ingest_file_entities_pkey",
+     "bytes": 159318016
+    },
+    {
+     "indexrelname": "ingest_jobs_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_jobs_repository_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_jobs_running_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_edges_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_nodes_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_refs_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_legacy_snapshots_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ingest_snapshot_adapters_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ingest_snapshot_profiles_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "nodes_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "nodes_repo_kind_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "repos_name_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "repos_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "resolver_context_selections_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "resolver_context_snapshot_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "resolver_contexts_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "resolver_deployment_bindings_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "resolver_deployment_snapshot_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "resolver_deployments_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "schema_migrations_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "search_discovery_entries_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_discovery_generations_generation_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_discovery_generations_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_discovery_generations_snapshot_id_generation_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_discovery_identifier_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_discovery_lookup_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_discovery_snapshot_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_documents_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_index_generations_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_index_generations_repository_id_snapshot_id_id_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "search_index_publications_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_coverage_reasons_pkey",
+     "bytes": 189456384
+    },
+    {
+     "indexrelname": "ucm_data_accesses_pkey",
+     "bytes": 5259264
+    },
+    {
+     "indexrelname": "ucm_database_accesses_pkey",
+     "bytes": 5193728
+    },
+    {
+     "indexrelname": "ucm_database_catalogs_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_contexts_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_objects_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_objects_database_key_version_key_object_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_objects_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_versions_database_key_version_key_finge_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_schema_versions_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_search_paths_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_database_search_paths_snapshot_id_context_id_schema_nam_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_entities_name_trgm_idx",
+     "bytes": 1220608
+    },
+    {
+     "indexrelname": "ucm_entities_name_words_idx",
+     "bytes": 540672
+    },
+    {
+     "indexrelname": "ucm_entities_pkey",
+     "bytes": 159318016
+    },
+    {
+     "indexrelname": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+     "bytes": 174514176
+    },
+    {
+     "indexrelname": "ucm_entities_snapshot_id_entity_type_logical_key_key",
+     "bytes": 238764032
+    },
+    {
+     "indexrelname": "ucm_entities_snapshot_type_idx",
+     "bytes": 7077888
+    },
+    {
+     "indexrelname": "ucm_entities_source_idx",
+     "bytes": 10592256
+    },
+    {
+     "indexrelname": "ucm_entities_symbol_name_idx",
+     "bytes": 483328
+    },
+    {
+     "indexrelname": "ucm_evidence_pkey",
+     "bytes": 97476608
+    },
+    {
+     "indexrelname": "ucm_external_references_pkey",
+     "bytes": 4587520
+    },
+    {
+     "indexrelname": "ucm_legacy_repositories_legacy_repo_id_key",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_legacy_repositories_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_occurrences_pkey",
+     "bytes": 31285248
+    },
+    {
+     "indexrelname": "ucm_one_published_snapshot_idx",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_operation_unique_output_idx",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_operation_values_pkey",
+     "bytes": 4882432
+    },
+    {
+     "indexrelname": "ucm_operation_values_reverse_idx",
+     "bytes": 4546560
+    },
+    {
+     "indexrelname": "ucm_operations_pkey",
+     "bytes": 3358720
+    },
+    {
+     "indexrelname": "ucm_orm_mapping_names_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_mappings_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_operations_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_queries_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_orm_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_relation_candidates_candidate_idx",
+     "bytes": 65536
+    },
+    {
+     "indexrelname": "ucm_relation_candidates_pkey",
+     "bytes": 1564672
+    },
+    {
+     "indexrelname": "ucm_relation_endpoints_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_relation_sources_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_relations_pkey",
+     "bytes": 83632128
+    },
+    {
+     "indexrelname": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+     "bytes": 106479616
+    },
+    {
+     "indexrelname": "ucm_relations_source_idx",
+     "bytes": 81223680
+    },
+    {
+     "indexrelname": "ucm_relations_target_idx",
+     "bytes": 59408384
+    },
+    {
+     "indexrelname": "ucm_repositories_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_repositories_repository_key_key",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_repository_publications_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_scopes_pkey",
+     "bytes": 4530176
+    },
+    {
+     "indexrelname": "ucm_snapshot_sources_pkey",
+     "bytes": 450560
+    },
+    {
+     "indexrelname": "ucm_snapshot_validations_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_snapshots_pkey",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_snapshots_repository_created_idx",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_snapshots_repository_id_id_key",
+     "bytes": 16384
+    },
+    {
+     "indexrelname": "ucm_source_analyses_pkey",
+     "bytes": 466944
+    },
+    {
+     "indexrelname": "ucm_source_analyses_snapshot_id_source_file_id_key",
+     "bytes": 450560
+    },
+    {
+     "indexrelname": "ucm_source_analysis_capabilities_pkey",
+     "bytes": 5054464
+    },
+    {
+     "indexrelname": "ucm_source_analysis_reasons_pkey",
+     "bytes": 8871936
+    },
+    {
+     "indexrelname": "ucm_source_blobs_pkey",
+     "bytes": 483328
+    },
+    {
+     "indexrelname": "ucm_source_diagnostics_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_source_evidence_legacy_snapshots_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_source_files_pkey",
+     "bytes": 450560
+    },
+    {
+     "indexrelname": "ucm_source_files_snapshot_id_path_key",
+     "bytes": 172032
+    },
+    {
+     "indexrelname": "ucm_sql_access_names_normalized_idx",
+     "bytes": 573440
+    },
+    {
+     "indexrelname": "ucm_sql_access_names_pkey",
+     "bytes": 8929280
+    },
+    {
+     "indexrelname": "ucm_sql_binding_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_sql_bindings_pkey",
+     "bytes": 2277376
+    },
+    {
+     "indexrelname": "ucm_sql_constructions_pkey",
+     "bytes": 1146880
+    },
+    {
+     "indexrelname": "ucm_sql_executions_owner_idx",
+     "bytes": 876544
+    },
+    {
+     "indexrelname": "ucm_sql_executions_pkey",
+     "bytes": 1130496
+    },
+    {
+     "indexrelname": "ucm_sql_fragments_pkey",
+     "bytes": 1236992
+    },
+    {
+     "indexrelname": "ucm_sql_partial_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_sql_placeholders_pkey",
+     "bytes": 2277376
+    },
+    {
+     "indexrelname": "ucm_sql_placeholders_snapshot_id_statement_id_ordinal_key",
+     "bytes": 2424832
+    },
+    {
+     "indexrelname": "ucm_sql_statement_reasons_pkey",
+     "bytes": 8192
+    },
+    {
+     "indexrelname": "ucm_sql_statements_pkey",
+     "bytes": 1163264
+    },
+    {
+     "indexrelname": "ucm_sql_statements_snapshot_id_candidate_id_statement_index_key",
+     "bytes": 1236992
+    },
+    {
+     "indexrelname": "ucm_sql_variants_pkey",
+     "bytes": 1138688
+    },
+    {
+     "indexrelname": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+     "bytes": 1236992
+    },
+    {
+     "indexrelname": "ucm_symbols_name_idx",
+     "bytes": 2629632
+    },
+    {
+     "indexrelname": "ucm_symbols_pkey",
+     "bytes": 7266304
+    },
+    {
+     "indexrelname": "ucm_symbols_qualified_words_idx",
+     "bytes": 614400
+    },
+    {
+     "indexrelname": "ucm_type_refs_pkey",
+     "bytes": 19316736
+    },
+    {
+     "indexrelname": "ucm_values_pkey",
+     "bytes": 4546560
+    }
+   ],
+   "queries": {
+    "symbol_simple": {
+     "wall_ms": [
+      10.311124991858378,
+      10.352500001317821,
+      10.335084007238038,
+      10.403541004052386,
+      10.231500011286698,
+      10.285166994435713,
+      10.278874993673526
+     ],
+     "median_wall_ms": 10.311124991858378,
+     "sql_execution_ms": 10.237,
+     "sql_count": 3,
+     "result_sha256": "b3bcf77fba2689a1c4d6db753c018cdef975e976287d9b800b35393d6b396198",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_symbol_name_idx",
+       "Actual Rows": 1500,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1503,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_name_idx",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1500,
+       "Shared Hit Blocks": 6000,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 51,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 255,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 204,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 204,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "symbol_signature": {
+     "wall_ms": [
+      0.3575000009732321,
+      0.3517500008456409,
+      0.3285830025561154,
+      0.33429199538659304,
+      0.3386669995961711,
+      0.27820801187772304,
+      0.27854100335389376
+     ],
+     "median_wall_ms": 0.33429199538659304,
+     "sql_execution_ms": 0.066,
+     "sql_count": 3,
+     "result_sha256": "d5f72aac6009710388bee5a4e556d35ef26dbdab3340ea930a8de35ac30083f0",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_symbol_name_idx",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 2,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_name_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 2,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "callers": {
+     "wall_ms": [
+      0.7179999956861138,
+      0.7150420133257285,
+      0.7098330097505823,
+      0.7090419967425987,
+      0.7088329875841737,
+      0.7077079935697839,
+      0.7049589912639931
+     ],
+     "median_wall_ms": 0.7090419967425987,
+     "sql_execution_ms": 0.115,
+     "sql_count": 6,
+     "result_sha256": "3cf4ed9366e0507d2a36bce5f2cba7dae900e658a715d353324fb4a70483adec",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_candidate_idx",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 2,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "callees": {
+     "wall_ms": [
+      0.986165992799215,
+      0.9864580060821027,
+      0.9882910089800134,
+      0.9838749974733219,
+      0.9771659970283508,
+      0.9764999995240942,
+      0.9762079862412065
+     ],
+     "median_wall_ms": 0.9838749974733219,
+     "sql_execution_ms": 0.384,
+     "sql_count": 6,
+     "result_sha256": "937caaf4a6f84fc35fe7681e810c931a235c52dbd4c318fc5fe6b08f64d3effe",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 6,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 6,
+       "Shared Hit Blocks": 30,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 6,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 25,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 6,
+       "Shared Hit Blocks": 18,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 12,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 30,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 18,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 7,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 34,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 28,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 21,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 14,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 7,
+       "Shared Hit Blocks": 28,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "executions_owner": {
+     "wall_ms": [
+      1.6129170107888058,
+      1.6376250132452697,
+      1.632249986869283,
+      1.6083340015029535,
+      1.6056250024121255,
+      1.6040419868659228,
+      1.6101670044008642
+     ],
+     "median_wall_ms": 1.6101670044008642,
+     "sql_execution_ms": 0.14,
+     "sql_count": 7,
+     "result_sha256": "f2ff67619783dab625461c7943a3154763bf1693098cdfa95994097a04f9140b",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_owner_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "executions_page": {
+     "wall_ms": [
+      6.233374995645136,
+      6.2763750029262155,
+      6.228709011338651,
+      6.23545800044667,
+      6.230083003174514,
+      6.22424999892246,
+      6.264000010560267
+     ],
+     "median_wall_ms": 6.233374995645136,
+     "sql_execution_ms": 5.247,
+     "sql_count": 7,
+     "result_sha256": "5c78b3be5041eae4bbab458e58d528fa0f2b14d7e624d7889f7377458038dea9",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_pkey",
+       "Actual Rows": 51,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 54,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 255,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 204,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 51,
+       "Shared Hit Blocks": 153,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 50,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 250,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 50,
+       "Shared Hit Blocks": 200,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 50,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 250,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 100,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 250,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 150,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 100,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 500,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 100,
+       "Shared Hit Blocks": 300,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 100,
+       "Shared Hit Blocks": 300,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "table_readers": {
+     "wall_ms": [
+      0.9994580032071099,
+      0.984333993983455,
+      0.9920410084305331,
+      0.97441699472256,
+      0.9767909941729158,
+      0.9833750082179904,
+      1.072708997526206
+     ],
+     "median_wall_ms": 0.984333993983455,
+     "sql_execution_ms": 0.2,
+     "sql_count": 4,
+     "result_sha256": "fa72346a57e882cf07b83ae50e4c8a6de5156036803feb74d8659f6a5e88d879",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_normalized_idx",
+       "Actual Rows": 18,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_data_accesses",
+       "Index Name": "ucm_data_accesses_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 18,
+       "Rows Removed by Filter": 1,
+       "Shared Hit Blocks": 72,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 4,
+       "Shared Hit Blocks": 16,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 13,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_pkey",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Shared Hit Blocks": 15,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Shared Hit Blocks": 9,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "column_writers": {
+     "wall_ms": [
+      0.9214159945258871,
+      0.9135000000242144,
+      0.9298750082962215,
+      0.9131659899139777,
+      0.9244590037269518,
+      0.9266670094802976,
+      0.9294589981436729
+     ],
+     "median_wall_ms": 0.9244590037269518,
+     "sql_execution_ms": 0.188,
+     "sql_count": 4,
+     "result_sha256": "2cb713a3c899df537909faca2eaf28af2d691b5dee557359cf7033ad9043325d",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_normalized_idx",
+       "Actual Rows": 18,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_data_accesses",
+       "Index Name": "ucm_data_accesses_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 18,
+       "Rows Removed by Filter": 1,
+       "Shared Hit Blocks": 84,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_statements",
+       "Index Name": "ucm_sql_statements_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 9,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_executions",
+       "Index Name": "ucm_sql_executions_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 7,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "trace_out": {
+     "wall_ms": [
+      5.660750000970438,
+      5.607999992207624,
+      5.6090839934768155,
+      5.598000003374182,
+      5.580750002991408,
+      5.585250008152798,
+      5.5767089943401515
+     ],
+     "median_wall_ms": 5.598000003374182,
+     "sql_execution_ms": 4.68,
+     "sql_count": 6,
+     "result_sha256": "cbd66a42a0659f9ababb0a95fa13276bd7400f6f3acfbddaf2df989db94e3524",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 2,
+       "Actual Loops": 18,
+       "Rows Removed by Filter": 6,
+       "Shared Hit Blocks": 138,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_source_idx",
+       "Actual Rows": 3,
+       "Actual Loops": 34,
+       "Rows Removed by Filter": 4,
+       "Shared Hit Blocks": 256,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 115,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 495,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 200,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 499,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 6000,
+       "Shared Hit Blocks": 154,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 46,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 226,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 46,
+       "Shared Hit Blocks": 161,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_files",
+       "Actual Rows": 3002,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 79,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 46,
+       "Shared Hit Blocks": 161,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "trace_in": {
+     "wall_ms": [
+      0.9792500059120357,
+      0.9798749961191788,
+      0.9727919969009236,
+      0.9805000008782372,
+      0.9566660010023043,
+      0.9625829989090562,
+      0.9837079996941611
+     ],
+     "median_wall_ms": 0.9792500059120357,
+     "sql_execution_ms": 0.307,
+     "sql_count": 6,
+     "result_sha256": "ee221ce9dbc0ff88c962664232b3c3e2a60ebc3bf411ac42a3e9dfb34f023bc3",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 3,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 15,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 1,
+       "Actual Loops": 4,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 4,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 4,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 8,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 21,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 12,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 5,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 25,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 15,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 5,
+       "Shared Hit Blocks": 20,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "evidence": {
+     "wall_ms": [
+      0.6471249944297597,
+      0.6372499919962138,
+      0.640875005046837,
+      0.6570420082425699,
+      0.6369159964378923,
+      0.6438339914893731,
+      0.6437910051317886
+     ],
+     "median_wall_ms": 0.6437910051317886,
+     "sql_execution_ms": 0.103,
+     "sql_count": 6,
+     "result_sha256": "b5c83c8bf4e8907bd7af055fc6725d8d2812e6405197d5e348018b88ea339d8d",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 10,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 6,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_files",
+       "Index Name": "ucm_source_files_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 2,
+       "Shared Hit Blocks": 8,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "typed_entity": {
+     "wall_ms": [
+      1.9894579891115427,
+      1.9591250020312145,
+      1.823040991439484,
+      1.7934169882209972,
+      1.7761250055627897,
+      1.7329590045846999,
+      1.7527499876450747
+     ],
+     "median_wall_ms": 1.7934169882209972,
+     "sql_execution_ms": 0.088,
+     "sql_count": 18,
+     "result_sha256": "ba0afb44571005a87ddc5bed808e8235ad6f6ce7dfbb46a91f947ff4f0b6f578",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_snapshots",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_symbols",
+       "Index Name": "ucm_symbols_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_capabilities",
+       "Index Name": "ucm_source_analysis_capabilities_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_reasons",
+       "Index Name": "ucm_source_analysis_reasons_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_diagnostics",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_mapping_names",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_database_search_paths",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_binding_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_statement_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_variants",
+       "Index Name": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_operation_values",
+       "Index Name": "ucm_operation_values_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 4,
+       "Shared Read Blocks": 0
+      }
+     ]
+    },
+    "typed_incoming": {
+     "wall_ms": [
+      1.4610830112360418,
+      1.4317080058390275,
+      1.4122919965302572,
+      1.4417920028790832,
+      1.338458008831367,
+      1.402916997903958,
+      1.2815419904654846
+     ],
+     "median_wall_ms": 1.4122919965302572,
+     "sql_execution_ms": 0.138,
+     "sql_count": 20,
+     "result_sha256": "13629d942f007cdb74ef9ef7d8de54bf82167aff80df5e0d10b4b2c8b574c5fa",
+     "scan_nodes": [
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repositories",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_repository_publications",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_snapshots",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 1,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_target_idx",
+       "Actual Rows": 3,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 7,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_candidate_idx",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 2,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Only Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 0,
+       "Actual Loops": 3,
+       "Rows Removed by Filter": 1,
+       "Shared Hit Blocks": 13,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_entities",
+       "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relations",
+       "Index Name": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_capabilities",
+       "Index Name": "ucm_source_analysis_capabilities_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_source_analysis_reasons",
+       "Index Name": "ucm_source_analysis_reasons_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_source_diagnostics",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_mapping_names",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_orm_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_database_search_paths",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_binding_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Seq Scan",
+       "Relation Name": "ucm_sql_statement_reasons",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Rows Removed by Filter": 0,
+       "Shared Hit Blocks": 0,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_access_names",
+       "Index Name": "ucm_sql_access_names_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_sql_variants",
+       "Index Name": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_type_refs",
+       "Index Name": "ucm_type_refs_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_operation_values",
+       "Index Name": "ucm_operation_values_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_relation_candidates",
+       "Index Name": "ucm_relation_candidates_pkey",
+       "Actual Rows": 0,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 3,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_evidence",
+       "Index Name": "ucm_evidence_pkey",
+       "Actual Rows": 1,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      },
+      {
+       "Node Type": "Index Scan",
+       "Relation Name": "ucm_coverage_reasons",
+       "Index Name": "ucm_coverage_reasons_pkey",
+       "Actual Rows": 2,
+       "Actual Loops": 1,
+       "Shared Hit Blocks": 5,
+       "Shared Read Blocks": 0
+      }
+     ]
+    }
+   },
+   "committed_batch_copy_seconds": [],
+   "garbage_collection_seconds": [],
+   "cleanup_mode": "snapshot_gc"
+  }
+ }
+}

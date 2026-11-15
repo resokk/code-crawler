@@ -28,3 +28,12 @@ target/candidate indexes through an ID union and a membership predicate, preserv
 deduplication and all reader semantics without a schema migration. A selective
 3,000-filler integration fixture checks the plan without disabling sequential scans
 or imposing timing thresholds.
+
+Symbol hydration: for a page of keys PG15 hash-joined the whole of `ucm_symbols`,
+a few thousand rows per snapshot. The three joins become LATERAL subqueries ending
+in OFFSET 0, which the planner cannot flatten, so each key goes through the primary
+key. No index is added. A 3,000-symbol integration fixture checks the plan.
+
+The harness takes `--copies N`: N committed copy + GC trials per schema phase, 0 to
+skip them. The controlled run uses three on an idle server; the run above 1M
+entities uses none, since GC of one copy at that size takes hours.

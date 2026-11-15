@@ -91,8 +91,7 @@ rollback, отмене или разрыве соединения. SQL-чита�
 DELETE для RETIRED только в транзакции с `SET LOCAL code_crawler.gc = 'on'`; её
 ставит `jobs.collect_garbage`. Для PUBLISHED, READY и VALIDATING флаг не действует.
 
-Удаление идёт построчно через guard-триггеры и на очень больших snapshots будет
-медленным. Этапы внутри INDEX (capture, analyze, load) в задании не различаются —
+Этапы внутри INDEX (capture, analyze, load) в задании не различаются —
 их показывает прогресс CLI.
 
 Saved resolver contexts and registered deployment mappings retain their selected
@@ -105,3 +104,34 @@ canonical parents in the safe GC allowlist. Deleting any selected snapshot or
 catalog generation invalidates dependent cache entries; these derivatives never
 retain a snapshot. Active C04 cache hits use the same transaction snapshot leases
 as uncached reads. See [resolver-cache.md](resolver-cache.md).
+
+## Время GC
+
+Замер `ucm-query-index-optimization` 2026-11-15: PostgreSQL 15.20, macOS arm64
+(Apple M4), shared_buffers=128MB, сервер без другой нагрузки. Удаляется BUILDING
+snapshot из 141 424 сущностей — копия опубликованного, загруженная `ingest_batch`.
+
+| | Время, с |
+| --- | ---: |
+| загрузка snapshot (`ingest_batch`), 3 запуска | 25,7; 25,0; 24,8 |
+| `collect_garbage` этого snapshot, 3 запуска | 120,9; 122,9; 124,0 |
+
+GC впятеро дольше загрузки. Основное время уходит в COMMIT, где срабатывают
+отложенные проверки внешних ключей: на каждую удалённую строку
+родительской таблицы PostgreSQL ищет ссылающиеся строки во всех дочерних таблицах.
+У части внешних ключей ссылающаяся колонка не входит ни в один индекс, и поиск
+идёт по префиксу `snapshot_id` первичного ключа — по всем строкам snapshot в этой
+таблице. Так устроены, например, `ucm_occurrences.target_symbol_id` и `scope_id`,
+`ucm_type_refs.target_symbol_id`, `ucm_evidence.source_file_id`,
+`ucm_scopes.parent_scope_id` и `owner_symbol_id`, `ucm_operations.scope_id`. Эта
+часть растёт как произведение числа родительских и дочерних строк, то есть
+квадратично от размера snapshot.
+
+Проверка причины: с временными индексами `(snapshot_id, <колонка>)` на 19 таких
+колонках GC того же snapshot занял 65,2 и 60,9 с вместо 122, а загрузка — 25,3 и
+25,6 с. Индексы в схему не добавлены: это решение change
+`b06-large-snapshot-gc-performance` (индексы против удаления порциями).
+
+На snapshot больше 1 млн сущностей GC не замерялся: при квадратичном росте
+удаление одной копии оценивается часами. До b06 большие snapshots стоит удалять
+редко и вне окна индексации; GC по-прежнему атомарен и не трогает PUBLISHED.

@@ -24,3 +24,8 @@ not discover deletion targets from public columns or table-name prefixes.
 and shared source blobs remain outside snapshot cleanup. A clean-schema integration
 test checks registry coverage when migrations add snapshot-owned tables. Foreign
 UUID/text snapshot_id tables remain untouched while BUILDING/RETIRED GC completes.
+
+GC timing: deleting a 141k-entity snapshot takes about five times as long as
+loading it. The time goes to deferred foreign-key checks at commit; referencing
+columns without an index make part of it quadratic. Measured and explained in
+docs/ingest-jobs.md; the fix (indexes or batched deletion) belongs to change b06.

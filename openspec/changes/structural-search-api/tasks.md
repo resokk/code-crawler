@@ -8,6 +8,6 @@
 - [x] Integration test on a Java/JDBC fixture: positive, unresolved, limits, scope.
 - [x] Unit and integration suites pass (integration run on local PostgreSQL 18).
 - [x] Integration suite on PostgreSQL 15.
-- [ ] Query plans and indexes (ucm-query-index-optimization).
+- [x] Query plans and indexes (ucm-query-index-optimization): verified on PG15 at 141k and 1.06M entities.
 
 Verified by [CI / PostgreSQL 15](https://github.com/resokk/code-crawler/actions/runs/43612670068) at `e8e5f18` (842 tests passed).

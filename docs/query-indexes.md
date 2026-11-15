@@ -101,9 +101,11 @@ parsing/validation, cleans its unpublished trial snapshots, and vacuums before p
 It never forces seqscan off or silently substitutes a custom plan for production
 plan_cache_mode=auto. Query outputs must remain identical across phases.
 
-A run at ordinary scale does not close the >1M-single-snapshot acceptance item.
-Full-snapshot validation remains memory intensive; scale and measured rows are
-reported explicitly. Timing values are observations, not portable CI thresholds.
+`--copies N` sets the number of committed copy + GC trials per schema phase
+(default 2); `--copies 0` skips them and never loads the whole snapshot into
+memory, which is how the run above 1M entities is made. The report also records
+indexing and validation time and the process peak RSS before any copy trial.
+Timing values are observations, not portable CI thresholds.
 
 ## PG15/Linux follow-up (2026-11-14)
 
@@ -131,11 +133,9 @@ and then hydrates the bounded page; no migration is needed. The regression check
 filters, order and truncation under normal `plan_cache_mode=auto` after repeated
 calls. It does not disable sequential scans or assert a machine-specific latency.
 
-PG15 can still choose a hash join scanning 6,404 live symbols when hydrating
-simple-name search results, a SQL-execution page or an outward graph trace. This remains recorded as a plan
-limitation; the
-unconditional no-sequential-scan requirement is not fully closed. A snapshot above
-1M entities and memory-bounded validation also remain open.
+On the 2026-11-14 run PG15 chose a hash join scanning 6,404 live symbols when
+hydrating simple-name search results, a SQL-execution page or an outward graph
+trace. That limitation is closed by the 2026-11-15 follow-up below.
 
 ### Recorded PG15 baseline
 
@@ -210,3 +210,107 @@ benchmark database through the explicit UCM registry, under a transaction; no
 foreign table discovery is used. Current-schema trials call normal snapshot GC.
 The report labels this distinction in `cleanup_mode`; historical trial-cleanup
 times are not measurements of the current operational GC preflight.
+
+## PG15 follow-up (2026-11-15): symbol hydration, controlled load and GC
+
+### Symbol hydration
+
+The remaining scans came from three joins to `ucm_symbols`: the simple-name search
+itself, `_entities` (endpoints of every relation page) and the owner lookup of SQL
+executions. The table holds a few thousand rows per snapshot, so for a page of ~50
+keys PostgreSQL 15 preferred a hash join over reading the whole table. Each join is
+now a `LATERAL` subquery ending in `OFFSET 0`: the planner cannot flatten it, so
+every key is looked up through `ucm_symbols_pkey`. Results are unchanged; no index
+or migration is added. `test_symbol_hydration_does_not_scan_all_symbols` reproduces
+the old plan on 3,000 symbols under normal `plan_cache_mode=auto` and fails without
+the rewrite. It does not disable sequential scans.
+
+### Controlled run at 141,424 entities
+
+[Compact results](benchmarks/query-pg15-2026-11-15-141k.json). PostgreSQL 15.20
+(Homebrew), macOS arm64 (Apple M4, 16 GiB), `en_US.UTF-8`, shared_buffers=128MB,
+work_mem=4MB, plan_cache_mode=auto; code at `7deedc1` plus this change. The server
+ran nothing else and the machine was kept awake; three committed copies and three
+GC runs per schema phase (`--copies 3`), seven API samples per query.
+
+After 0018 and on the current schema no structural query scans `ucm_entities`,
+`ucm_symbols`, `ucm_relations`, `ucm_sql_executions`, `ucm_data_accesses` or
+`ucm_sql_access_names` sequentially. Before 0018 the expected scans of
+`ucm_sql_executions` and `ucm_sql_access_names` remain. Query results are identical
+across the three phases.
+
+| Query | SQL pre-0018, ms | SQL post-0018, ms | SQL current, ms | API current median, ms |
+| --- | ---: | ---: | ---: | ---: |
+| symbol_simple | 2.52 | 2.09 | 2.09 | 2.44 |
+| symbol_signature | 0.47 | 0.07 | 0.06 | 0.40 |
+| callers | 0.13 | 0.10 | 0.10 | 0.92 |
+| callees | 0.40 | 0.40 | 0.40 | 1.18 |
+| executions_owner | 0.17 | 0.13 | 0.13 | 1.36 |
+| executions_page | 3.71 | 3.71 | 3.69 | 4.79 |
+| table_readers | 0.55 | 0.17 | 0.17 | 1.32 |
+| column_writers | 0.53 | 0.16 | 0.16 | 1.32 |
+| trace_out | 2.98 | 3.06 | 3.02 | 4.14 |
+| trace_in | 0.32 | 0.34 | 0.35 | 1.00 |
+| evidence | 0.09 | 0.09 | 0.09 | 0.74 |
+| typed_entity | 0.07 | 0.08 | 0.09 | 1.87 |
+| typed_incoming | 0.14 | 0.11 | 0.12 | 1.37 |
+
+These are a different machine from the 2026-11-14 Linux run; compare phases within
+one table, not tables with each other.
+
+| Schema | Committed copy, s (3 runs) | Median, s | GC of the copy, s (3 runs) | Median, s |
+| --- | --- | ---: | --- | ---: |
+| before_0018 | 23.25, 25.36, 25.60 | 25.36 | 124.61, 125.91, 126.60 | 125.91 |
+| after_0018 | 24.57, 25.00, 24.74 | 24.74 | 120.34, 122.77, 122.75 | 122.75 |
+| current | 25.69, 25.01, 24.75 | 25.01 | 120.88, 122.89, 124.04 | 122.89 |
+
+Bounded ingest cost: the medians differ by at most 0.62 s (2.5%) while samples
+within one phase spread by up to 2.35 s, and the phase with the 0018 indexes is not
+the slowest. The four indexes add no measurable load cost at this scale. Indexing
+the sources took 41.97 s and sliced validation 20.41 s; the process peaked at
+416 MiB RSS before the whole batch was loaded for the copy trials.
+
+GC is five times slower than loading the same snapshot and does not depend on the
+0018 indexes. See [ingest-jobs.md](ingest-jobs.md#время-gc) for the cause.
+
+### Snapshot above 1M entities
+
+[Compact results](benchmarks/query-pg15-2026-11-15-1m.json). Same server, settings
+and code; `--groups 1500 --copies 0`: 3,002 generated Java files, one published
+snapshot of 1,060,524 entities (558,004 relations, 207,004 occurrences, 48,004
+symbols, 7,500 SQL statements and executions). Copy trials are skipped at this
+size because of GC time, so no whole batch is loaded into memory.
+
+After 0018 and on the current schema no structural query scans a large UCM table
+sequentially; results are identical across phases.
+
+| Query | SQL pre-0018, ms | SQL post-0018, ms | SQL current, ms | API current median, ms |
+| --- | ---: | ---: | ---: | ---: |
+| symbol_simple | 15.05 | 10.28 | 10.24 | 10.31 |
+| symbol_signature | 3.71 | 0.07 | 0.07 | 0.33 |
+| callers | 0.37 | 0.12 | 0.12 | 0.71 |
+| callees | 0.39 | 0.39 | 0.38 | 0.98 |
+| executions_owner | 0.43 | 0.15 | 0.14 | 1.61 |
+| executions_page | 5.41 | 5.26 | 5.25 | 6.23 |
+| table_readers | 2.89 | 0.21 | 0.20 | 0.98 |
+| column_writers | 2.87 | 0.19 | 0.19 | 0.92 |
+| trace_out | 4.65 | 4.63 | 4.68 | 5.60 |
+| trace_in | 0.30 | 0.29 | 0.31 | 0.98 |
+| evidence | 0.11 | 0.10 | 0.10 | 0.64 |
+| typed_entity | 0.09 | 0.08 | 0.09 | 1.79 |
+| typed_incoming | 0.34 | 0.13 | 0.14 | 1.41 |
+
+Against the 141k snapshot only `symbol_simple` grows noticeably: the name `load`
+matches 1,500 symbols, all of which are read and sorted before the page is cut.
+The other queries stay within about 1.5 ms of SQL time for 7.5 times the data.
+
+| Index (0018), one published snapshot | Bytes |
+| --- | ---: |
+| `ucm_entities_symbol_name_idx` | 483,328 |
+| `ucm_relation_candidates_candidate_idx` | 65,536 |
+| `ucm_sql_access_names_normalized_idx` | 573,440 |
+| `ucm_sql_executions_owner_idx` | 876,544 |
+
+Pipeline: indexing 405.4 s, sliced validation 213.2 s, process peak 1,012 MiB RSS.
+Load cost and GC were not measured at this size; the 141k figures above stand for
+them.
