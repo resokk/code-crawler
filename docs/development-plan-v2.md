@@ -92,6 +92,7 @@ D05 OpenAPI contracts добавляет YAML/JSON discovery, typed syntax facts
 локальные references и deferred remote selectors: [контракт](openapi-contracts.md).
 OpenAPI 3.0/3.1/3.2, QUERY/querystring и incremental lifecycle покрыты тестами;
 Java bindings остаются отдельным D06.
+[PG15 CI: 1028 passed](https://github.com/resokk/code-crawler/actions/runs/43681621831).
 
 ## R6 — Production readiness (P1/P2)
 

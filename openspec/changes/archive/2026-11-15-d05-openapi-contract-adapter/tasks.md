@@ -17,7 +17,7 @@ Acceptance evidence is recorded below; mandatory CI is checked after the impleme
 - [x] 13. Prove repository-scoped incremental behavior and no cross-repository resolution during ingestion.
 - [x] 14. Add PostgreSQL 15 integration test from fixture through published UCM; do not duplicate Java/SQL analyzers.
 - [x] 15. Update docs with supported versions, limitations, evidence, coverage and error behavior.
-- [ ] 16. Run ruff check/format, pytest and mandatory CI before checking tasks.
+- [x] 16. Run ruff check/format, pytest and mandatory CI before checking tasks.
 
 
 ## Acceptance evidence
@@ -46,3 +46,10 @@ characters are diagnosed without aborting the producer. Focused PG15 suite:
 27 passed. Full final PG15 suite: **1028 passed in 132.53s**; lint and formatting
 passed. Initial implementation CI also passed (run 43681365700); final fix CI
 is recorded in completion.md after verification.
+
+
+Final mandatory GitHub CI / PostgreSQL 15 succeeded on
+470f29fd3e2025f7175b68231cd0f49ce1e05022:
+https://github.com/resokk/code-crawler/actions/runs/43681621831
+**1028 passed in 168.30s**; all migrations, lint, format and clean-working-tree
+checks passed. Completed and archived on 2026-11-15 (Europe/Moscow).
