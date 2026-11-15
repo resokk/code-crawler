@@ -28,3 +28,8 @@ contract candidates under explicit contract IDs, with unknown runtime service
 identity. Document titles, servers, callbacks and webhooks do not become service
 bindings/endpoints. Verified with the extended catalog fixtures, 912 unit tests
 and 24 publication/OpenAPI/BPMN/GC integration tests on PostgreSQL 15.
+
+Final published-code acceptance: commit `d20827e`, **1056 passed** on PostgreSQL 15
+(2026-11-15). Ruff check and format check passed. This run includes OpenAPI
+contract namespace/service-uncertainty fixtures, original C02/C03 APIs and pins,
+MCP authorization, pagination, publication failure/rollback/GC and all regressions.
