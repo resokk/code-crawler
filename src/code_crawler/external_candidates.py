@@ -27,7 +27,10 @@ from code_crawler.ucm import (
     Text,
 )
 
-VERSION = "1"
+VERSION = "2"
+_UNKNOWN_TYPE = re.compile(
+    r"(?<![\w.$])(?:kotlin\.unknown|groovy\.dynamic|vbscript\.Variant|unknown|any)(?![\w.$])|<unknown>"
+)
 
 
 class EvidencePath(ContractModel):
@@ -127,7 +130,7 @@ def normalize_selector(
         )
         known = selector.parameter_type_names is not None
         unknown_types = known and any(
-            t in ("unknown", "<unknown>", "?", "*")
+            t in ("?", "*") or _UNKNOWN_TYPE.search(t) is not None
             for t in selector.parameter_type_names
         )
         dynamic = any(

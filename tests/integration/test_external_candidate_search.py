@@ -15,6 +15,7 @@ from code_crawler.publication import (
 from code_crawler.resolver_context import select_context
 from code_crawler.source_evidence import read_source_fragment
 from code_crawler.ucm import (
+    CallableSignature,
     Certainty,
     Coverage,
     EntityRef,
@@ -24,6 +25,7 @@ from code_crawler.ucm import (
     HttpSelector,
     Symbol,
     SymbolSelector,
+    TypeRef,
     callable_key,
     logical_id,
 )
@@ -627,6 +629,114 @@ def test_http_contract_candidates_require_explicit_service_context_and_stay_part
                     conn, "repo", refs["http"], wrong, allowed_repositories=grants
                 )
             ).candidates
+        finally:
+            await conn.close()
+
+    asyncio.run(run())
+
+
+def test_matching_adapter_placeholders_remain_partial_with_complete_source_facts(
+    database_url, ucm_batch_factory
+):
+    async def run():
+        conn = await asyncpg.connect(database_url)
+        try:
+            source = await setup(conn)
+            target = await snapshots.register_repository(
+                conn,
+                snapshots.RepositoryInput(
+                    repository_key="target", display_name="target", source="fixture"
+                ),
+            )
+            source_facts, _ = source_batch(ucm_batch_factory, source)
+            template = next(
+                e
+                for e in source_facts.entities
+                if isinstance(e, ExternalReference) and e.name == "exact"
+            )
+            target_facts = target_batch(ucm_batch_factory, target)
+            target_method = next(
+                e
+                for e in target_facts.entities
+                if isinstance(e, Symbol) and e.name == "m"
+            )
+            refs, methods = [], []
+            for index, marker in enumerate(
+                (
+                    "kotlin.unknown",
+                    "groovy.dynamic",
+                    "vbscript.Variant",
+                    "List<unknown>",
+                    "Map<String,groovy.dynamic>",
+                    "any",
+                )
+            ):
+                name = f"uncertain{index}"
+                fqn = "remote.Client." + name
+                key = f"external:placeholder:{index}"
+                refs.append(
+                    template.model_copy(
+                        update={
+                            "logical_key": key,
+                            "id": logical_id(
+                                str(source), EntityType.EXTERNAL_REFERENCE, key
+                            ),
+                            "name": name,
+                            "selector": SymbolSelector(
+                                qualified_name=fqn, parameter_type_names=(marker,)
+                            ),
+                        }
+                    )
+                )
+                signature = CallableSignature(parameter_types=(TypeRef(name=marker),))
+                method_key = callable_key(target_method.owner_key, name, signature)
+                methods.append(
+                    Symbol(
+                        repository_id=str(target),
+                        logical_key=method_key,
+                        id=logical_id(str(target), EntityType.SYMBOL, method_key),
+                        name=name,
+                        symbol_kind="METHOD",
+                        qualified_name=fqn,
+                        owner_key=target_method.owner_key,
+                        signature=signature,
+                        source_range=target_method.source_range,
+                    )
+                )
+            source_snapshot = await create(
+                conn,
+                source,
+                UcmBatch(
+                    repository_id=source, entities=(*source_facts.entities, *refs)
+                ),
+            )
+            target_snapshot = await create(
+                conn,
+                target,
+                UcmBatch(
+                    repository_id=target, entities=(*target_facts.entities, *methods)
+                ),
+            )
+            for repo, sid in ((source, source_snapshot), (target, target_snapshot)):
+                await validate_snapshot(conn, sid)
+                await publish_snapshot(conn, repo, sid, expected_snapshot_id=None)
+            grants = frozenset({"repo", "target"})
+            context = await select_context(
+                conn, "LATEST_INDEXED", ("repo", "target"), allowed_repositories=grants
+            )
+            before = await conn.fetchval("SELECT count(*) FROM ucm_relations")
+            for reference in refs:
+                result = await search.resolve_external_reference(
+                    conn, "repo", reference.id, context, allowed_repositories=grants
+                )
+                assert result.reference_certainty == Certainty.STATIC_PROVEN
+                assert result.reference_coverage.status == "COMPLETE"
+                assert result.status == "PARTIAL" and result.target is None
+                assert len(result.candidates) == 1
+                assert result.candidates[0].certainty == Certainty.INFERRED
+                assert result.coverage.analyzer_version == "2"
+                assert "unknown parameter type identity" in result.reasons
+            assert await conn.fetchval("SELECT count(*) FROM ucm_relations") == before
         finally:
             await conn.close()
 

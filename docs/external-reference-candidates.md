@@ -38,7 +38,12 @@ template execution semantics are not inferred.
 RESOLVED means one exact **declaration selector identity** in the selected indexed
 context, never proof of invocation/deployment. It requires a complete selector,
 STATIC_PROVEN/COMPLETE source facts, compatible version constraints and accessible
-source/target Evidence paths. Symbol names without signature proof remain PARTIAL.
+source/target Evidence paths. Symbol names without signature proof remain PARTIAL. Resolver analyzer version 2
+also treats adapter placeholders (`kotlin.unknown`, `groovy.dynamic`,
+`vbscript.Variant`, TypeScript `any`/`unknown`) as incomplete type identity,
+including nested generic/array types. Exact-key candidates remain discoverable,
+but matching placeholder spellings cannot produce RESOLVED/STATIC_PROVEN.
+Fully qualified concrete names such as `org.unknown` are not placeholder matches.
 Multiple compatible candidates produce AMBIGUOUS; no candidates produces UNRESOLVED.
 Hints can constrain lookup (repository key, exact commit/snapshot ID), but never
 serve as proof themselves. Unknown framework semantics and partial source facts

@@ -20,3 +20,16 @@ They retain PARTIAL certainty until canonical service/implementation binding exi
 
 Validation on the integrated D02/D05/sealed-catalog baseline: ruff check/format
 and full PostgreSQL 15 suite: 1062 passed.
+
+## Adapter-placeholder proof hardening
+
+Resolver analyzer version 2 rejects Kotlin/Groovy/VBScript and TypeScript
+unknown/dynamic parameter markers as complete identity proof, including nested
+generic/array forms. Exact lookup keys and candidate discovery are preserved;
+unique matching placeholders stay PARTIAL/INFERRED even with STATIC_PROVEN,
+COMPLETE source envelopes. Concrete qualified names remain eligible.
+
+Regression evidence includes the initially failing marker normalization cases,
+positive type-name boundaries and a PostgreSQL fixture with matching unknown
+signatures. Canonical relations remain unchanged. Validation on cc8b385 plus this
+fix: **1107 passed** with PostgreSQL 15; ruff check and format check passed.

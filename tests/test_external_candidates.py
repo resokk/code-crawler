@@ -88,3 +88,41 @@ def test_unknown_frameworks_and_parameter_types_never_become_complete_symbol_pro
     ):
         lookup = normalize_selector(selector)
         assert not lookup.complete and lookup.reasons
+
+
+@pytest.mark.parametrize(
+    "type_name",
+    [
+        "kotlin.unknown",
+        "groovy.dynamic",
+        "vbscript.Variant",
+        "List<unknown>",
+        "kotlin.unknown[]",
+        "Map<String,groovy.dynamic>",
+        "any",
+    ],
+)
+def test_adapter_unknown_types_are_not_declaration_identity_proof(type_name):
+    selector = SymbolSelector(
+        qualified_name="api.Client.m", parameter_type_names=(type_name,)
+    )
+    lookup = normalize_selector(selector)
+    assert lookup.key == ("api.Client.m", (type_name,))
+    assert not lookup.complete
+    assert "unknown parameter type identity" in lookup.reasons
+
+
+@pytest.mark.parametrize(
+    "type_name",
+    [
+        "org.unknown",
+        "UnknownType",
+        "kotlin.Any",
+        "groovy.dynamicThing",
+        "List<KnownUnknown>",
+    ],
+)
+def test_concrete_type_names_are_not_confused_with_unknown_markers(type_name):
+    assert normalize_selector(
+        SymbolSelector(qualified_name="api.Client.m", parameter_type_names=(type_name,))
+    ).complete
