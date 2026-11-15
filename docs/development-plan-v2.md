@@ -115,3 +115,4 @@ D07 Kafka message intelligence augments canonical Java profiles with producer,
 listener/subscription, topic declaration, DTO/serde and configuration candidates.
 It preserves explicit uncertainty and deferred remote resource keys; broker/runtime
 and cross-repository linking are not inferred. [Contract](kafka-message-intelligence.md).
+[PG15 CI: 1171 passed](https://github.com/resokk/code-crawler/actions/runs/43707790495).

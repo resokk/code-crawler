@@ -15,7 +15,7 @@
 - [x] 13. Add PostgreSQL 15 integration test from fixture to published UCM with Evidence and SourceAnalysis.
 - [x] 14. Check idempotence and incremental invalidation when adapter fingerprint changes.
 - [x] 15. Update language-specific docs and mark unsupported behavior in Coverage.
-- [ ] 16. Run ruff, unit, PG15 integration tests, and review regression results.
+- [x] 16. Run ruff, unit, PG15 integration tests, and review regression results.
 
 
 ## Acceptance evidence
@@ -41,3 +41,10 @@ Spring bean/deployment or cross-repository delivery proof is claimed. Global Kaf
 discovery/resolver integration is deferred; qualified local resource lookup passes.
 The complete contract and limitations are in docs/kafka-message-intelligence.md.
 Mandatory GitHub CI is recorded after the implementation run.
+
+
+Final mandatory CI / PostgreSQL 15 succeeded on
+f840ad936379ca9b2c44fe75d47f8e9fa106e642:
+https://github.com/resokk/code-crawler/actions/runs/43707790495
+**1171 passed in 148.18s**. All migrations, lint, formatting and clean-working-tree
+checks passed. Completed and archived on 2026-11-15 (Europe/Moscow).
