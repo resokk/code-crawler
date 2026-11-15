@@ -5,6 +5,9 @@ from uuid import UUID
 
 import asyncpg
 
+from code_crawler import external_candidates
+from code_crawler.resolver_context import ResolverContext
+
 MAX_LIMIT = 200
 MAX_DEPTH = 6
 
@@ -772,3 +775,23 @@ SELECT jsonb_build_object(
     for item in result["items"]:
         item.update(resolution="UNRESOLVED", certainty="UNKNOWN")
     return result
+
+
+async def resolve_external_reference(
+    conn: asyncpg.Connection,
+    source_repository_key: str,
+    reference_id: str,
+    context: ResolverContext,
+    *,
+    allowed_repositories: frozenset[str],
+    limit: int = 50,
+) -> external_candidates.CandidateResolution:
+    """Find bounded external declaration candidates in an authorized immutable version context."""
+    return await external_candidates.resolve_external_reference(
+        conn,
+        source_repository_key,
+        reference_id,
+        context,
+        allowed_repositories=allowed_repositories,
+        limit=limit,
+    )

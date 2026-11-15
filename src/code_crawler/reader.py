@@ -251,3 +251,41 @@ async def published_reader(
             yield reader
         finally:
             reader._active = False
+
+
+@asynccontextmanager
+async def selected_reader(
+    conn: asyncpg.Connection,
+    repository_key: str,
+    snapshot_id: UUID,
+    *,
+    allowed_repositories: frozenset[str],
+) -> AsyncIterator[PublishedReader]:
+    """Read one authorized published/retained version inside a coherent read transaction."""
+    from code_crawler.discovery import authorize
+
+    authorize((repository_key,), allowed_repositories)
+    if (
+        not conn.is_in_transaction()
+        or await conn.fetchval("SHOW transaction_isolation")
+        not in ("repeatable read", "serializable")
+        or await conn.fetchval("SHOW transaction_read_only") != "on"
+    ):
+        raise ValueError(
+            "selected reader requires a read-only repeatable-read transaction"
+        )
+    repository_id = await conn.fetchval(
+        "SELECT s.repository_id FROM public.ucm_snapshots s JOIN public.ucm_repositories r ON r.id=s.repository_id "
+        "WHERE r.repository_key=$1 AND s.id=$2 AND s.state IN ('PUBLISHED','RETIRED')",
+        repository_key,
+        snapshot_id,
+    )
+    if repository_id is None:
+        raise ValueError(
+            "snapshot is not a published/retained version of this repository"
+        )
+    view = PublishedReader(conn, repository_id, snapshot_id, _token=_CONTEXT_TOKEN)
+    try:
+        yield view
+    finally:
+        view._active = False

@@ -43,3 +43,8 @@ Reader использует тот же normalized document decoder, что publ
 разные publications, их ответы содержат snapshot_id. Reader не добавляет auth.
 
 Сквозная regression: [canonical-e2e.md](canonical-e2e.md).
+
+Authorized retained-version reads for cross-repository resolution use
+`selected_reader` inside a read-only REPEATABLE READ transaction. It verifies exact
+repository ownership and PUBLISHED/RETIRED state without falling back to a current
+publication. See [external-reference-candidates.md](external-reference-candidates.md).

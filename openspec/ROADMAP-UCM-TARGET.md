@@ -25,9 +25,9 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 
 ## Stream C — discovery/GraphRAG
 - C01 search-document-persistence: versioned derived document generations — [completed](changes/archive/2026-11-15-c01-search-document-persistence/completion.md), PG15 CI passed
-- C02 global-discovery-catalog: published lookup keys across repo snapshots
-- C03 repository-version-context: latest, pinned and deployment versions
-- C04 external-reference-candidate-search: bounded query-time resolution with Evidence
+- C02 global-discovery-catalog: [completed](changes/archive/2026-11-15-c02-global-discovery-catalog/completion.md), versioned authorized declaration catalog
+- C03 repository-version-context: [completed](changes/archive/2026-11-15-c03-repository-version-context/completion.md), immutable latest/pinned/deployment manifests and retention
+- C04 external-reference-candidate-search: [completed](changes/archive/2026-11-15-c04-external-reference-candidate-search/completion.md), bounded identity resolution with Evidence
 - C05 resolver-cache-and-invalidation: context and generation aware cache
 - C06 cross-repository-graph-query: bounded authorized multi-repo traversal
 - C07 embedding-generation-pipeline: model choice, vector registry/cache and pgvector

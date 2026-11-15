@@ -1,0 +1,71 @@
+# External reference candidate search (C04)
+
+`search.resolve_external_reference(conn, source_repository_key, reference_id,
+context, *, allowed_repositories, limit=50)` reads one ExternalReference from its
+exact C03-selected source snapshot and searches C02 declarations only in the same
+immutable context. It returns a typed `CandidateResolution` (`contract_version=1`),
+source/origin IDs, context fingerprint, source Evidence paths, candidates, resolution,
+coverage and reasons. It never persists cross-repository Relations or changes the
+canonical ExternalReference (which remains UNRESOLVED).
+
+Both source and every selected target repository require explicit trusted grants.
+Absent/insufficient authorization fails before reading facts. Public MCP exposure
+and principal ACL integration belong to A02/C09; this backend API never accepts an
+untrusted client-provided allowlist as an authorization decision.
+
+The entire query runs in read-only REPEATABLE READ (or an existing compatible
+transaction). Fanout is at most 32 selected repositories and 1..200 candidates;
+SQL fetches limit+1, ordered by repository/snapshot/entity. Truncation or an unavailable
+catalog generation yields PARTIAL, even if only one visible candidate remains.
+Pinned retired versions are supported. No fallback to another snapshot, global latest,
+name similarity or a remote network lookup occurs.
+
+Selector keys preserve case and namespace: Symbol FQN + exact ordered signature
+(unknown differs from zero parameters), DB database/version/catalog/schema/kind/name,
+HTTP service/method/path, BPMN process/worker IDs, Kafka topic IDs. Known framework
+prefixes remain framework selectors; they cannot be promoted to ordinary symbol
+proof. Connection aliases require an unambiguous canonical DatabaseContext in the origin
+entity’s source file; an alias
+is never treated as a global database identity. Missing schema uses explicit context
+search-path selection, without guessing across schemas. Dynamic identifiers remain
+partial. Kafka/worker declarations remain UNSUPPORTED in C02. OpenAPI operations (D05) are
+HTTP candidates: explicit service constraints require a matching deployment mapping.
+Without that mapping no arbitrary repository is selected. Contract facts do not
+declare canonical service identity/implementation binding, so HTTP matches stay
+PARTIAL even when unique. Paths are literal: server base-path expansion and route
+template execution semantics are not inferred.
+
+RESOLVED means one exact **declaration selector identity** in the selected indexed
+context, never proof of invocation/deployment. It requires a complete selector,
+STATIC_PROVEN/COMPLETE source facts, compatible version constraints and accessible
+source/target Evidence paths. Symbol names without signature proof remain PARTIAL.
+Multiple compatible candidates produce AMBIGUOUS; no candidates produces UNRESOLVED.
+Hints can constrain lookup (repository key, exact commit/snapshot ID), but never
+serve as proof themselves. Unknown framework semantics and partial source facts
+never become STATIC_PROVEN. Candidate discovery certainty and source fact certainty
+are returned separately.
+
+HTTP candidates additionally retain the originating OpenAPI `contract_id`; contracts
+with the same route remain separate candidates.
+
+Evidence paths include repository/snapshot/entity/generation, archived source file
+hash/path/range and the matching rule. Source bytes can be obtained explicitly with
+`source_evidence.read_source_fragment`; search does not copy entire files into every
+candidate. Legacy/unavailable source is explicit and prevents conclusive resolution.
+There is no resolver cache (C05) and no new storage schema in C04.
+
+Example (trusted backend; grants come from authorization, not request parameters):
+
+```python
+context = await select_context(
+    conn, "LATEST_INDEXED", ("app", "library"), allowed_repositories=grants
+)
+result = await search.resolve_external_reference(
+    conn, "app", external_id, context, allowed_repositories=grants, limit=20
+)
+```
+
+For reusable selections call `save_context`; future queries load the same manifest
+with `load_context`. An ephemeral context still selects exact versions for this
+call, but persistent retention requires saving it. `selected_reader` provides the
+same authorized, retained-snapshot read path inside an existing read-only transaction.
