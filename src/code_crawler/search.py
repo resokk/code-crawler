@@ -72,7 +72,11 @@ async def _entities(
         " WHERE t.snapshot_id=e.snapshot_id AND t.owner_id=e.entity_id "
         " AND t.role='PARAMETER') AS parameter_types "
         "FROM public.ucm_entities e "
-        "LEFT JOIN public.ucm_symbols s USING (snapshot_id, entity_id) "
+        # OFFSET 0 не даёт планировщику заменить поиск по ключу на hash join с
+        # полным чтением ucm_symbols: PostgreSQL 15 выбирал его для страницы результатов.
+        "LEFT JOIN LATERAL (SELECT y.symbol_kind, y.qualified_name "
+        " FROM public.ucm_symbols y WHERE y.snapshot_id=e.snapshot_id "
+        " AND y.entity_id=e.entity_id OFFSET 0) s ON true "
         "LEFT JOIN public.ucm_source_files f ON f.snapshot_id=e.snapshot_id "
         " AND f.entity_id=e.source_file_id "
         # Сам файл: у SOURCE_FILE нет source_file_id, его путь — в собственной строке.
@@ -178,13 +182,15 @@ async def search_symbols(
     snapshot_id = await _snapshot(conn, repository_key)
     rows = await conn.fetch(
         # UNION вместо OR по двум таблицам: каждая ветка идёт по своему индексу.
-        "SELECT s.entity_id FROM public.ucm_symbols s "
-        "WHERE s.snapshot_id=$1 AND s.entity_id IN ("
+        # OFFSET 0: каждый найденный ID читается по ключу, см. _entities.
+        "SELECT s.entity_id FROM ("
         " SELECT entity_id FROM public.ucm_entities "
         " WHERE snapshot_id=$1 AND entity_type='SYMBOL' AND name=$2 "
-        " UNION ALL SELECT entity_id FROM public.ucm_symbols "
-        " WHERE snapshot_id=$1 AND qualified_name=$2) "
-        "AND ($3::text IS NULL OR s.symbol_kind=$3) "
+        " UNION SELECT entity_id FROM public.ucm_symbols "
+        " WHERE snapshot_id=$1 AND qualified_name=$2) m "
+        "JOIN LATERAL (SELECT y.* FROM public.ucm_symbols y "
+        " WHERE y.snapshot_id=$1 AND y.entity_id=m.entity_id OFFSET 0) s ON true "
+        "WHERE ($3::text IS NULL OR s.symbol_kind=$3) "
         "AND ($4::text[] IS NULL OR $4 = COALESCE((SELECT array_agg(t.name ORDER BY t.position) "
         " FROM public.ucm_type_refs t WHERE t.snapshot_id=s.snapshot_id "
         " AND t.owner_id=s.entity_id AND t.role='PARAMETER'), '{}')) "
@@ -323,8 +329,9 @@ async def _executions(
         "SELECT x.entity_id AS id, x.api, x.owner_symbol_id, o.qualified_name AS owner, "
         "f.path, e.start_line, e.end_line FROM public.ucm_sql_executions x "
         "JOIN public.ucm_entities e USING (snapshot_id, entity_id) "
-        "JOIN public.ucm_symbols o ON o.snapshot_id=x.snapshot_id "
-        " AND o.entity_id=x.owner_symbol_id "
+        "JOIN LATERAL (SELECT y.qualified_name FROM public.ucm_symbols y "
+        " WHERE y.snapshot_id=x.snapshot_id AND y.entity_id=x.owner_symbol_id "
+        " OFFSET 0) o ON true "
         "LEFT JOIN public.ucm_source_files f ON f.snapshot_id=e.snapshot_id "
         " AND f.entity_id=e.source_file_id "
         f"WHERE x.snapshot_id=$1 AND {where}",

@@ -294,3 +294,72 @@ def test_lexical_search_ranks_filters_and_pages(
             await conn.close()
 
     asyncio.run(run())
+
+
+def test_symbol_hydration_does_not_scan_all_symbols(database_url: str) -> None:
+    """A page of results must look symbols up by key, however small the table is."""
+    import json
+
+    from test_publication import create, setup
+
+    from code_crawler.ingestion import ingest_stream
+    from code_crawler.query_benchmark import RecordingConnection, plan_nodes
+    from code_crawler.ucm import EntityType, Symbol, logical_id
+
+    async def run() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            repo = await setup(conn)
+            snap = await create(conn, repo)
+
+            async def symbols():
+                yield tuple(
+                    Symbol(
+                        repository_id=str(repo),
+                        logical_key=f"java:type:app.C{i}",
+                        id=logical_id(
+                            str(repo), EntityType.SYMBOL, f"java:type:app.C{i}"
+                        ),
+                        # Каждое имя встречается 60 раз: страница из 50 результатов.
+                        name=f"C{i % 50}",
+                        symbol_kind="CLASS",
+                        qualified_name=f"app.C{i}",
+                    )
+                    for i in range(3000)
+                )
+
+            await ingest_stream(conn, snap, repo, symbols())
+            await validate_snapshot(conn, snap)
+            await publish_snapshot(conn, repo, snap, expected_snapshot_id=None)
+            await conn.execute("ANALYZE")
+            proxy = RecordingConnection(conn)
+            for _ in range(7):
+                proxy.queries.clear()
+                found = await search.search_symbols(proxy, "repo", "C7")
+                assert len(found["items"]) == 50 and found["truncated"]
+            scans = []
+            for query in proxy.queries:
+                plan = json.loads(
+                    await conn.fetchval(
+                        "EXPLAIN (ANALYZE, FORMAT JSON) " + query.sql, *query.arguments
+                    )
+                )[0]
+                scans += [
+                    node
+                    for node in plan_nodes(plan["Plan"])
+                    if node.get("Relation Name") == "ucm_symbols"
+                ]
+            assert scans
+            assert not [
+                (
+                    node["Relation Name"],
+                    node.get("Filter"),
+                    node.get("Parent Relationship"),
+                )
+                for node in scans
+                if node["Node Type"] == "Seq Scan"
+            ]
+        finally:
+            await conn.close()
+
+    asyncio.run(run())
