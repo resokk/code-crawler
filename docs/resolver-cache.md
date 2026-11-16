@@ -40,7 +40,10 @@ READ transaction. Transaction-scoped snapshot leases also protect cache hits fro
 concurrent GC and are released with the request. Warming computes in such a read, then revalidates versions before
 an atomic write. Snapshot/generation key-share locks and the GC/cache transaction
 locks prevent insertion against disappearing dependencies. A generation race skips
-the write rather than storing a result under a newer version. Dependency cascades
+the write rather than storing a result under a newer version. Snapshot GC or
+deployment release between computation and write likewise returns
+`stored=false, reason=CONTEXT_CHANGED`; invalid requests still fail during the
+initial authorized read. Dependency cascades
 remove entries on snapshot GC or catalog-generation deletion. Both cache tables
 are explicitly listed before their parents in the safe GC registry; their `snapshot_id`
 identifies the source owner (entries) or selected dependency (dependency rows). Caches do not retain

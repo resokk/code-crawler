@@ -18,3 +18,21 @@ Validation: ruff check/format and full mandatory PostgreSQL 15 suite: 1180 passe
 The integrated baseline includes safe-GC preflight/leases, resolver unknown-type
 handling, sliced canonical validation and D07 Kafka message facts. Cache storage
 uses migration 0028 after Kafka migration 0027.
+
+## Post-computation context-loss hardening
+
+A snapshot collected by GC or a deployment released after the authorized read
+can disappear before the cache write. Maintenance now returns
+`stored=false, reason=CONTEXT_CHANGED` for that race instead of leaking an
+unhandled validation error. Invalid initial requests and denied grants still fail;
+canonical source facts and unrelated cache entries are not changed.
+
+Both race scenarios were reproduced as failing PostgreSQL regressions, then
+verified after the fix. Validation on 02fc9e0 plus this hardening:
+**1182 passed** with mandatory PostgreSQL 15 and strict markers; ruff check/format
+passed. The existing C05 API and storage schema remain unchanged.
+
+Integrated GitHub acceptance for `c6fdee2621faa25b650f217484ea762cc6111dbd`:
+[CI / PostgreSQL 15](https://github.com/resokk/code-crawler/actions/runs/43805870780)
+completed successfully: **1247 passed**, including current C06/D06 changes, lint,
+format checks and migration application on a clean PostgreSQL 15 database.
