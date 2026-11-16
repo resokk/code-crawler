@@ -1,4 +1,4 @@
-CREATE TABLE public.ucm_entities (
+CREATE TABLE ucm_entities (
     snapshot_id uuid NOT NULL,
     entity_id text NOT NULL CHECK (entity_id ~ '^ucm:[0-9a-f]{64}$'),
     repository_id uuid NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE public.ucm_entities (
     PRIMARY KEY (snapshot_id, entity_id),
     UNIQUE (snapshot_id, entity_id, entity_type),
     UNIQUE (snapshot_id, entity_type, logical_key),
-    FOREIGN KEY (repository_id, snapshot_id) REFERENCES public.ucm_snapshots(repository_id,id),
+    FOREIGN KEY (repository_id, snapshot_id) REFERENCES ucm_snapshots(repository_id,id),
     CHECK (
         (source_file_id IS NULL AND start_line IS NULL AND start_byte_column IS NULL
          AND end_line IS NULL AND end_byte_column IS NULL) OR
@@ -26,10 +26,10 @@ CREATE TABLE public.ucm_entities (
          AND (end_line,end_byte_column) >= (start_line,start_byte_column))
     )
 );
-CREATE INDEX ucm_entities_snapshot_type_idx ON public.ucm_entities(snapshot_id,entity_type);
-CREATE INDEX ucm_entities_source_idx ON public.ucm_entities(snapshot_id,source_file_id);
+CREATE INDEX ucm_entities_snapshot_type_idx ON ucm_entities(snapshot_id,entity_type);
+CREATE INDEX ucm_entities_source_idx ON ucm_entities(snapshot_id,source_file_id);
 
-CREATE TABLE public.ucm_source_files (
+CREATE TABLE ucm_source_files (
     snapshot_id uuid NOT NULL,
     entity_id text NOT NULL,
     entity_type text NOT NULL DEFAULT 'SOURCE_FILE' CHECK (entity_type = 'SOURCE_FILE'),
@@ -40,11 +40,11 @@ CREATE TABLE public.ucm_source_files (
     UNIQUE (snapshot_id,path),
     PRIMARY KEY (snapshot_id,entity_id),
     FOREIGN KEY (snapshot_id,entity_id,entity_type)
-        REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type)
+        REFERENCES ucm_entities(snapshot_id,entity_id,entity_type)
         DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE TABLE public.ucm_symbols (
+CREATE TABLE ucm_symbols (
     snapshot_id uuid NOT NULL,
     entity_id text NOT NULL,
     entity_type text NOT NULL DEFAULT 'SYMBOL' CHECK (entity_type = 'SYMBOL'),
@@ -56,11 +56,11 @@ CREATE TABLE public.ucm_symbols (
     CHECK ((symbol_kind IN ('METHOD','CONSTRUCTOR')) = (owner_key IS NOT NULL)),
     PRIMARY KEY (snapshot_id,entity_id),
     FOREIGN KEY (snapshot_id,entity_id,entity_type)
-        REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type)
+        REFERENCES ucm_entities(snapshot_id,entity_id,entity_type)
         DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE TABLE public.ucm_scopes (
+CREATE TABLE ucm_scopes (
     snapshot_id uuid NOT NULL,
     entity_id text NOT NULL,
     entity_type text NOT NULL DEFAULT 'SCOPE' CHECK (entity_type = 'SCOPE'),
@@ -68,15 +68,15 @@ CREATE TABLE public.ucm_scopes (
     scope_kind text NOT NULL CHECK (scope_kind IN ('FILE','TYPE','CALLABLE','BLOCK')),
     parent_scope_id text,
     owner_symbol_id text,
-    FOREIGN KEY (snapshot_id,parent_scope_id) REFERENCES public.ucm_scopes(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
-    FOREIGN KEY (snapshot_id,owner_symbol_id) REFERENCES public.ucm_symbols(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,parent_scope_id) REFERENCES ucm_scopes(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,owner_symbol_id) REFERENCES ucm_symbols(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
     PRIMARY KEY (snapshot_id,entity_id),
     FOREIGN KEY (snapshot_id,entity_id,entity_type)
-        REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type)
+        REFERENCES ucm_entities(snapshot_id,entity_id,entity_type)
         DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE TABLE public.ucm_occurrences (
+CREATE TABLE ucm_occurrences (
     snapshot_id uuid NOT NULL,
     entity_id text NOT NULL,
     entity_type text NOT NULL DEFAULT 'OCCURRENCE' CHECK (entity_type = 'OCCURRENCE'),
@@ -86,15 +86,15 @@ CREATE TABLE public.ucm_occurrences (
     resolution text NOT NULL CHECK (resolution IN ('UNRESOLVED','RESOLVED','AMBIGUOUS')),
     target_symbol_id text,
     CHECK ((resolution = 'RESOLVED') = (target_symbol_id IS NOT NULL)),
-    FOREIGN KEY (snapshot_id,scope_id) REFERENCES public.ucm_scopes(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
-    FOREIGN KEY (snapshot_id,target_symbol_id) REFERENCES public.ucm_symbols(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,scope_id) REFERENCES ucm_scopes(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,target_symbol_id) REFERENCES ucm_symbols(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
     PRIMARY KEY (snapshot_id,entity_id),
     FOREIGN KEY (snapshot_id,entity_id,entity_type)
-        REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type)
+        REFERENCES ucm_entities(snapshot_id,entity_id,entity_type)
         DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE TABLE public.ucm_values (
+CREATE TABLE ucm_values (
     snapshot_id uuid NOT NULL,
     entity_id text NOT NULL,
     entity_type text NOT NULL DEFAULT 'VALUE' CHECK (entity_type = 'VALUE'),
@@ -108,42 +108,42 @@ CREATE TABLE public.ucm_values (
     CHECK (value_kind <> 'UNKNOWN' OR partial),
     PRIMARY KEY (snapshot_id,entity_id),
     FOREIGN KEY (snapshot_id,entity_id,entity_type)
-        REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type)
+        REFERENCES ucm_entities(snapshot_id,entity_id,entity_type)
         DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE TABLE public.ucm_operations (
+CREATE TABLE ucm_operations (
     snapshot_id uuid NOT NULL,
     entity_id text NOT NULL,
     entity_type text NOT NULL DEFAULT 'OPERATION' CHECK (entity_type = 'OPERATION'),
 
     operation_kind text NOT NULL CHECK (operation_kind IN ('READ','ASSIGN','CALL','RETURN','CONCAT')),
     scope_id text NOT NULL,
-    FOREIGN KEY (snapshot_id,scope_id) REFERENCES public.ucm_scopes(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,scope_id) REFERENCES ucm_scopes(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
     PRIMARY KEY (snapshot_id,entity_id),
     FOREIGN KEY (snapshot_id,entity_id,entity_type)
-        REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type)
+        REFERENCES ucm_entities(snapshot_id,entity_id,entity_type)
         DEFERRABLE INITIALLY DEFERRED
 );
 
-ALTER TABLE public.ucm_entities ADD FOREIGN KEY (snapshot_id,source_file_id)
-    REFERENCES public.ucm_source_files(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE public.ucm_symbols ADD FOREIGN KEY (snapshot_id,scope_id)
-    REFERENCES public.ucm_scopes(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED;
-CREATE INDEX ucm_symbols_name_idx ON public.ucm_symbols(snapshot_id,qualified_name);
-CREATE TABLE public.ucm_operation_values (
+ALTER TABLE ucm_entities ADD FOREIGN KEY (snapshot_id,source_file_id)
+    REFERENCES ucm_source_files(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE ucm_symbols ADD FOREIGN KEY (snapshot_id,scope_id)
+    REFERENCES ucm_scopes(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED;
+CREATE INDEX ucm_symbols_name_idx ON ucm_symbols(snapshot_id,qualified_name);
+CREATE TABLE ucm_operation_values (
     snapshot_id uuid NOT NULL,
     operation_id text NOT NULL,
     direction text NOT NULL CHECK (direction IN ('INPUT','OUTPUT')),
     position integer NOT NULL CHECK (position >= 0),
     value_id text NOT NULL,
     PRIMARY KEY (snapshot_id,operation_id,direction,position),
-    FOREIGN KEY (snapshot_id,operation_id) REFERENCES public.ucm_operations(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
-    FOREIGN KEY (snapshot_id,value_id) REFERENCES public.ucm_values(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED
+    FOREIGN KEY (snapshot_id,operation_id) REFERENCES ucm_operations(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,value_id) REFERENCES ucm_values(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED
 );
-CREATE UNIQUE INDEX ucm_operation_unique_output_idx ON public.ucm_operation_values(snapshot_id,operation_id,value_id) WHERE direction='OUTPUT';
-CREATE INDEX ucm_operation_values_reverse_idx ON public.ucm_operation_values(snapshot_id,value_id);
-CREATE TABLE public.ucm_type_refs (
+CREATE UNIQUE INDEX ucm_operation_unique_output_idx ON ucm_operation_values(snapshot_id,operation_id,value_id) WHERE direction='OUTPUT';
+CREATE INDEX ucm_operation_values_reverse_idx ON ucm_operation_values(snapshot_id,value_id);
+CREATE TABLE ucm_type_refs (
     snapshot_id uuid NOT NULL,
     owner_id text NOT NULL,
     role text NOT NULL CHECK (role IN ('TYPE','PARAMETER','RETURN','CALLEE')),
@@ -153,22 +153,22 @@ CREATE TABLE public.ucm_type_refs (
     target_symbol_id text,
     PRIMARY KEY (snapshot_id,owner_id,role,position),
     CHECK ((resolution='RESOLVED') = (target_symbol_id IS NOT NULL)),
-    FOREIGN KEY (snapshot_id,owner_id) REFERENCES public.ucm_entities(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
-    FOREIGN KEY (snapshot_id,target_symbol_id) REFERENCES public.ucm_symbols(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED
+    FOREIGN KEY (snapshot_id,owner_id) REFERENCES ucm_entities(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,target_symbol_id) REFERENCES ucm_symbols(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED
 );
-CREATE TABLE public.ucm_relation_sources (
+CREATE TABLE ucm_relation_sources (
     relation_kind text NOT NULL,
     source_type text NOT NULL,
     PRIMARY KEY (relation_kind,source_type)
 );
-CREATE TABLE public.ucm_relation_endpoints (
+CREATE TABLE ucm_relation_endpoints (
     relation_kind text NOT NULL,
     source_type text NOT NULL,
     target_type text NOT NULL,
     PRIMARY KEY (relation_kind,source_type,target_type),
-    FOREIGN KEY (relation_kind,source_type) REFERENCES public.ucm_relation_sources(relation_kind,source_type)
+    FOREIGN KEY (relation_kind,source_type) REFERENCES ucm_relation_sources(relation_kind,source_type)
 );
-INSERT INTO public.ucm_relation_sources VALUES
+INSERT INTO ucm_relation_sources VALUES
 ('CALLS', 'METHOD'),
 ('CALLS', 'OPERATION'),
 ('CALLS', 'SYMBOL'),
@@ -186,7 +186,7 @@ INSERT INTO public.ucm_relation_sources VALUES
 ('FLOWS_TO', 'VALUE'),
 ('PRODUCES', 'OPERATION'),
 ('REFERENCES', 'OCCURRENCE');
-INSERT INTO public.ucm_relation_endpoints VALUES
+INSERT INTO ucm_relation_endpoints VALUES
 ('CALLS', 'METHOD', 'METHOD'),
 ('CALLS', 'METHOD', 'SYMBOL'),
 ('CALLS', 'OPERATION', 'METHOD'),
@@ -228,7 +228,7 @@ INSERT INTO public.ucm_relation_endpoints VALUES
 ('REFERENCES', 'OCCURRENCE', 'METHOD'),
 ('REFERENCES', 'OCCURRENCE', 'SYMBOL');
 
-CREATE TABLE public.ucm_relations (
+CREATE TABLE ucm_relations (
     snapshot_id uuid NOT NULL,
     entity_id text NOT NULL,
     entity_type text NOT NULL DEFAULT 'RELATION' CHECK (entity_type = 'RELATION'),
@@ -244,10 +244,10 @@ CREATE TABLE public.ucm_relations (
     CHECK ((target_id IS NULL) = (target_type IS NULL)),
     CHECK ((resolution='RESOLVED') = (target_id IS NOT NULL)),
     CHECK (resolution='RESOLVED' OR reason IS NOT NULL),
-    FOREIGN KEY (relation_kind,source_type) REFERENCES public.ucm_relation_sources(relation_kind,source_type),
-    FOREIGN KEY (relation_kind,source_type,target_type) REFERENCES public.ucm_relation_endpoints(relation_kind,source_type,target_type),
-    FOREIGN KEY (snapshot_id,source_id,source_type) REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED,
-    FOREIGN KEY (snapshot_id,target_id,target_type) REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (relation_kind,source_type) REFERENCES ucm_relation_sources(relation_kind,source_type),
+    FOREIGN KEY (relation_kind,source_type,target_type) REFERENCES ucm_relation_endpoints(relation_kind,source_type,target_type),
+    FOREIGN KEY (snapshot_id,source_id,source_type) REFERENCES ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,target_id,target_type) REFERENCES ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED,
 
     certainty text NOT NULL CHECK (certainty IN ('STATIC_PROVEN','INFERRED','UNKNOWN')),
     coverage_capability text NOT NULL CHECK (coverage_capability ~ '\S'),
@@ -257,13 +257,13 @@ CREATE TABLE public.ucm_relations (
     CHECK (coverage_status <> 'UNSUPPORTED' OR (resolution='UNRESOLVED' AND certainty='UNKNOWN')),
     PRIMARY KEY (snapshot_id,entity_id),
     FOREIGN KEY (snapshot_id,entity_id,entity_type)
-        REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type)
+        REFERENCES ucm_entities(snapshot_id,entity_id,entity_type)
         DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE INDEX ucm_relations_source_idx ON public.ucm_relations(snapshot_id,source_id,relation_kind);
-CREATE INDEX ucm_relations_target_idx ON public.ucm_relations(snapshot_id,target_id,relation_kind);
-CREATE TABLE public.ucm_relation_candidates (
+CREATE INDEX ucm_relations_source_idx ON ucm_relations(snapshot_id,source_id,relation_kind);
+CREATE INDEX ucm_relations_target_idx ON ucm_relations(snapshot_id,target_id,relation_kind);
+CREATE TABLE ucm_relation_candidates (
     snapshot_id uuid NOT NULL,
     relation_id text NOT NULL,
     relation_kind text NOT NULL,
@@ -272,14 +272,14 @@ CREATE TABLE public.ucm_relation_candidates (
     candidate_type text NOT NULL,
     PRIMARY KEY (snapshot_id,relation_id,candidate_id),
     FOREIGN KEY (snapshot_id,relation_id,relation_kind,source_type)
-        REFERENCES public.ucm_relations(snapshot_id,entity_id,relation_kind,source_type) DEFERRABLE INITIALLY DEFERRED,
+        REFERENCES ucm_relations(snapshot_id,entity_id,relation_kind,source_type) DEFERRABLE INITIALLY DEFERRED,
     FOREIGN KEY (relation_kind,source_type,candidate_type)
-        REFERENCES public.ucm_relation_endpoints(relation_kind,source_type,target_type),
+        REFERENCES ucm_relation_endpoints(relation_kind,source_type,target_type),
     FOREIGN KEY (snapshot_id,candidate_id,candidate_type)
-        REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED
+        REFERENCES ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE TABLE public.ucm_external_references (
+CREATE TABLE ucm_external_references (
     snapshot_id uuid NOT NULL,
     entity_id text NOT NULL,
     entity_type text NOT NULL DEFAULT 'EXTERNAL_REFERENCE' CHECK (entity_type = 'EXTERNAL_REFERENCE'),
@@ -299,7 +299,7 @@ CREATE TABLE public.ucm_external_references (
     version_hint text CHECK (version_hint IS NULL OR version_hint ~ '\S'),
     resolution text NOT NULL DEFAULT 'UNRESOLVED' CHECK (resolution='UNRESOLVED'),
     reason text NOT NULL CHECK (reason ~ '\S'),
-    FOREIGN KEY (snapshot_id,source_id,source_type) REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,source_id,source_type) REFERENCES ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED,
 
     certainty text NOT NULL CHECK (certainty IN ('STATIC_PROVEN','INFERRED','UNKNOWN')),
     coverage_capability text NOT NULL CHECK (coverage_capability ~ '\S'),
@@ -319,11 +319,11 @@ CREATE TABLE public.ucm_external_references (
     ),
     PRIMARY KEY (snapshot_id,entity_id),
     FOREIGN KEY (snapshot_id,entity_id,entity_type)
-        REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type)
+        REFERENCES ucm_entities(snapshot_id,entity_id,entity_type)
         DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE TABLE public.ucm_evidence (
+CREATE TABLE ucm_evidence (
     snapshot_id uuid NOT NULL,
     owner_id text NOT NULL,
     owner_type text NOT NULL CHECK (owner_type IN ('RELATION','EXTERNAL_REFERENCE')),
@@ -339,19 +339,19 @@ CREATE TABLE public.ucm_evidence (
     description text NOT NULL CHECK (description ~ '\S'),
     PRIMARY KEY (snapshot_id,owner_id,ordinal),
     CHECK ((end_line,end_byte_column) >= (start_line,start_byte_column)),
-    FOREIGN KEY (snapshot_id,owner_id,owner_type) REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED,
-    FOREIGN KEY (snapshot_id,source_file_id) REFERENCES public.ucm_source_files(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED
+    FOREIGN KEY (snapshot_id,owner_id,owner_type) REFERENCES ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED,
+    FOREIGN KEY (snapshot_id,source_file_id) REFERENCES ucm_source_files(snapshot_id,entity_id) DEFERRABLE INITIALLY DEFERRED
 );
-CREATE TABLE public.ucm_coverage_reasons (
+CREATE TABLE ucm_coverage_reasons (
     snapshot_id uuid NOT NULL,
     owner_id text NOT NULL,
     owner_type text NOT NULL CHECK (owner_type IN ('RELATION','EXTERNAL_REFERENCE')),
     ordinal integer NOT NULL CHECK (ordinal >= 0),
     reason text NOT NULL CHECK (reason ~ '\S'),
     PRIMARY KEY (snapshot_id,owner_id,ordinal),
-    FOREIGN KEY (snapshot_id,owner_id,owner_type) REFERENCES public.ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED
+    FOREIGN KEY (snapshot_id,owner_id,owner_type) REFERENCES ucm_entities(snapshot_id,entity_id,entity_type) DEFERRABLE INITIALLY DEFERRED
 );
-CREATE FUNCTION public.ucm_guard_fact_write() RETURNS trigger
+CREATE FUNCTION ucm_guard_fact_write() RETURNS trigger
 LANGUAGE plpgsql AS $$
 DECLARE
     selected_snapshot uuid;
@@ -366,7 +366,7 @@ BEGIN
     IF TG_OP = 'DELETE' THEN selected_snapshot := OLD.snapshot_id;
     ELSE selected_snapshot := NEW.snapshot_id;
     END IF;
-    SELECT state INTO snapshot_state FROM public.ucm_snapshots
+    SELECT state INTO snapshot_state FROM ucm_snapshots
         WHERE id=selected_snapshot FOR SHARE;
     IF snapshot_state IS DISTINCT FROM 'BUILDING' THEN
         RAISE EXCEPTION 'canonical facts require BUILDING snapshot' USING ERRCODE='23514';
@@ -375,59 +375,59 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-CREATE TRIGGER ucm_entities_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_entities
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_entities_truncate_guard BEFORE TRUNCATE ON public.ucm_entities
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_source_files_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_source_files
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_source_files_truncate_guard BEFORE TRUNCATE ON public.ucm_source_files
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_symbols_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_symbols
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_symbols_truncate_guard BEFORE TRUNCATE ON public.ucm_symbols
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_scopes_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_scopes
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_scopes_truncate_guard BEFORE TRUNCATE ON public.ucm_scopes
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_occurrences_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_occurrences
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_occurrences_truncate_guard BEFORE TRUNCATE ON public.ucm_occurrences
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_operations_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_operations
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_operations_truncate_guard BEFORE TRUNCATE ON public.ucm_operations
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_values_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_values
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_values_truncate_guard BEFORE TRUNCATE ON public.ucm_values
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_operation_values_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_operation_values
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_operation_values_truncate_guard BEFORE TRUNCATE ON public.ucm_operation_values
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_type_refs_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_type_refs
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_type_refs_truncate_guard BEFORE TRUNCATE ON public.ucm_type_refs
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_relations_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_relations
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_relations_truncate_guard BEFORE TRUNCATE ON public.ucm_relations
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_relation_candidates_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_relation_candidates
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_relation_candidates_truncate_guard BEFORE TRUNCATE ON public.ucm_relation_candidates
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_external_references_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_external_references
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_external_references_truncate_guard BEFORE TRUNCATE ON public.ucm_external_references
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_evidence_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_evidence
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_evidence_truncate_guard BEFORE TRUNCATE ON public.ucm_evidence
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_coverage_reasons_write_guard BEFORE INSERT OR UPDATE OR DELETE ON public.ucm_coverage_reasons
-    FOR EACH ROW EXECUTE FUNCTION public.ucm_guard_fact_write();
-CREATE TRIGGER ucm_coverage_reasons_truncate_guard BEFORE TRUNCATE ON public.ucm_coverage_reasons
-    FOR EACH STATEMENT EXECUTE FUNCTION public.ucm_guard_fact_write();
+CREATE TRIGGER ucm_entities_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_entities
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_entities_truncate_guard BEFORE TRUNCATE ON ucm_entities
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_source_files_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_source_files
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_source_files_truncate_guard BEFORE TRUNCATE ON ucm_source_files
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_symbols_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_symbols
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_symbols_truncate_guard BEFORE TRUNCATE ON ucm_symbols
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_scopes_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_scopes
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_scopes_truncate_guard BEFORE TRUNCATE ON ucm_scopes
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_occurrences_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_occurrences
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_occurrences_truncate_guard BEFORE TRUNCATE ON ucm_occurrences
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_operations_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_operations
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_operations_truncate_guard BEFORE TRUNCATE ON ucm_operations
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_values_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_values
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_values_truncate_guard BEFORE TRUNCATE ON ucm_values
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_operation_values_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_operation_values
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_operation_values_truncate_guard BEFORE TRUNCATE ON ucm_operation_values
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_type_refs_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_type_refs
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_type_refs_truncate_guard BEFORE TRUNCATE ON ucm_type_refs
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_relations_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_relations
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_relations_truncate_guard BEFORE TRUNCATE ON ucm_relations
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_relation_candidates_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_relation_candidates
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_relation_candidates_truncate_guard BEFORE TRUNCATE ON ucm_relation_candidates
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_external_references_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_external_references
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_external_references_truncate_guard BEFORE TRUNCATE ON ucm_external_references
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_evidence_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_evidence
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_evidence_truncate_guard BEFORE TRUNCATE ON ucm_evidence
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_coverage_reasons_write_guard BEFORE INSERT OR UPDATE OR DELETE ON ucm_coverage_reasons
+    FOR EACH ROW EXECUTE FUNCTION ucm_guard_fact_write();
+CREATE TRIGGER ucm_coverage_reasons_truncate_guard BEFORE TRUNCATE ON ucm_coverage_reasons
+    FOR EACH STATEMENT EXECUTE FUNCTION ucm_guard_fact_write();
