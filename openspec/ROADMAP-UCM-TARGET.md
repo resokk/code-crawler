@@ -1,7 +1,7 @@
-# Code-crawler: OpenSpec target roadmap (reviewed 18ebcf7)
+# Code-crawler: OpenSpec target roadmap (updated 2026-11-15, b5b3f35)
 
 ## Status and rules
-This directory contains **39 proposed, NOT implemented** changes with independent proposal.md, design.md, specs/<capability>/spec.md and tasks.md. The baseline is `18ebcf75ee9b7ab9ba4b35a18fb0cb68bca9bade`. Existing active changes are preserved untouched. Each change must be applied, tested and reviewed separately by an LLM or developer; do not mark open checkboxes as completed merely because this plan exists.
+The original 39 changes are tracked across active `changes/` and completed `archive/` directories, with proposal.md, design.md, specs/<capability>/spec.md and tasks.md. Many features are **already implemented**, and the baseline is now `b5b3f35ee50fcb0d8546af57898a0436ae642415`. Check [development plan v3](../docs/development-plan-v3.md) and [current review](../docs/review-2026-11-15-b5b3f35.md) for accurate status and priorities. Do not reimplement archived changes.
 
 Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in PostgreSQL 15, Java/Groovy/PLPlus, SQL construction/execution/lineage, ORM, source archive, incremental CLI and publication, structural/lexical search, stateless read-only FastMCP. Confirmed recent GitHub Actions PG15 succeeded on baseline. Reuse these implementations; do not reimplement them.
 
@@ -33,6 +33,9 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - C07 embedding-generation-pipeline: model choice, vector registry/cache and pgvector
 - C08 hybrid-retrieval: exact + FTS + vector + graph expansion
 - C09 mcp-multirepository-intelligence: global search/trace/impact tools
+- C10 kafka-topic-discovery: exact discovery from D07 declaration producers only; new follow-up
+- C11 bpmn-worker-discovery: candidate-only worker definitions from D02; new follow-up
+- C12 streaming-search-document-rebuild: bounded C01 projections; new follow-up
 
 ## Stream D — source adapters (can run parallel with C after stable core)
 - D01 bpmn-schema-adapter: BPMN 2.0 processes, elements, flows and variables — [completed](archive/2026-11-15-d01-bpmn-schema-adapter/completion.md), PG15 CI 882 passed
@@ -55,9 +58,9 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - E04 openspec-archive-policy: preserve proposal/design/spec/task history
 
 ## Critical path
-1. **Immediate safety**: A01; A02 before exposing MCP to clients; A05 depends on GitHub admin authorization.
-2. **Performance baseline**: B01 before B02/B03/B04, then B05; B06 after A01, with B07/B08 for regression/load.
-3. **Search**: C01 → C02 and C03 → C04 → C05/C06; C07 (after C01 and A06) → C08 → C09 (also A02).
+1. **Immediate safety**: A01 completed; A02 open as [PR #8](https://github.com/resokk/code-crawler/pull/8) and MUST precede network MCP exposure; A05 admin-bypass policy and A06 redaction remain open.
+2. **Performance**: >1M snapshot indexing now succeeds (405.4s index + 213.2s validation, 1012MiB); B06 GC (~123s/141k) is urgent, B02 SQL validation remains partially memory-bound, B03/B05 follow; B07/B08 for regression/load.
+3. **Search**: C01–C06 completed; C10/C11 fill missing typed discovery coverage. C07 (after A06) → C08 → C09 (after A02). C12 removes full UCM materialization from document generation.
 4. **Adapters**: D01 → D02; D03 → D04; D05 → D06; D08 → D09; D07/D10/D11/D12 independent after registry readiness. Avoid cross-repo links at ingestion.
 5. **Operations**: E01–E04 after corresponding data/ACL boundaries, and E02 before destructive large-scale GC.
 
