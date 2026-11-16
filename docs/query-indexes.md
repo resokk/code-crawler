@@ -437,3 +437,10 @@ before/after speedup at 1M. The comparison is the
 recorded 20k fresh/warm matrix, the deterministic bad-plan regression, and two
 successful bounded 1M acceptance repetitions. These measurements cover synthetic
 bulk ingestion, not parsing or production-disk throughput.
+
+## Current end-to-end baseline
+
+[B01 baseline protocol](performance-baseline.md) measures current-schema capture,
+analysis, staging/FK, validation/publication, readers and GC independently, with
+repeated 400-file runs, a 1,000-file run and a >1M-entity attempt. This complements
+the historical index comparisons above.

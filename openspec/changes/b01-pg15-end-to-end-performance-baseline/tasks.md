@@ -16,3 +16,10 @@
 - [ ] 11. Сравнить поведение published reader до/после, не поднимать уровень Certainty без Evidence.
 - [ ] 12. Обновить тематические docs/, Coverage и ограничения.
 - [ ] 13. Запустить ruff, pytest --require-postgres и benchmark/CI, сохранить воспроизводимые результаты.
+
+## Runner verification (scale evidence pending)
+
+- Current schema includes B04 FK/staging improvements and A06 policy (base `2951af8`).
+- Ruff lint/format passed; full mandatory PG15 suite: 1322 passed in 312.07s.
+- Final focused B01 suite: 11 passed in 12.45s, including cancellation recovery, ownership cleanup and published-reader preservation.
+- Controlled scale series and required remote CI remain pending; do not archive yet.
