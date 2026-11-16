@@ -17,7 +17,7 @@ pytestmark = pytest.mark.integration
 async def insert(conn: asyncpg.Connection, table: str, **fields: object) -> None:
     placeholders = ",".join(f"${i}" for i in range(1, len(fields) + 1))
     await conn.execute(
-        f"INSERT INTO public.{table} ({','.join(fields)}) VALUES ({placeholders})",
+        f"INSERT INTO {table} ({','.join(fields)}) VALUES ({placeholders})",
         *fields.values(),
     )
 
@@ -510,7 +510,7 @@ def test_fact_cannot_move_and_support_tables_cannot_be_truncated(
             # CASCADE includes dependent tables, but BEFORE TRUNCATE must reject the operation.
             for table in tables:
                 with pytest.raises(asyncpg.CheckViolationError):
-                    await conn.execute(f"TRUNCATE public.{table} CASCADE")
+                    await conn.execute(f"TRUNCATE {table} CASCADE")
             assert await conn.fetchval("SELECT count(*) FROM ucm_entities") == 8
         finally:
             await conn.close()

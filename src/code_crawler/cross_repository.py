@@ -195,9 +195,9 @@ class _Walk:
         rows = await conn.fetch(
             """
             SELECT p.*,f.path,f.content_sha256,(a.source_file_id IS NOT NULL) AS archived
-            FROM public.ucm_evidence p JOIN public.ucm_source_files f
+            FROM ucm_evidence p JOIN ucm_source_files f
               ON f.snapshot_id=p.snapshot_id AND f.entity_id=p.source_file_id
-            LEFT JOIN public.ucm_snapshot_sources a
+            LEFT JOIN ucm_snapshot_sources a
               ON a.snapshot_id=f.snapshot_id AND a.source_file_id=f.entity_id AND a.content_sha256=f.content_sha256
             WHERE p.snapshot_id=$1 AND p.owner_id=$2 ORDER BY p.ordinal LIMIT $3
             """,
@@ -239,7 +239,7 @@ class _Walk:
     async def local(self, conn, visit):
         selection = self.selections[visit.location.repository_key]
         rows = await conn.fetch(
-            "SELECT * FROM public.ucm_relations WHERE snapshot_id=$1 AND source_id=$2 "
+            "SELECT * FROM ucm_relations WHERE snapshot_id=$1 AND source_id=$2 "
             "AND (cardinality($3::text[])=0 OR relation_kind=ANY($3)) ORDER BY entity_id LIMIT $4",
             selection.snapshot_id,
             visit.location.entity.id,
@@ -254,7 +254,7 @@ class _Walk:
                 return
             evidence, cut = await self.proofs(conn, selection, row["entity_id"])
             reasons = await conn.fetch(
-                "SELECT reason FROM public.ucm_coverage_reasons WHERE snapshot_id=$1 AND owner_id=$2 ORDER BY ordinal LIMIT $3",
+                "SELECT reason FROM ucm_coverage_reasons WHERE snapshot_id=$1 AND owner_id=$2 ORDER BY ordinal LIMIT $3",
                 selection.snapshot_id,
                 row["entity_id"],
                 MAX_PROOFS + 1,
@@ -285,7 +285,7 @@ class _Walk:
             if row["resolution"] in ("PARTIAL", "AMBIGUOUS"):
                 budget = min(self.fanout, self.max_results - self.units - 1)
                 found = await conn.fetch(
-                    "SELECT candidate_id,candidate_type FROM public.ucm_relation_candidates WHERE snapshot_id=$1 AND relation_id=$2 ORDER BY candidate_id LIMIT $3",
+                    "SELECT candidate_id,candidate_type FROM ucm_relation_candidates WHERE snapshot_id=$1 AND relation_id=$2 ORDER BY candidate_id LIMIT $3",
                     selection.snapshot_id,
                     row["entity_id"],
                     budget + 1,
@@ -412,7 +412,7 @@ class _Walk:
             await pin_snapshot(conn, selected.snapshot_id)
         source = self.selections[source_key]
         entity_type = await conn.fetchval(
-            "SELECT entity_type FROM public.ucm_entities WHERE snapshot_id=$1 AND entity_id=$2",
+            "SELECT entity_type FROM ucm_entities WHERE snapshot_id=$1 AND entity_id=$2",
             source.snapshot_id,
             entity_id,
         )

@@ -1108,7 +1108,7 @@ async def _lock_empty(
     conn: asyncpg.Connection, snapshot_id: UUID, repository_id: UUID
 ) -> None:
     snapshot = await conn.fetchrow(
-        "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1 FOR UPDATE",
+        "SELECT repository_id,state FROM ucm_snapshots WHERE id=$1 FOR UPDATE",
         snapshot_id,
     )
     if snapshot is None or snapshot["repository_id"] != repository_id:
@@ -1116,7 +1116,7 @@ async def _lock_empty(
     if snapshot["state"] != "BUILDING":
         raise ValueError("ingestion requires BUILDING snapshot")
     if await conn.fetchval(
-        "SELECT EXISTS(SELECT 1 FROM public.ucm_entities WHERE snapshot_id=$1)",
+        "SELECT EXISTS(SELECT 1 FROM ucm_entities WHERE snapshot_id=$1)",
         snapshot_id,
     ):
         raise ValueError("ingestion requires an empty snapshot")
@@ -1134,7 +1134,7 @@ async def _stage(
             stage = prefix + "_" + table.removeprefix("ucm_")
             stages[table] = (stage, ",".join(columns))
             await conn.execute(
-                f"CREATE TEMP TABLE {stage} (LIKE public.{table} INCLUDING DEFAULTS) ON COMMIT DROP"
+                f"CREATE TEMP TABLE {stage} (LIKE {table} INCLUDING DEFAULTS) ON COMMIT DROP"
             )
         await conn.copy_records_to_table(
             stages[table][0],
@@ -1153,7 +1153,7 @@ async def _transfer(
             continue
         stage, columns = stages[table]
         await conn.execute(
-            f"INSERT INTO public.{table} ({columns}) SELECT {columns} FROM pg_temp.{stage}"
+            f"INSERT INTO {table} ({columns}) SELECT {columns} FROM pg_temp.{stage}"
         )
         # Staging has no constraints; canonical FKs stay deferred across chunks.
         await conn.execute(f"TRUNCATE pg_temp.{stage}")
@@ -1163,7 +1163,7 @@ async def _transfer(
 async def _check(conn: asyncpg.Connection, tables: Iterable[str]) -> None:
     if names := sorted(set(tables)):
         # Bulk inserts into new tables otherwise leave FK lookups with empty-table estimates.
-        await conn.execute("ANALYZE " + ",".join("public." + name for name in names))
+        await conn.execute("ANALYZE " + ",".join(names))
     # One flush avoids repeatedly walking PostgreSQL's deferred-trigger queue.
     tick("Запись в БД: проверка связей")
     await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")

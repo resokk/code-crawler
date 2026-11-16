@@ -27,7 +27,7 @@ async def register_repository(
     """Return stable UUID for an explicit repository key without renaming metadata."""
     async with conn.transaction():
         repository_id = await conn.fetchval(
-            "INSERT INTO public.ucm_repositories(id, repository_key, display_name, source) "
+            "INSERT INTO ucm_repositories(id, repository_key, display_name, source) "
             "VALUES ($1, $2, $3, $4) ON CONFLICT (repository_key) DO NOTHING RETURNING id",
             uuid4(),
             metadata.repository_key,
@@ -37,7 +37,7 @@ async def register_repository(
         if repository_id is not None:
             return repository_id
         return await conn.fetchval(
-            "SELECT id FROM public.ucm_repositories WHERE repository_key=$1",
+            "SELECT id FROM ucm_repositories WHERE repository_key=$1",
             metadata.repository_key,
         )
 
@@ -47,7 +47,7 @@ async def create_snapshot(
 ) -> UUID:
     """Create a fresh BUILDING snapshot without changing publication visibility."""
     return await conn.fetchval(
-        "INSERT INTO public.ucm_snapshots "
+        "INSERT INTO ucm_snapshots "
         "(id, repository_id, commit_hash, branch, source_fingerprint, dirty) "
         "VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
         uuid4(),
@@ -64,8 +64,8 @@ async def published_snapshot(
 ) -> asyncpg.Record | None:
     """Read only the snapshot selected by the repository publication pointer."""
     return await conn.fetchrow(
-        "SELECT s.* FROM public.ucm_repository_publications p "
-        "JOIN public.ucm_snapshots s ON (s.repository_id, s.id) = "
+        "SELECT s.* FROM ucm_repository_publications p "
+        "JOIN ucm_snapshots s ON (s.repository_id, s.id) = "
         "(p.repository_id, p.snapshot_id) WHERE p.repository_id=$1",
         repository_id,
     )

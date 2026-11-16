@@ -94,7 +94,7 @@ class PublishedReader:
         tables["ucm_entities"] = [
             dict(row)
             for row in await self._conn.fetch(
-                "SELECT * FROM public.ucm_entities WHERE snapshot_id=$1 AND entity_id=ANY($2) ORDER BY entity_id",
+                "SELECT * FROM ucm_entities WHERE snapshot_id=$1 AND entity_id=ANY($2) ORDER BY entity_id",
                 self.snapshot_id,
                 list(ids),
             )
@@ -108,7 +108,7 @@ class PublishedReader:
                 tables[table] = [
                     dict(row)
                     for row in await self._conn.fetch(
-                        f"SELECT * FROM public.{table} WHERE snapshot_id=$1 AND entity_id=ANY($2)",
+                        f"SELECT * FROM {table} WHERE snapshot_id=$1 AND entity_id=ANY($2)",
                         self.snapshot_id,
                         list(ids),
                     )
@@ -122,7 +122,7 @@ class PublishedReader:
                 tables[table] = [
                     dict(row)
                     for row in await self._conn.fetch(
-                        f"SELECT * FROM public.{table} WHERE snapshot_id=$1 AND {owner}=ANY($2)",
+                        f"SELECT * FROM {table} WHERE snapshot_id=$1 AND {owner}=ANY($2)",
                         self.snapshot_id,
                         selected,
                     )
@@ -186,7 +186,7 @@ class PublishedReader:
             raise ValueError("invalid relation direction/limit")
         selected_kinds = [RelationKind(kind).value for kind in kinds]
         if not await self._conn.fetchval(
-            "SELECT EXISTS(SELECT 1 FROM public.ucm_entities WHERE snapshot_id=$1 AND entity_id=$2)",
+            "SELECT EXISTS(SELECT 1 FROM ucm_entities WHERE snapshot_id=$1 AND entity_id=$2)",
             self.snapshot_id,
             entity_id,
         ):
@@ -194,10 +194,10 @@ class PublishedReader:
         match = (
             "r.source_id=$2"
             if direction == "out"
-            else "r.entity_id IN (SELECT entity_id FROM public.ucm_relations WHERE snapshot_id=$1 AND target_id=$2 UNION ALL SELECT relation_id FROM public.ucm_relation_candidates WHERE snapshot_id=$1 AND candidate_id=$2)"
+            else "r.entity_id IN (SELECT entity_id FROM ucm_relations WHERE snapshot_id=$1 AND target_id=$2 UNION ALL SELECT relation_id FROM ucm_relation_candidates WHERE snapshot_id=$1 AND candidate_id=$2)"
         )
         rows = await self._conn.fetch(
-            f"SELECT r.entity_id FROM public.ucm_relations r WHERE r.snapshot_id=$1 AND {match} AND (cardinality($3::text[])=0 OR r.relation_kind=ANY($3)) ORDER BY r.entity_id LIMIT $4",
+            f"SELECT r.entity_id FROM ucm_relations r WHERE r.snapshot_id=$1 AND {match} AND (cardinality($3::text[])=0 OR r.relation_kind=ANY($3)) ORDER BY r.entity_id LIMIT $4",
             self.snapshot_id,
             entity_id,
             selected_kinds,
@@ -240,7 +240,7 @@ async def published_reader(
         raise ValueError("repository key must be nonblank")
     async with conn.transaction(isolation="repeatable_read", readonly=True):
         row = await conn.fetchrow(
-            "SELECT s.repository_id,s.id FROM public.ucm_repositories r JOIN public.ucm_repository_publications p ON p.repository_id=r.id JOIN public.ucm_snapshots s ON (s.repository_id,s.id)=(p.repository_id,p.snapshot_id) WHERE r.repository_key=$1 AND s.state='PUBLISHED'",
+            "SELECT s.repository_id,s.id FROM ucm_repositories r JOIN ucm_repository_publications p ON p.repository_id=r.id JOIN ucm_snapshots s ON (s.repository_id,s.id)=(p.repository_id,p.snapshot_id) WHERE r.repository_key=$1 AND s.state='PUBLISHED'",
             repository_key,
         )
         if row is None:
@@ -277,7 +277,7 @@ async def selected_reader(
             "selected reader requires a read-only repeatable-read transaction"
         )
     repository_id = await conn.fetchval(
-        "SELECT s.repository_id FROM public.ucm_snapshots s JOIN public.ucm_repositories r ON r.id=s.repository_id "
+        "SELECT s.repository_id FROM ucm_snapshots s JOIN ucm_repositories r ON r.id=s.repository_id "
         "WHERE r.repository_key=$1 AND s.id=$2 AND s.state IN ('PUBLISHED','RETIRED')",
         repository_key,
         snapshot_id,

@@ -519,7 +519,7 @@ def test_physical_search_plan_before_and_after_index(database_url: str, tmp_path
                 query = next(
                     q
                     for q in recording.queries
-                    if "FROM public.ucm_database_objects d " in q.sql
+                    if "FROM ucm_database_objects d " in q.sql
                 )
                 plan = json.loads(
                     await conn.fetchval(
@@ -531,7 +531,7 @@ def test_physical_search_plan_before_and_after_index(database_url: str, tmp_path
 
             before, baseline = await measured()
             await db.apply_migration(conn, "0030_database_qualified_search.sql")
-            await conn.execute("ANALYZE public.ucm_database_objects")
+            await conn.execute("ANALYZE ucm_database_objects")
             after, indexed = await measured()
             assert before == after
             scans = list(plan_nodes(indexed["Plan"]))

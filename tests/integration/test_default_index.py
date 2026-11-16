@@ -256,10 +256,7 @@ def test_default_index_requires_current_database_schema(database_url, tmp_path):
             await git_repo(tmp_path)
             code, output = await command(database_url, "index", str(tmp_path))
             assert code == 1 and "db init" in output
-            assert (
-                await conn.fetchval("SELECT to_regclass('public.ucm_snapshots')")
-                is None
-            )
+            assert await conn.fetchval("SELECT to_regclass('ucm_snapshots')") is None
             await migrate(conn)
             await conn.execute(
                 "INSERT INTO schema_migrations(name) VALUES ('9999_future.sql')"

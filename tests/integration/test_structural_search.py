@@ -76,7 +76,7 @@ def test_structural_queries_over_published_snapshot(
             assert {
                 r["indexname"]
                 for r in await conn.fetch(
-                    "SELECT indexname FROM pg_indexes WHERE schemaname='public'"
+                    "SELECT indexname FROM pg_indexes WHERE schemaname=current_schema()"
                 )
             } >= {
                 "ucm_entities_symbol_name_idx",
@@ -397,7 +397,7 @@ def test_sql_certainty_is_independent_of_discovery(
         conn = await asyncpg.connect(database_url)
         try:
             await publish(conn, tmp_path)
-            before = await conn.fetchval("SELECT count(*) FROM public.ucm_relations")
+            before = await conn.fetchval("SELECT count(*) FROM ucm_relations")
             literal = (await search.find_table_writers(conn, "app", "never_executed"))[
                 "items"
             ]
@@ -440,10 +440,7 @@ def test_sql_certainty_is_independent_of_discovery(
                 and "SQL_TEXT_NOT_RECOVERED" in e["coverage"]["reasons"]
                 for e in unknown
             )
-            assert (
-                await conn.fetchval("SELECT count(*) FROM public.ucm_relations")
-                == before
-            )
+            assert await conn.fetchval("SELECT count(*) FROM ucm_relations") == before
         finally:
             await conn.close()
 

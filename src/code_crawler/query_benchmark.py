@@ -250,13 +250,11 @@ async def _phase(
                 await conn.execute("SET CONSTRAINTS ALL DEFERRED")
                 await conn.execute("SET LOCAL code_crawler.gc = 'on'")
                 for table in jobs._SNAPSHOT_TABLES:
-                    if await conn.fetchval("SELECT to_regclass($1)", "public." + table):
+                    if await conn.fetchval("SELECT to_regclass($1)", table):
                         await conn.execute(
-                            f"DELETE FROM public.{table} WHERE snapshot_id=$1", trial
+                            f"DELETE FROM {table} WHERE snapshot_id=$1", trial
                         )
-                await conn.execute(
-                    "DELETE FROM public.ucm_snapshots WHERE id=$1", trial
-                )
+                await conn.execute("DELETE FROM ucm_snapshots WHERE id=$1", trial)
         else:
             await jobs.collect_garbage(conn, building_older_than_hours=0)
         gc_times.append(time.perf_counter() - start)

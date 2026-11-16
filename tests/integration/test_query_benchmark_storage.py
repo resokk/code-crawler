@@ -36,8 +36,7 @@ def test_benchmark_isolated_database_and_identical_results(database_url, monkeyp
                 assert len(phase["committed_batch_copy_seconds"]) == 2
                 assert len(phase["garbage_collection_seconds"]) == 2
             assert (
-                await conn.fetchval("SELECT to_regclass('public.schema_migrations')")
-                is None
+                await conn.fetchval("SELECT to_regclass('schema_migrations')") is None
             )
             assert before == await conn.fetchval(
                 "SELECT count(*) FROM pg_database WHERE datname LIKE 'crawler_benchmark_%'"

@@ -72,7 +72,7 @@ COPY графа и откат загрузки, каскадное удален�
 ## UCM snapshots
 
 Миграция `0003_ucm_repository_snapshots.sql` добавляет независимые таблицы
-репозиториев, snapshots и publication pointer в `public`. Legacy-данные
+репозиториев, snapshots и publication pointer. Legacy-данные
 сохраняются. Контракт metadata, ограничения и границы текущего API описаны в
 [snapshots.md](snapshots.md). Атомарная публикация описана в [ucm-publication.md](ucm-publication.md).
 
@@ -145,3 +145,9 @@ immutability/checksums, обязательный архив перед READY/PUB
 Миграция `0019_lexical_search_index.sql` ставит расширения `pg_trgm` и `btree_gin`,
 вводит функцию `ucm_identifier_words` и три GIN-индекса лексического поиска. См.
 [lexical-search.md](lexical-search.md).
+
+## Схема БД
+
+Миграции и запросы не указывают схему: объекты создаются и ищутся в текущей
+схеме подключения (`search_path`). Проверки каталога (GC снимков,
+инкрементальный перенос) сверяются с `current_schema()`.

@@ -114,7 +114,7 @@ def make_identity(
 async def _identity(conn, source_key, reference_id, context, limit, algorithm_version):
     source = next(s for s in context.selections if s.repository_key == source_key)
     descriptor = await conn.fetchval(
-        "SELECT to_jsonb(r)::text FROM public.ucm_external_references r WHERE r.snapshot_id=$1 AND r.entity_id=$2",
+        "SELECT to_jsonb(r)::text FROM ucm_external_references r WHERE r.snapshot_id=$1 AND r.entity_id=$2",
         source.snapshot_id,
         reference_id,
     )
@@ -224,14 +224,14 @@ async def _read_cached_resolution(
     if identity is None:
         event("MISS", "SOURCE_NOT_EXTERNAL", context)
         return None
-    if not await conn.fetchval("SELECT to_regclass('public.resolver_cache_entries')"):
+    if not await conn.fetchval("SELECT to_regclass('resolver_cache_entries')"):
         event("MISS", "STORAGE_UNAVAILABLE", context, identity.cache_key)
         return None
     try:
         async with conn.transaction():
             row = await conn.fetchrow(
                 "SELECT payload,payload_sha256,expires_at>statement_timestamp() AS fresh "
-                "FROM public.resolver_cache_entries WHERE cache_key=$1",
+                "FROM resolver_cache_entries WHERE cache_key=$1",
                 identity.cache_key,
             )
     except asyncpg.UndefinedTableError:
@@ -263,11 +263,11 @@ async def _read_cached_resolution(
 
 async def _prune(conn, maximum):
     expired = await conn.fetch(
-        "DELETE FROM public.resolver_cache_entries WHERE expires_at<=clock_timestamp() RETURNING cache_key"
+        "DELETE FROM resolver_cache_entries WHERE expires_at<=clock_timestamp() RETURNING cache_key"
     )
     excess = await conn.fetch(
-        "DELETE FROM public.resolver_cache_entries WHERE cache_key IN "
-        "(SELECT cache_key FROM public.resolver_cache_entries ORDER BY created_at DESC,cache_key DESC OFFSET $1) RETURNING cache_key",
+        "DELETE FROM resolver_cache_entries WHERE cache_key IN "
+        "(SELECT cache_key FROM resolver_cache_entries ORDER BY created_at DESC,cache_key DESC OFFSET $1) RETURNING cache_key",
         maximum,
     )
     return len(expired) + len(excess)
@@ -334,11 +334,11 @@ async def warm_resolver_cache(
             await conn.execute("SELECT pg_advisory_xact_lock($1)", GC_LOCK)
             await conn.execute("SELECT pg_advisory_xact_lock($1)", CACHE_LOCK)
             await conn.fetch(
-                "SELECT id FROM public.ucm_snapshots WHERE id=ANY($1) ORDER BY id FOR KEY SHARE",
+                "SELECT id FROM ucm_snapshots WHERE id=ANY($1) ORDER BY id FOR KEY SHARE",
                 [s.snapshot_id for s in context.selections],
             )
             await conn.fetch(
-                "SELECT generation FROM public.search_discovery_generations WHERE generation=ANY($1) ORDER BY generation FOR KEY SHARE",
+                "SELECT generation FROM search_discovery_generations WHERE generation=ANY($1) ORDER BY generation FOR KEY SHARE",
                 [s.generation for s in context.selections],
             )
             try:
@@ -358,7 +358,7 @@ async def warm_resolver_cache(
             evicted = await _prune(conn, MAX_ENTRIES)
             expires = await conn.fetchval(
                 """
-                INSERT INTO public.resolver_cache_entries
+                INSERT INTO resolver_cache_entries
                 (cache_key,source_repository_id,snapshot_id,reference_id,selector_hash,context_fingerprint,
                  generations_hash,algorithm_version,discovery_version,candidate_limit,payload,payload_sha256,expires_at,created_at)
                 VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,statement_timestamp()+make_interval(secs=>$13),statement_timestamp())
@@ -381,7 +381,7 @@ async def warm_resolver_cache(
                 ttl_seconds,
             )
             await conn.executemany(
-                "INSERT INTO public.resolver_cache_dependencies VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING",
+                "INSERT INTO resolver_cache_dependencies VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING",
                 [
                     (identity.cache_key, s.repository_id, s.snapshot_id, s.generation)
                     for s in context.selections

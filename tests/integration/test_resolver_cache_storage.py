@@ -471,9 +471,7 @@ def test_missing_cache_schema_is_not_a_resolver_dependency(
                     conn, ucm_batch_factory
                 )
             assert (
-                await conn.fetchval(
-                    "SELECT to_regclass('public.resolver_cache_entries')"
-                )
+                await conn.fetchval("SELECT to_regclass('resolver_cache_entries')")
                 is None
             )
             result = await search.resolve_external_reference(

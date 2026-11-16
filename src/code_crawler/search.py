@@ -58,8 +58,8 @@ async def _snapshot(
     if snapshot_id is not None:
         # Явная версия — только та, что была опубликована: BUILDING/READY не читаются.
         if not await conn.fetchval(
-            "SELECT EXISTS(SELECT 1 FROM public.ucm_snapshots s "
-            "JOIN public.ucm_repositories r ON r.id=s.repository_id "
+            "SELECT EXISTS(SELECT 1 FROM ucm_snapshots s "
+            "JOIN ucm_repositories r ON r.id=s.repository_id "
             "WHERE s.id=$2 AND r.repository_key=$1 AND s.state IN ('PUBLISHED','RETIRED'))",
             repository_key,
             snapshot_id,
@@ -69,8 +69,8 @@ async def _snapshot(
             await pin_snapshot(conn, snapshot_id)
         return snapshot_id
     snapshot_id = await conn.fetchval(
-        "SELECT p.snapshot_id FROM public.ucm_repository_publications p "
-        "JOIN public.ucm_repositories r ON r.id=p.repository_id WHERE r.repository_key=$1",
+        "SELECT p.snapshot_id FROM ucm_repository_publications p "
+        "JOIN ucm_repositories r ON r.id=p.repository_id WHERE r.repository_key=$1",
         repository_key,
     )
     if snapshot_id is None:
@@ -95,19 +95,19 @@ async def _entities(
     rows = await conn.fetch(
         "SELECT e.entity_id AS id, e.entity_type AS type, e.name, s.symbol_kind AS kind, "
         "s.qualified_name, COALESCE(f.path, own.path) AS path, e.start_line, e.end_line, "
-        "(SELECT array_agg(t.name ORDER BY t.position) FROM public.ucm_type_refs t "
+        "(SELECT array_agg(t.name ORDER BY t.position) FROM ucm_type_refs t "
         " WHERE t.snapshot_id=e.snapshot_id AND t.owner_id=e.entity_id "
         " AND t.role='PARAMETER') AS parameter_types "
-        "FROM public.ucm_entities e "
+        "FROM ucm_entities e "
         # OFFSET 0 не даёт планировщику заменить поиск по ключу на hash join с
         # полным чтением ucm_symbols: PostgreSQL 15 выбирал его для страницы результатов.
         "LEFT JOIN LATERAL (SELECT y.symbol_kind, y.qualified_name "
-        " FROM public.ucm_symbols y WHERE y.snapshot_id=e.snapshot_id "
+        " FROM ucm_symbols y WHERE y.snapshot_id=e.snapshot_id "
         " AND y.entity_id=e.entity_id OFFSET 0) s ON true "
-        "LEFT JOIN public.ucm_source_files f ON f.snapshot_id=e.snapshot_id "
+        "LEFT JOIN ucm_source_files f ON f.snapshot_id=e.snapshot_id "
         " AND f.entity_id=e.source_file_id "
         # Сам файл: у SOURCE_FILE нет source_file_id, его путь — в собственной строке.
-        "LEFT JOIN public.ucm_source_files own ON own.snapshot_id=e.snapshot_id "
+        "LEFT JOIN ucm_source_files own ON own.snapshot_id=e.snapshot_id "
         " AND own.entity_id=e.entity_id "
         "WHERE e.snapshot_id=$1 AND e.entity_id=ANY($2)",
         snapshot_id,
@@ -127,7 +127,7 @@ async def _proofs(
     for row in await conn.fetch(
         "SELECT v.owner_id, f.path, v.start_line, v.start_byte_column, v.end_line, "
         "v.end_byte_column, v.analyzer, v.analyzer_version, v.rule, v.description "
-        "FROM public.ucm_evidence v JOIN public.ucm_source_files f "
+        "FROM ucm_evidence v JOIN ucm_source_files f "
         "ON f.snapshot_id=v.snapshot_id AND f.entity_id=v.source_file_id "
         "WHERE v.snapshot_id=$1 AND v.owner_id=ANY($2) ORDER BY v.owner_id, v.ordinal",
         snapshot_id,
@@ -136,14 +136,14 @@ async def _proofs(
         evidence = dict(row)
         result[evidence.pop("owner_id")]["evidence"].append(evidence)
     for row in await conn.fetch(
-        "SELECT owner_id, reason FROM public.ucm_coverage_reasons "
+        "SELECT owner_id, reason FROM ucm_coverage_reasons "
         "WHERE snapshot_id=$1 AND owner_id=ANY($2) ORDER BY owner_id, ordinal",
         snapshot_id,
         owner_ids,
     ):
         result[row["owner_id"]]["coverage_reasons"].append(row["reason"])
     for row in await conn.fetch(
-        "SELECT relation_id, candidate_id FROM public.ucm_relation_candidates "
+        "SELECT relation_id, candidate_id FROM ucm_relation_candidates "
         "WHERE snapshot_id=$1 AND relation_id=ANY($2) ORDER BY relation_id, candidate_id",
         snapshot_id,
         owner_ids,
@@ -211,15 +211,15 @@ async def search_symbols(
         # UNION вместо OR по двум таблицам: каждая ветка идёт по своему индексу.
         # OFFSET 0: каждый найденный ID читается по ключу, см. _entities.
         "SELECT s.entity_id FROM ("
-        " SELECT entity_id FROM public.ucm_entities "
+        " SELECT entity_id FROM ucm_entities "
         " WHERE snapshot_id=$1 AND entity_type='SYMBOL' AND name=$2 "
-        " UNION SELECT entity_id FROM public.ucm_symbols "
+        " UNION SELECT entity_id FROM ucm_symbols "
         " WHERE snapshot_id=$1 AND qualified_name=$2) m "
-        "JOIN LATERAL (SELECT y.* FROM public.ucm_symbols y "
+        "JOIN LATERAL (SELECT y.* FROM ucm_symbols y "
         " WHERE y.snapshot_id=$1 AND y.entity_id=m.entity_id OFFSET 0) s ON true "
         "WHERE ($3::text IS NULL OR s.symbol_kind=$3) "
         "AND ($4::text[] IS NULL OR $4 = COALESCE((SELECT array_agg(t.name ORDER BY t.position) "
-        " FROM public.ucm_type_refs t WHERE t.snapshot_id=s.snapshot_id "
+        " FROM ucm_type_refs t WHERE t.snapshot_id=s.snapshot_id "
         " AND t.owner_id=s.entity_id AND t.role='PARAMETER'), '{}')) "
         "ORDER BY s.qualified_name, s.entity_id LIMIT $5",
         snapshot_id,
@@ -258,17 +258,15 @@ async def search_text(
     # Литералы из фиксированного списка: по ним планировщик выбирает частичные индексы.
     listed = ",".join(f"'{entity_type}'" for entity_type in types)
     like = "%" + query.lower().translate({ord(c): "\\" + c for c in "\\%_"}) + "%"
-    words = "plainto_tsquery('simple', public.ucm_identifier_words($2))"
-    name_words = "to_tsvector('simple', public.ucm_identifier_words(e.name))"
-    qualified_words = (
-        "to_tsvector('simple', public.ucm_identifier_words(s.qualified_name))"
-    )
+    words = "plainto_tsquery('simple', ucm_identifier_words($2))"
+    name_words = "to_tsvector('simple', ucm_identifier_words(e.name))"
+    qualified_words = "to_tsvector('simple', ucm_identifier_words(s.qualified_name))"
     rows = await conn.fetch(
         "WITH hits AS ("
-        " SELECT e.entity_id FROM public.ucm_entities e WHERE e.snapshot_id=$1 "
+        " SELECT e.entity_id FROM ucm_entities e WHERE e.snapshot_id=$1 "
         f" AND e.entity_type IN ({listed}) AND (lower(e.name) % lower($2) "
         f"  OR lower(e.name) LIKE $3 OR {name_words} @@ {words}) "
-        " UNION SELECT s.entity_id FROM public.ucm_symbols s WHERE s.snapshot_id=$1 "
+        " UNION SELECT s.entity_id FROM ucm_symbols s WHERE s.snapshot_id=$1 "
         f" AND 'SYMBOL' IN ({listed}) AND {qualified_words} @@ {words}) "
         "SELECT * FROM (SELECT e.entity_id, CASE "
         " WHEN lower($2) IN (lower(e.name), lower(s.qualified_name)) THEN 'EXACT' "
@@ -276,9 +274,9 @@ async def search_text(
         " ELSE 'SIMILAR' END AS match, "
         "similarity(lower(e.name), lower($2)) AS similarity, "
         "COALESCE(s.qualified_name, e.name) AS label "
-        "FROM hits JOIN public.ucm_entities e ON e.snapshot_id=$1 "
+        "FROM hits JOIN ucm_entities e ON e.snapshot_id=$1 "
         " AND e.entity_id=hits.entity_id "
-        "LEFT JOIN public.ucm_symbols s ON s.snapshot_id=$1 "
+        "LEFT JOIN ucm_symbols s ON s.snapshot_id=$1 "
         " AND s.entity_id=e.entity_id) ranked "
         "ORDER BY array_position(ARRAY['EXACT','WORDS','SIMILAR'], match), "
         "similarity DESC, label, entity_id LIMIT $4 OFFSET $5",
@@ -313,17 +311,17 @@ async def _calls(
 ) -> dict:
     snapshot_id = await _snapshot(conn, repository_key)
     matched = (
-        f"SELECT entity_id FROM public.ucm_relations WHERE snapshot_id=$1 "
+        f"SELECT entity_id FROM ucm_relations WHERE snapshot_id=$1 "
         f"AND relation_kind='CALLS' AND {own}=$2"
     )
     if own == "target_id":
         # Кандидаты AMBIGUOUS/PARTIAL связей — тоже возможные вызовы: их нельзя терять молча.
         matched += (
-            " UNION ALL SELECT relation_id FROM public.ucm_relation_candidates "
+            " UNION ALL SELECT relation_id FROM ucm_relation_candidates "
             "WHERE snapshot_id=$1 AND candidate_id=$2"
         )
     rows = await conn.fetch(
-        f"SELECT {_RELATION} FROM public.ucm_relations r WHERE r.snapshot_id=$1 "
+        f"SELECT {_RELATION} FROM ucm_relations r WHERE r.snapshot_id=$1 "
         f"AND r.relation_kind='CALLS' AND r.entity_id IN ({matched}) "
         "ORDER BY r.entity_id LIMIT $3",
         snapshot_id,
@@ -354,19 +352,19 @@ async def _executions(
 ) -> list[dict]:
     rows = await conn.fetch(
         "SELECT x.entity_id AS id, x.api, x.owner_symbol_id, o.qualified_name AS owner, "
-        "f.path, e.start_line, e.end_line FROM public.ucm_sql_executions x "
-        "JOIN public.ucm_entities e USING (snapshot_id, entity_id) "
-        "JOIN LATERAL (SELECT y.qualified_name FROM public.ucm_symbols y "
+        "f.path, e.start_line, e.end_line FROM ucm_sql_executions x "
+        "JOIN ucm_entities e USING (snapshot_id, entity_id) "
+        "JOIN LATERAL (SELECT y.qualified_name FROM ucm_symbols y "
         " WHERE y.snapshot_id=x.snapshot_id AND y.entity_id=x.owner_symbol_id "
         " OFFSET 0) o ON true "
-        "LEFT JOIN public.ucm_source_files f ON f.snapshot_id=e.snapshot_id "
+        "LEFT JOIN ucm_source_files f ON f.snapshot_id=e.snapshot_id "
         " AND f.entity_id=e.source_file_id "
         f"WHERE x.snapshot_id=$1 AND {where}",
         snapshot_id,
         *arguments,
     )
     relation_rows = await conn.fetch(
-        f"SELECT {_RELATION} FROM public.ucm_relations r "
+        f"SELECT {_RELATION} FROM ucm_relations r "
         "WHERE r.snapshot_id=$1 AND r.relation_kind='EXECUTES_SQL' "
         "AND r.target_id=ANY($2) ORDER BY r.entity_id",
         snapshot_id,
@@ -405,7 +403,7 @@ async def find_sql_executions(
     page = executions[:limit]
     rows = await conn.fetch(
         f"SELECT {_RELATION}, st.text, st.operation, st.parse_status, st.dialect "
-        "FROM public.ucm_relations r LEFT JOIN public.ucm_sql_statements st "
+        "FROM ucm_relations r LEFT JOIN ucm_sql_statements st "
         "ON st.snapshot_id=r.snapshot_id AND st.entity_id=r.target_id "
         "WHERE r.snapshot_id=$1 AND r.relation_kind='EXECUTES_STATEMENT' "
         "AND r.source_id=ANY($2) ORDER BY r.entity_id",
@@ -515,7 +513,7 @@ async def _database_selector(
     object_key = None
     if database_object_id is not None:
         target = await conn.fetchrow(
-            "SELECT * FROM public.ucm_database_objects WHERE snapshot_id=$1 AND entity_id=$2",
+            "SELECT * FROM ucm_database_objects WHERE snapshot_id=$1 AND entity_id=$2",
             snapshot_id,
             database_object_id,
         )
@@ -564,15 +562,15 @@ async def _physical_access_rows(
         "d.object_key, d.database_key, d.version_key, d.schema_fingerprint, "
         "d.object_kind AS database_object_kind, d.catalog_name, d.schema_name, d.table_name, d.column_name, "
         "c.entity_id AS context_id, c.connection_key "
-        "FROM public.ucm_database_objects d "
-        "JOIN public.ucm_relations r ON r.snapshot_id=d.snapshot_id AND r.target_id=d.entity_id "
+        "FROM ucm_database_objects d "
+        "JOIN ucm_relations r ON r.snapshot_id=d.snapshot_id AND r.target_id=d.entity_id "
         " AND r.relation_kind='RESOLVES_DATABASE_OBJECT' AND r.resolution='RESOLVED' "
-        "JOIN public.ucm_database_accesses da ON da.snapshot_id=r.snapshot_id AND da.entity_id=r.source_id "
-        "JOIN public.ucm_database_contexts c ON c.snapshot_id=da.snapshot_id AND c.entity_id=da.context_id "
+        "JOIN ucm_database_accesses da ON da.snapshot_id=r.snapshot_id AND da.entity_id=r.source_id "
+        "JOIN ucm_database_contexts c ON c.snapshot_id=da.snapshot_id AND c.entity_id=da.context_id "
         " AND c.database_key=d.database_key AND c.version_key=d.version_key "
         " AND c.schema_fingerprint=d.schema_fingerprint "
-        "JOIN public.ucm_data_accesses a ON a.snapshot_id=da.snapshot_id AND a.entity_id=da.access_id "
-        "JOIN public.ucm_sql_statements st ON st.snapshot_id=a.snapshot_id AND st.entity_id=a.statement_id "
+        "JOIN ucm_data_accesses a ON a.snapshot_id=da.snapshot_id AND a.entity_id=da.access_id "
+        "JOIN ucm_sql_statements st ON st.snapshot_id=a.snapshot_id AND st.entity_id=a.statement_id "
         "WHERE d.snapshot_id=$1 AND d.database_key=$2 AND d.version_key=$3 AND d.table_name=$4 "
         "AND ($5::text IS NULL OR d.schema_name=$5) "
         "AND d.column_name IS NOT DISTINCT FROM $6::text "
@@ -635,7 +633,7 @@ async def _accesses(
     page = rows[:limit]
     links = await conn.fetch(
         f"SELECT {_RELATION}, r.target_id AS statement_id, r.source_id AS execution_id "
-        "FROM public.ucm_relations r WHERE r.snapshot_id=$1 "
+        "FROM ucm_relations r WHERE r.snapshot_id=$1 "
         "AND r.relation_kind='EXECUTES_STATEMENT' AND r.target_id=ANY($2) "
         "AND ($3::text[] IS NULL OR r.source_id=ANY($3))",
         snapshot_id,
@@ -646,7 +644,7 @@ async def _accesses(
     )
     link_relations = await _relations(conn, snapshot_id, links)
     access_rows = await conn.fetch(
-        f"SELECT {_RELATION} FROM public.ucm_relations r "
+        f"SELECT {_RELATION} FROM ucm_relations r "
         "WHERE r.snapshot_id=$1 AND r.target_id=ANY($2) "
         "AND r.source_id=ANY($3) ORDER BY r.entity_id",
         snapshot_id,
@@ -671,7 +669,7 @@ async def _accesses(
     relations = {}
     if exact:
         proof_rows = await conn.fetch(
-            f"SELECT {_RELATION} FROM public.ucm_relations r WHERE r.snapshot_id=$1 AND r.entity_id=ANY($2) ORDER BY r.entity_id",
+            f"SELECT {_RELATION} FROM ucm_relations r WHERE r.snapshot_id=$1 AND r.entity_id=ANY($2) ORDER BY r.entity_id",
             snapshot_id,
             [row["database_relation_id"] for row in page],
         )
@@ -770,7 +768,7 @@ async def _syntactic_access_rows(
 ) -> list[asyncpg.Record]:
     def named(part: str, index: int) -> str:
         return (
-            "EXISTS (SELECT 1 FROM public.ucm_sql_access_names n "
+            "EXISTS (SELECT 1 FROM ucm_sql_access_names n "
             "WHERE n.snapshot_id=a.snapshot_id AND n.access_id=a.entity_id "
             f"AND n.part='{part}' AND n.normalized IN (${index}, lower(${index})))"
         )
@@ -778,11 +776,11 @@ async def _syntactic_access_rows(
     return await conn.fetch(
         "SELECT a.entity_id AS access_id, a.object_kind, a.access_kind, a.role, "
         "a.binding_status, a.resolution, a.reason, a.statement_id, st.text, st.operation, "
-        "st.parse_status FROM public.ucm_data_accesses a "
-        "JOIN public.ucm_sql_statements st ON st.snapshot_id=a.snapshot_id "
+        "st.parse_status FROM ucm_data_accesses a "
+        "JOIN ucm_sql_statements st ON st.snapshot_id=a.snapshot_id "
         " AND st.entity_id=a.statement_id "
         # JOIN, а не EXISTS: поиск начинается с индекса по нормализованному имени.
-        "JOIN public.ucm_sql_access_names tn ON tn.snapshot_id=a.snapshot_id "
+        "JOIN ucm_sql_access_names tn ON tn.snapshot_id=a.snapshot_id "
         " AND tn.access_id=a.entity_id AND tn.part='table_name' "
         " AND tn.normalized IN ($3, lower($3)) "
         "WHERE a.snapshot_id=$1 AND a.access_kind=ANY($2) "
@@ -882,12 +880,12 @@ async def trace_dependency(
     rows = await conn.fetch(
         "WITH RECURSIVE walk(entity_id, depth) AS ("
         " SELECT $2::text, 0 UNION "
-        f" SELECT r.{far}, w.depth+1 FROM walk w JOIN public.ucm_relations r "
+        f" SELECT r.{far}, w.depth+1 FROM walk w JOIN ucm_relations r "
         f" ON r.snapshot_id=$1 AND r.{near}=w.entity_id "
         " AND ($4::text[] IS NULL OR r.relation_kind=ANY($4)) "
         f" WHERE w.depth+1 < $3 AND r.{far} IS NOT NULL), "
         "nodes AS (SELECT entity_id, min(depth) AS depth FROM walk GROUP BY entity_id) "
-        f"SELECT {_RELATION}, n.depth+1 AS depth FROM nodes n JOIN public.ucm_relations r "
+        f"SELECT {_RELATION}, n.depth+1 AS depth FROM nodes n JOIN ucm_relations r "
         f"ON r.snapshot_id=$1 AND r.{near}=n.entity_id "
         "AND ($4::text[] IS NULL OR r.relation_kind=ANY($4)) "
         "ORDER BY n.depth, r.entity_id LIMIT $5",
@@ -908,7 +906,7 @@ async def get_evidence(
     """Return one relation with its endpoints, Evidence, Coverage and candidates."""
     snapshot_id = await _snapshot(conn, repository_key)
     rows = await conn.fetch(
-        f"SELECT {_RELATION} FROM public.ucm_relations r "
+        f"SELECT {_RELATION} FROM ucm_relations r "
         "WHERE r.snapshot_id=$1 AND r.entity_id=$2",
         snapshot_id,
         relation_id,
@@ -1075,17 +1073,17 @@ WITH manifest AS MATERIALIZED (
  CASE WHEN s.state='PUBLISHED' AND g.state='READY' AND g.projector_version=$5
  THEN g.generation END AS generation_id
  FROM unnest($1::text[]) requested(repository_key)
- LEFT JOIN public.ucm_repositories r USING(repository_key)
- LEFT JOIN public.ucm_repository_publications p ON p.repository_id=r.id
- LEFT JOIN public.ucm_snapshots s ON s.id=p.snapshot_id
- LEFT JOIN public.search_discovery_generations g ON g.snapshot_id=p.snapshot_id
+ LEFT JOIN ucm_repositories r USING(repository_key)
+ LEFT JOIN ucm_repository_publications p ON p.repository_id=r.id
+ LEFT JOIN ucm_snapshots s ON s.id=p.snapshot_id
+ LEFT JOIN search_discovery_generations g ON g.snapshot_id=p.snapshot_id
 ), matching AS MATERIALIZED (
  SELECT m.repository_key,e.repository_id,e.snapshot_id,e.generation AS generation_id,
  e.entity_id,e.kind,
  CASE WHEN e.kind='DATABASE' THEN COALESCE(e.lookup_key->>6,e.lookup_key->>5,e.lookup_key->>3)
  WHEN e.kind='HTTP' THEN e.lookup_key->>2 ELSE e.lookup_key->>0 END AS lookup_key,e.qualifier,
  e.entity_type,e.source_file_id,e.start_line,e.start_byte_column,e.end_line,e.end_byte_column,e.rule
- FROM manifest m JOIN public.search_discovery_entries e
+ FROM manifest m JOIN search_discovery_entries e
  ON e.generation=m.generation_id
  WHERE e.kind=$2 AND md5(CASE WHEN e.kind='DATABASE'
  THEN COALESCE(e.lookup_key->>6,e.lookup_key->>5,e.lookup_key->>3) WHEN e.kind='HTTP' THEN e.lookup_key->>2 ELSE e.lookup_key->>0 END)=md5($3)

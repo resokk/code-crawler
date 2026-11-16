@@ -467,7 +467,7 @@ async def _fetch(
         return [
             dict(row)
             for row in await conn.fetch(
-                f"SELECT * FROM public.{table} WHERE snapshot_id=$1 AND {column}=ANY($2)",
+                f"SELECT * FROM {table} WHERE snapshot_id=$1 AND {column}=ANY($2)",
                 snapshot_id,
                 keys,
             )
@@ -539,13 +539,13 @@ async def _validate_stream(
         check_entities(repository_id, entities, catalog, paths, producers)
 
     total = await conn.fetchval(
-        "SELECT count(*) FROM public.ucm_entities WHERE snapshot_id=$1", snapshot_id
+        "SELECT count(*) FROM ucm_entities WHERE snapshot_id=$1", snapshot_id
     )
     last = ""
     while ids := [
         row["entity_id"]
         for row in await conn.fetch(
-            "SELECT entity_id FROM public.ucm_entities WHERE snapshot_id=$1 "
+            "SELECT entity_id FROM ucm_entities WHERE snapshot_id=$1 "
             "AND entity_id>$2 ORDER BY entity_id LIMIT $3",
             snapshot_id,
             last,
@@ -561,24 +561,24 @@ async def _validate_stream(
     # отвергало её как unconsumed.
     for table in ("ucm_entities", *_SUBTYPES.values(), *_AUXILIARY):
         if consumed[table] != await conn.fetchval(
-            f"SELECT count(*) FROM public.{table} WHERE snapshot_id=$1", snapshot_id
+            f"SELECT count(*) FROM {table} WHERE snapshot_id=$1", snapshot_id
         ):
             raise ValueError("unconsumed canonical rows")
     check_unique_reports(
         row["source_file_id"]
         for row in await conn.fetch(
-            "SELECT source_file_id FROM public.ucm_source_analyses WHERE snapshot_id=$1",
+            "SELECT source_file_id FROM ucm_source_analyses WHERE snapshot_id=$1",
             snapshot_id,
         )
     )
     parents = await conn.fetch(
-        "SELECT entity_id,parent_scope_id FROM public.ucm_scopes WHERE snapshot_id=$1",
+        "SELECT entity_id,parent_scope_id FROM ucm_scopes WHERE snapshot_id=$1",
         snapshot_id,
     )
     await asyncio.to_thread(check_scope_cycles, dict(map(tuple, parents)))
     facts = await conn.fetch(
-        "SELECT entity_id FROM public.ucm_entities WHERE snapshot_id=$1 "
-        "AND entity_type=ANY($2) UNION ALL SELECT entity_id FROM public.ucm_relations "
+        "SELECT entity_id FROM ucm_entities WHERE snapshot_id=$1 "
+        "AND entity_type=ANY($2) UNION ALL SELECT entity_id FROM ucm_relations "
         "WHERE snapshot_id=$1 AND relation_kind=ANY($3)",
         snapshot_id,
         list(_SQL_KINDS),
@@ -606,7 +606,7 @@ def _require_free_connection(conn: asyncpg.Connection) -> None:
 async def load_snapshot_batch(conn: asyncpg.Connection, snapshot_id: UUID) -> UcmBatch:
     """Read and validate a frozen canonical snapshot without changing its state."""
     snapshot = await conn.fetchrow(
-        "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1", snapshot_id
+        "SELECT repository_id,state FROM ucm_snapshots WHERE id=$1", snapshot_id
     )
     if snapshot is None or snapshot["state"] == "BUILDING":
         raise ValueError("reading batch requires a frozen snapshot")
@@ -615,7 +615,7 @@ async def load_snapshot_batch(conn: asyncpg.Connection, snapshot_id: UUID) -> Uc
         tables[table] = [
             dict(row)
             for row in await conn.fetch(
-                f"SELECT * FROM public.{table} WHERE snapshot_id=$1", snapshot_id
+                f"SELECT * FROM {table} WHERE snapshot_id=$1", snapshot_id
             )
         ]
     return await asyncio.to_thread(_restore, snapshot["repository_id"], tables)
@@ -626,14 +626,14 @@ async def validate_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> int:
     _require_free_connection(conn)
     async with conn.transaction():
         snapshot = await conn.fetchrow(
-            "SELECT * FROM public.ucm_snapshots WHERE id=$1 FOR UPDATE", snapshot_id
+            "SELECT * FROM ucm_snapshots WHERE id=$1 FOR UPDATE", snapshot_id
         )
         if snapshot is None:
             raise ValueError("snapshot does not exist")
         if snapshot["state"] == "READY":
             await require_source_archive(conn, snapshot_id)
             count = await conn.fetchval(
-                "SELECT entity_count FROM public.ucm_snapshot_validations WHERE snapshot_id=$1",
+                "SELECT entity_count FROM ucm_snapshot_validations WHERE snapshot_id=$1",
                 snapshot_id,
             )
             if count is None:
@@ -643,25 +643,25 @@ async def validate_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> int:
             raise ValueError("validation requires BUILDING or VALIDATING snapshot")
         await require_source_archive(conn, snapshot_id)
         await conn.execute(
-            "UPDATE public.ucm_snapshots SET state='VALIDATING' WHERE id=$1",
+            "UPDATE ucm_snapshots SET state='VALIDATING' WHERE id=$1",
             snapshot_id,
         )
     count = await _validate_stream(conn, snapshot_id, snapshot["repository_id"])
     async with conn.transaction():
         state = await conn.fetchval(
-            "SELECT state FROM public.ucm_snapshots WHERE id=$1 FOR UPDATE", snapshot_id
+            "SELECT state FROM ucm_snapshots WHERE id=$1 FOR UPDATE", snapshot_id
         )
         if state == "READY":
             return count
         if state != "VALIDATING":
             raise ValueError("snapshot state changed during validation")
         await conn.execute(
-            "INSERT INTO public.ucm_snapshot_validations(snapshot_id,entity_count) VALUES ($1,$2)",
+            "INSERT INTO ucm_snapshot_validations(snapshot_id,entity_count) VALUES ($1,$2)",
             snapshot_id,
             count,
         )
         await conn.execute(
-            "UPDATE public.ucm_snapshots SET state='READY' WHERE id=$1", snapshot_id
+            "UPDATE ucm_snapshots SET state='READY' WHERE id=$1", snapshot_id
         )
     return count
 
@@ -676,12 +676,12 @@ async def _publish(
     _require_free_connection(conn)
     async with conn.transaction():
         if not await conn.fetchval(
-            "SELECT id FROM public.ucm_repositories WHERE id=$1 FOR UPDATE",
+            "SELECT id FROM ucm_repositories WHERE id=$1 FOR UPDATE",
             repository_id,
         ):
             raise ValueError("repository does not exist")
         current = await conn.fetchval(
-            "SELECT snapshot_id FROM public.ucm_repository_publications WHERE repository_id=$1",
+            "SELECT snapshot_id FROM ucm_repository_publications WHERE repository_id=$1",
             repository_id,
         )
         if current != expected_snapshot_id:
@@ -689,14 +689,14 @@ async def _publish(
                 "publication pointer changed; refresh expected_snapshot_id"
             )
         target = await conn.fetchrow(
-            "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1 FOR UPDATE",
+            "SELECT repository_id,state FROM ucm_snapshots WHERE id=$1 FOR UPDATE",
             snapshot_id,
         )
         if target is None or target["repository_id"] != repository_id:
             raise ValueError("snapshot missing or belongs to another repository")
         if current == snapshot_id and target["state"] == "PUBLISHED":
             if await conn.fetchval(
-                "SELECT to_regclass('public.search_discovery_generations')"
+                "SELECT to_regclass('search_discovery_generations')"
             ):
                 await build_generation(conn, snapshot_id)
             return
@@ -704,27 +704,25 @@ async def _publish(
         if target["state"] != required:
             raise ValueError(f"publication requires {required} snapshot")
         if not await conn.fetchval(
-            "SELECT EXISTS(SELECT 1 FROM public.ucm_snapshot_validations WHERE snapshot_id=$1)",
+            "SELECT EXISTS(SELECT 1 FROM ucm_snapshot_validations WHERE snapshot_id=$1)",
             snapshot_id,
         ):
             raise ValueError("snapshot has no validation receipt")
         await require_source_archive(conn, snapshot_id)
         if current is not None:
             await conn.execute(
-                "UPDATE public.ucm_snapshots SET state='RETIRED' WHERE id=$1", current
+                "UPDATE ucm_snapshots SET state='RETIRED' WHERE id=$1", current
             )
         await conn.execute(
-            "UPDATE public.ucm_snapshots SET state='PUBLISHED' WHERE id=$1", snapshot_id
+            "UPDATE ucm_snapshots SET state='PUBLISHED' WHERE id=$1", snapshot_id
         )
         await conn.execute(
-            "INSERT INTO public.ucm_repository_publications(repository_id,snapshot_id) VALUES ($1,$2) ON CONFLICT (repository_id) DO UPDATE SET snapshot_id=EXCLUDED.snapshot_id,updated_at=clock_timestamp()",
+            "INSERT INTO ucm_repository_publications(repository_id,snapshot_id) VALUES ($1,$2) ON CONFLICT (repository_id) DO UPDATE SET snapshot_id=EXCLUDED.snapshot_id,updated_at=clock_timestamp()",
             repository_id,
             snapshot_id,
         )
         # Historical migration-prefix benchmarks intentionally predate discovery storage.
-        if await conn.fetchval(
-            "SELECT to_regclass('public.search_discovery_generations')"
-        ):
+        if await conn.fetchval("SELECT to_regclass('search_discovery_generations')"):
             await build_generation(conn, snapshot_id)
 
 
