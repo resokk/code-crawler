@@ -31,3 +31,8 @@ Both race scenarios were reproduced as failing PostgreSQL regressions, then
 verified after the fix. Validation on 02fc9e0 plus this hardening:
 **1182 passed** with mandatory PostgreSQL 15 and strict markers; ruff check/format
 passed. The existing C05 API and storage schema remain unchanged.
+
+Integrated GitHub acceptance for `c6fdee2621faa25b650f217484ea762cc6111dbd`:
+[CI / PostgreSQL 15](https://github.com/resokk/code-crawler/actions/runs/43805870780)
+completed successfully: **1247 passed**, including current C06/D06 changes, lint,
+format checks and migration application on a clean PostgreSQL 15 database.
