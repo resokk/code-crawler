@@ -27,3 +27,31 @@ src/code_crawler/incremental.py; src/code_crawler/ingestion.py; src/code_crawler
 
 ## Dependencies
 B01; учитывать B02/B05
+
+## Concrete implementation
+
+Analysis, strict FileAnalysis recheck and COPY-row normalization are completed
+before the write transaction. Rows/ownership/references/explicit dependencies are
+spooled one slice at a time to a private anonymous TemporaryFile. Pickle is used
+only as internal transport for this process's normalized wire rows; external
+pickle paths/bytes are never accepted. The OS closes/unlinks the file on process
+exit, so no persistent spool retention or crash janitor is required. Disk-full
+and corrupt/read/write errors fail before publication; no resumable checkpoint.
+
+A shared session advisory lease pins the selected immutable baseline, without an
+open read transaction/MVCC snapshot or repository row lock. Acquisition rechecks
+presence after the lease and handles cancellation without releasing another
+owner's lock count. The index result retains the same base ID for publication CAS.
+
+A preallocated snapshot UUID is used in normalized rows; creation occurs only in
+the write transaction. COPY, cloning, archive, manifests and FK flush remain one
+atomic transaction. Explicit dependencies use a temporary table instead of an
+all-slices Python set. Worktree verification runs before writing and after archive/
+FK checks immediately before commit. Captured bytes/catalogs and the one-file
+worst case are not bounded by this change; B05 remains separate. No migration.
+
+IncrementalResult adds preparation_seconds, write_transaction_seconds and
+spool_bytes with backward-compatible defaults. Opt-in transaction_benchmark uses
+a fresh generated Java/SQL fixture and disposable PG15 DB, samples xact_start,
+records callbacks inside transactions/RSS/settings, validates the snapshot and
+hashes normalized canonical facts. Benchmark failures drop only their own DB.
