@@ -75,3 +75,9 @@ unauthorized context fails before database access. Publication changes and rollb
 are tested separately from explicitly selected snapshots. Timeout and cancellation
 are exercised with a real PostgreSQL query inside a savepoint, followed by another
 successful query on the same connection. No schema migration is needed.
+
+A02 authentication additionally requires read/discover permissions and membership
+for the root and every repository in the supplied context, intersected with the
+server discovery scope before DB access. Context repository/snapshot IDs are
+verified by the existing reader; they are references, not authorization grants.
+See [mcp-access-control.md](mcp-access-control.md).

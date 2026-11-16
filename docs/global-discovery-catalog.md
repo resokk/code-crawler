@@ -82,6 +82,8 @@ JSON-key API и candidate-only контракт для C03/других callers.
 MCP `search_discovery_entries` использует read-only REPEATABLE READ и trusted
 server allowlist `DISCOVERY_REPOSITORY_KEYS` (JSON array repository keys).
 Без политики глобальное чтение fail closed; клиент может только сузить scope.
-Это не полноценная authentication/ACL система R6. Source text, snippets и
+A02 дополнительно проверяет bearer identity, permission discover и пересекает
+allowlist с repository membership; см. [mcp-access-control.md](mcp-access-control.md).
+Source text, snippets и
 Evidence descriptions не копируются. Из BPMN literal facts берутся только
 semantic keys id/targetNamespace; универсальный secret detector A06 не заменяется.

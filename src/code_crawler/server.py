@@ -10,10 +10,17 @@ import asyncpg
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.server.context import Context
+from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.lifespan import lifespan
 from pydantic import BeforeValidator, Field
 
 from code_crawler import search
+from code_crawler.access import (
+    Permission,
+    PolicyVerifier,
+    configure_audit,
+    load_policy,
+)
 from code_crawler.resolver_context import ResolverContext
 from code_crawler.ucm import RelationKind
 
@@ -37,6 +44,8 @@ SymbolKind = Literal[
 
 @lifespan
 async def _database(server: FastMCP) -> AsyncIterator[dict]:
+    policy = load_policy()
+    configure_audit()
     url = os.environ.get("DATABASE_URL")
     if not url:
         raise RuntimeError("не задана переменная окружения DATABASE_URL")
@@ -48,26 +57,50 @@ async def _database(server: FastMCP) -> AsyncIterator[dict]:
     )
     pool = await asyncpg.create_pool(url, min_size=1)
     try:
-        yield {"pool": pool, "discovery_repository_keys": discovery_keys}
+        yield {
+            "pool": pool,
+            "discovery_repository_keys": discovery_keys,
+            "access_policy": policy,
+        }
     finally:
         await pool.close()
 
 
-mcp = FastMCP("code-crawler", lifespan=_database)
+mcp = FastMCP(
+    "code-crawler", lifespan=_database, auth=PolicyVerifier(), mask_error_details=True
+)
 
 
 async def _query(
-    ctx: Context, run: Callable[[asyncpg.Connection], Awaitable[dict]]
+    ctx: Context,
+    run: Callable[[asyncpg.Connection], Awaitable[dict]],
+    repository_key: str | None = None,
+    *,
+    permission: Permission = "read",
+    discovery_keys: tuple[str, ...] | None = None,
 ) -> dict:
+    policy = ctx.lifespan_context["access_policy"]
+    token = get_access_token()
+    try:
+        principal = policy.authenticate(token.token if token else None)
+        if repository_key is None and discovery_keys is None:
+            raise PermissionError("access denied")
+        targets = discovery_keys if discovery_keys is not None else (repository_key,)
+        policy.authorize(principal, permission, targets)
+    except PermissionError:
+        raise ToolError("access denied") from None
     async with ctx.lifespan_context["pool"].acquire() as conn:
         try:
-            # Сервер индексы только читает: транзакция не даст запросу что-то записать.
             async with conn.transaction(isolation="repeatable_read", readonly=True):
                 return await run(conn)
-        except PermissionError as error:
-            raise ToolError("repository scope is not authorized") from error
-        except ValueError as error:
-            raise ToolError(str(error)) from error
+        except (
+            ValueError,
+            PermissionError,
+            RuntimeError,
+            asyncpg.PostgresError,
+            asyncpg.InterfaceError,
+        ):
+            raise ToolError("query failed") from None
 
 
 @mcp.tool
@@ -95,6 +128,7 @@ async def search_symbols(
             parameter_types=parameter_types,
             limit=limit,
         ),
+        repository_key=repository_key,
     )
 
 
@@ -130,6 +164,7 @@ async def search_text(
             limit=limit,
             offset=offset,
         ),
+        repository_key=repository_key,
     )
 
 
@@ -145,6 +180,7 @@ async def find_callers(
     return await _query(
         ctx,
         lambda conn: search.find_callers(conn, repository_key, symbol_id, limit=limit),
+        repository_key=repository_key,
     )
 
 
@@ -160,6 +196,7 @@ async def find_callees(
     return await _query(
         ctx,
         lambda conn: search.find_callees(conn, repository_key, symbol_id, limit=limit),
+        repository_key=repository_key,
     )
 
 
@@ -179,6 +216,7 @@ async def find_sql_executions(
         lambda conn: search.find_sql_executions(
             conn, repository_key, symbol_id=symbol_id, limit=limit
         ),
+        repository_key=repository_key,
     )
 
 
@@ -200,6 +238,7 @@ async def find_table_readers(
         lambda conn: search.find_table_readers(
             conn, repository_key, table, column=column, schema=schema, limit=limit
         ),
+        repository_key=repository_key,
     )
 
 
@@ -221,6 +260,7 @@ async def find_table_writers(
         lambda conn: search.find_table_writers(
             conn, repository_key, table, column=column, schema=schema, limit=limit
         ),
+        repository_key=repository_key,
     )
 
 
@@ -251,6 +291,7 @@ async def trace_dependency(
             depth=depth,
             limit=limit,
         ),
+        repository_key=repository_key,
     )
 
 
@@ -260,7 +301,10 @@ async def get_evidence(
 ) -> dict:
     """Полные Evidence, Coverage и candidates одной связи по её `relation_id`."""
     return await _query(
-        ctx, lambda conn: search.get_evidence(conn, repository_key, relation_id)
+        ctx,
+        lambda conn: search.get_evidence(conn, repository_key, relation_id),
+        repository_key,
+        permission="evidence",
     )
 
 
@@ -291,21 +335,39 @@ async def search_discovery_entries(
     server DISCOVERY_REPOSITORY_KEYS; клиент может только сузить scope. Следующая
     страница требует fingerprint предыдущей, чтобы не смешать поколения.
     """
+    policy = ctx.lifespan_context["access_policy"]
+    token = get_access_token()
+    try:
+        principal = policy.authenticate(token.token if token else None)
+    except PermissionError:
+        raise ToolError("access denied") from None
+    allowed = tuple(
+        sorted(
+            set(principal.repositories)
+            & set(ctx.lifespan_context.get("discovery_repository_keys", ()))
+        )
+    )
+    requested = tuple(repository_keys) if repository_keys is not None else allowed
+    if not requested or not set(requested) <= set(allowed):
+        from code_crawler.access import audit
+
+        audit(principal.id, "discover", False, requested)
+        raise ToolError("access denied")
     return await _query(
         ctx,
         lambda conn: search.search_discovery_entries(
             conn,
             kind,
             lookup_key,
-            allowed_repository_keys=ctx.lifespan_context.get(
-                "discovery_repository_keys", ()
-            ),
+            allowed_repository_keys=list(allowed),
             repository_keys=repository_keys,
             qualifier=qualifier,
             limit=limit,
             offset=offset,
             expected_fingerprint=expected_fingerprint,
         ),
+        permission="discover",
+        discovery_keys=requested,
     )
 
 
@@ -327,8 +389,27 @@ async def trace_cross_repository(
 
     Неоднозначные кандидаты возвращаются без продолжения пути. Каждый переход
     сохраняет Evidence и snapshots; лимиты возвращают частичный результат.
-    Права задаёт server DISCOVERY_REPOSITORY_KEYS.
+    Требуются read/discover, membership всех версий контекста и server scope.
     """
+
+    policy = ctx.lifespan_context["access_policy"]
+    token = get_access_token()
+    targets = tuple(
+        sorted({repository_key, *(s.repository_key for s in context.selections)})
+    )
+    try:
+        principal = policy.authenticate(token.token if token else None)
+        policy.authorize(principal, "discover", targets)
+        allowed = frozenset(principal.repositories) & frozenset(
+            ctx.lifespan_context.get("discovery_repository_keys", ())
+        )
+        if not set(targets) <= allowed:
+            from code_crawler.access import audit
+
+            audit(principal.id, "discover", False, targets)
+            raise PermissionError("access denied")
+    except PermissionError:
+        raise ToolError("access denied") from None
 
     async def run(conn):
         result = await search.trace_cross_repository(
@@ -336,9 +417,7 @@ async def trace_cross_repository(
             repository_key,
             entity_id,
             context,
-            allowed_repositories=frozenset(
-                ctx.lifespan_context.get("discovery_repository_keys", ())
-            ),
+            allowed_repositories=allowed,
             depth=depth,
             fanout=fanout,
             max_nodes=max_nodes,
@@ -349,7 +428,7 @@ async def trace_cross_repository(
         )
         return result.model_dump(mode="json")
 
-    return await _query(ctx, run)
+    return await _query(ctx, run, discovery_keys=targets)
 
 
 def main() -> None:

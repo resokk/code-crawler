@@ -32,7 +32,7 @@ class FakePool:
 
 
 @pytest.fixture
-def pool(monkeypatch: pytest.MonkeyPatch) -> FakePool:
+def pool(monkeypatch: pytest.MonkeyPatch, mcp_credentials) -> FakePool:
     fake = FakePool()
 
     async def create_pool(url: str, **options):
@@ -64,6 +64,9 @@ def test_server_exposes_structural_tools(pool: FakePool) -> None:
         "get_evidence",
     }
     assert all(tool.description for tool in tools.values())
+    assert all(
+        "principal" not in tool.input_schema["properties"] for tool in tools.values()
+    )
     assert "ctx" not in tools["find_callers"].input_schema["properties"]
 
 
@@ -86,7 +89,7 @@ def test_tool_passes_arguments_reads_only_and_reports_errors(
                 "find_callers", {"repository_key": "app", "symbol_id": ID, "limit": 7}
             )
             assert result.data == {"snapshot_id": "s", "items": [], "truncated": False}
-            with pytest.raises(ToolError, match="no published snapshot"):
+            with pytest.raises(ToolError, match="query failed"):
                 await client.call_tool(
                     "find_callers", {"repository_key": "missing", "symbol_id": ID}
                 )
@@ -106,7 +109,7 @@ def test_tool_passes_arguments_reads_only_and_reports_errors(
 def test_discovery_fails_closed_without_policy(pool: FakePool) -> None:
     async def run():
         async with Client(mcp) as client:
-            with pytest.raises(ToolError, match="explicit allowed scope"):
+            with pytest.raises(ToolError, match="access denied"):
                 await client.call_tool(
                     "search_discovery_entries",
                     {"kind": "SYMBOL", "lookup_key": "app.A"},
@@ -170,7 +173,7 @@ def test_cross_repository_tool_uses_server_grants(pool, monkeypatch):
 
     async def run():
         async with Client(mcp) as client:
-            with pytest.raises(ToolError, match="repository scope is not authorized"):
+            with pytest.raises(ToolError, match="query failed"):
                 await client.call_tool(
                     "trace_cross_repository",
                     {

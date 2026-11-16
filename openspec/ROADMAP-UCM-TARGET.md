@@ -7,7 +7,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 
 ## Stream A — correctness/security (before corporate deployment)
 - A01 safe-snapshot-gc: explicit UCM GC table allowlist and rollback — [completed](archive/2026-11-15-a01-safe-snapshot-gc/completion.md), PG15 CI 1112 passed
-- A02 mcp-repository-access-control: principal authentication and repository ACL
+- A02 mcp-repository-access-control: principal authentication and repository ACL — [completed](archive/2026-11-15-a02-mcp-repository-access-control/completion.md), PG15 CI 1252 passed
 - A03 database-qualified-structural-search: database/version/object scoped SQL access search
 - A04 sql-search-certainty-contract: discovered SQL versus proven execution and target identity
 - A05 required-main-ci-check: main branch required status check, requires GitHub admin settings
