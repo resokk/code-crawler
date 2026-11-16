@@ -314,3 +314,126 @@ The other queries stay within about 1.5 ms of SQL time for 7.5 times the data.
 Pipeline: indexing 405.4 s, sliced validation 213.2 s, process peak 1,012 MiB RSS.
 Load cost and GC were not measured at this size; the 141k figures above stand for
 them.
+
+## B04: bulk-load FK optimization
+
+`uv run python -m code_crawler.bulk_benchmark --pairs 500000 --repeats 2 \
+  --locale en_US.utf8 --budget-seconds 900 --output REPORT.json`
+
+`BENCHMARK_DATABASE_URL` должен указывать на выделенный PostgreSQL 15 admin server
+с CREATEDB. Harness создаёт только собственную `crawler_bulk_<uuid>` базу из
+`template0` и удаляет её в finally, включая ошибки. Поддержаны locale `C` и
+`en_US.utf8`; locale выбирается только для новой базы, существующие БД не меняются.
+Никакие FK/индексы не отключаются. Для baseline harness можно запустить с кодом
+`08d9708` (до B04); API `ingest_stream` не меняется.
+
+Fixture из `pairs` методов и столько же CALLS, плюс один SourceFile, даёт
+`2*pairs+1` entities. Каждый call содержит Evidence и PARTIAL Coverage, ссылается
+на следующий метод, включая ссылки в следующие порции и замыкание цепи.
+Это синтетические typed UCM facts, а не замер Java parser: единственный archived
+source явно помечен как synthetic evidence. Разбор исходников не входит в результат.
+
+Отчёт отдельно содержит wall duration клиентских COPY, INSERT SELECT, ANALYZE и
+SET CONSTRAINTS (с round trips), число SQL-команд, staging high-water bytes,
+полное время committed ingest, archive, semantic validation и publication.
+`total_seconds` включает генерацию/recheck моделей, commit и diagnostics, но не
+создание БД/миграции и последующие reader probes. Обычный published reader проверяет
+точное восстановление sample Symbol/Relation; validation проверяет все entities.
+Повторы сохраняют предыдущие published/retired snapshots в той же базе.
+Размеры всех индексов и SHA256 `ingestion.py` сохраняются в отчёте.
+
+Бюджет по умолчанию — 900 с на trial; CLI возвращает ненулевой код после записи
+отчёта при превышении. Это порог данного opt-in benchmark, не переносимый latency
+assert для CI и не принудительный timeout долгого запроса. Планы equality FK probe
+сохраняются до/после ANALYZE при production `plan_cache_mode=auto`; EXPLAIN probe
+не утверждает, что видит внутренний SPI plan PostgreSQL RI trigger.
+
+Initial isolated PG15 smoke (20 001 entities, C locale): prior code COPY 0.265 s,
+INSERT SELECT 2.598 s, FK checks 47.623 s (88 SET commands), total 76.887 s.
+A single ALL check alone: FK 45.138 s, total 70.178 s. Adding ANALYZE before the
+check: FK 0.592 s, total 11.241 s. These single samples motivated the change;
+they do not establish a portable speedup factor. No index or collation migration
+is introduced; added-index write/storage overhead is zero. Forward migration of
+all historical ID keys would add table/index rewrites without fixing stale stats.
+Linguistic SQL identifier semantics and quoted/case-sensitive names stay unchanged.
+
+### Controlled B04 measurements
+
+The controlled runs use Linux x86_64 with a 2-CPU cgroup quota and 8 GiB memory,
+Docker `postgres:15`, shared_buffers=128MB, work_mem=4MB,
+plan_cache_mode=auto, fsync=on and synchronous_commit=on. PGDATA is a dedicated
+5-GiB tmpfs, max_wal_size=128MB, min_wal_size=32MB, checkpoint_timeout=60s.
+The original disk-backed million-entity attempt was cancelled before commit when
+workspace free space became low; its partial timings are excluded. tmpfs timings
+are not a throughput claim for production disks. Each trial runs alone; no test
+suite or second benchmark overlaps it. The initial smoke figures above used the
+original disk-backed setup and are listed only to explain the investigation.
+
+On both C and en_US.utf8, baseline first-load FK EXPLAIN selects
+`ucm_entities_symbol_name_idx` by snapshot and filters entity_id over the symbol
+set. After ANALYZE the same probe uses the unique entity-ID index. A repeat on the
+old code already benefits from populated-table statistics: this is why first and
+repeat trials must be compared separately. New ANALYZE work has a cost on warm
+loads; no universal ingestion speedup is claimed. No extra index is introduced.
+
+| 20 001 entities | First ingest, s | First FK, s | First full cycle, s | Repeat full cycle, s | Peak fact staging, MiB |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| baseline C | 51.177 | 44.951 | 70.378 | 11.069 | 14.10 |
+| B04 C | 5.941 | 0.730 | 10.906 | 9.277 | 7.08 |
+| baseline en_US.utf8 | 50.206 | 44.429 | 70.329 | 10.620 | 14.10 |
+| B04 en_US.utf8 | 6.865 | 0.688 | 10.849 | 12.794 | 7.08 |
+
+Two trials per setup are observations, not confidence intervals. ANALYZE client
+wall time at this scale is 0.25–0.92 s per trial. The warm en_US trial demonstrates
+that the optimization's added work is not free. `chunk_size=5000` pairs means
+10 000 entities per fact-staging slice in these measurements; the writer's maximum
+slice is 20 000 entities. The million-entity run uses the same chunk size, so its
+peak staging should remain proportional to a slice rather than the snapshot.
+
+The million-entity acceptance repeats use separate fresh databases because keeping
+two full snapshots plus discovery generations exceeded the available tmpfs quota.
+The first invocation completed its first trial and reader checks; the following
+trial was cancelled before storage exhaustion. Its completed timing log is
+retained explicitly as a log-only observation (unrecorded metrics are not filled
+in). The next acceptance trial uses `--repeats 1` in a new disposable database.
+Previous-snapshot preservation is separately checked by the two-trial 20k runs and
+the integration suite. No global tmpfs mount was changed.
+
+For such constrained environments run the command twice with `--repeats 1` and
+distinct output files. CLI now atomically saves each verified completed trial to
+`--output`; `complete=false` and `requested_trials` distinguish an incomplete
+multi-trial run. A subsequent failure or cancellation preserves that checkpoint
+while database cleanup still runs. Report serialization is outside trial timing.
+
+Benchmark provenance: the measurements above start from `08d9708` and schema
+through 0029, with B04 changing only the writer/benchmark. During verification,
+main advanced to A03 (`d53ea67`), adding migration 0030's index on
+`ucm_database_objects`. The synthetic fixture has no DATABASE_OBJECT rows and
+A03 does not change ingestion.py or incremental.py; the measured writer SHA256
+is unchanged. Final full-suite and CI validation run with A03/0030 included.
+
+### Million-entity acceptance
+
+[Machine-readable observations, phases, settings, plans and index sizes](benchmarks/bulk-pg15-2026-11-16.json).
+Both fresh trials load 1 000 001 entities and pass full semantic validation,
+publication and exact sample read-back with unchanged INFERRED/PARTIAL proof.
+
+| Trial | Committed ingest, s | FK flush, s | Validation, s | Publication, s | Full cycle, s | Budget 900 s |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| first completed trial (log) | 427.134 | 55.976 | 234.197 | 101.071 | 762.416 | passed |
+| fresh repeat (JSON checkpoint) | 401.075 | 54.051 | 228.094 | 89.994 | 719.186 | passed |
+
+The fresh repeat's fact-staging high-water is 7 512 064 bytes (7.16 MiB), against
+7 421 952 bytes (7.08 MiB) at 20k on the same 10k-entity slices. Larger method
+numbers slightly widen each row; staging does not grow with the number of slices.
+Client process peak RSS for the fresh repeat is 138.64 MiB, including validation;
+this is not PostgreSQL server memory. One published database occupies 2 737 356 135
+bytes, which explains why retaining two such snapshots plus WAL did not fit the
+5-GiB fixture tmpfs. The first completed trial predates JSON checkpoint support;
+its unrecorded staging/index metrics are deliberately omitted rather than inferred.
+
+No 1M baseline trial of the old code was run; there is no claimed controlled
+before/after speedup at 1M. The comparison is the
+recorded 20k fresh/warm matrix, the deterministic bad-plan regression, and two
+successful bounded 1M acceptance repetitions. These measurements cover synthetic
+bulk ingestion, not parsing or production-disk throughput.

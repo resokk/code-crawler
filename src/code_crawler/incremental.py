@@ -602,6 +602,7 @@ async def index_incremental(
             stages,
             await asyncio.to_thread(_rows, snap, repository_id, files),
         )
+        await _transfer(conn, stages)
         owned = [(snap, file.path, file.id) for file in files]
         for start in range(0, len(selected), _SLICE):
             part = selected[start : start + _SLICE]
@@ -609,6 +610,7 @@ async def index_incremental(
                 _inspect, snap, repository_id, part, await analyze(part)
             )
             await _stage(conn, prefix, stages, rows)
+            await _transfer(conn, {table: stages[table] for table in rows})
             owned += [(snap, path, entity_id) for path, entity_id in slice_owned]
             await conn.copy_records_to_table(
                 "ingest_refs", schema_name="pg_temp", records=references
@@ -628,7 +630,6 @@ async def index_incremental(
             columns=("snapshot_id", "path", "entity_id"),
             records=owned,
         )
-        await _transfer(conn, stages)
         if base_id and plan.reused and not plan.full_rebuild:
             await _clone(conn, base_id, snap, list(plan.reused))
         # Структурные зависимости: файл ссылается на сущность, принадлежащую другому файлу.
@@ -659,5 +660,5 @@ async def index_incremental(
             "INSERT INTO public.ingest_snapshot_adapters(snapshot_id,adapter_key,analysis_version,fingerprint) VALUES ($1,$2,$3,$4)",
             [(snap, s.key, s.analysis_version, s.fingerprint) for s in scopes],
         )
-        await _check(conn)
+        await _check(conn, {*stages, *_SUBTYPES.values(), *_AUXILIARY})
     return IncrementalResult(snap, base_id, plan)

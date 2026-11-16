@@ -17,7 +17,7 @@ publication pointer и не переключает legacy CLI.
 Подготовка и повторная валидация моделей выполняются в worker thread. Writer
 берёт FOR UPDATE lock snapshot, сериализуя загрузки и переходы state. Нормализованные
 records загружаются COPY в session-local temporary staging tables ON COMMIT DROP.
-Pass 1 переносит envelope rows ucm_entities; pass 2 — subtype, refs, ordered
+В каждой порции pass 1 переносит envelope rows ucm_entities; pass 2 — subtype, refs, ordered
 arguments/candidates, evidence и coverage reasons. FK проверяются до commit.
 Все канонические записи и staging находятся в одной транзакции: любая ошибка
 или cancellation откатывает загрузку; temp tables удаляются. Новый snapshot
@@ -137,3 +137,34 @@ shared_buffers=128MB, locale `en_US.UTF-8`, сервер без другой н�
 
 Не замерялось: загрузка такого snapshot через `ingest_batch` (целый batch в
 памяти) и его GC — см. [ingest-jobs.md](ingest-jobs.md#время-gc).
+
+## B04: перенос порциями и планы FK
+
+Порция переносится из staging в canonical сразу после COPY: сначала envelope,
+затем её subtype/refs/evidence/coverage. После каждого INSERT SELECT staging
+таблица очищается TRUNCATE и переиспользуется следующей порцией. Все FK остаются
+включёнными и deferred до конца общей транзакции; ссылки на следующие порции,
+циклы, атомарность и запрет записи в published snapshots сохранены.
+
+Для `ingest_batch` размер порции — 20 000 entities. `ingest_stream` дополнительно
+режет входные последовательности до этого размера. Incremental loader переносит
+файлы и каждый analysis slice до следующего slice. Объём fact staging теперь
+зависит от максимальной порции, а не числа порций snapshot. Это ограничение по
+числу entities, не жёсткая квота байтов: вложенные списки/длинные значения внутри
+одной entity могут быть большими. Incremental `ingest_refs`/`ingest_reuse` и очередь
+отложенных FK остаются пропорциональными загрузке; B04 не ограничивает полный RSS
+PostgreSQL и не сокращает время жизни транзакции (это B03).
+
+Перед финальным `SET CONSTRAINTS ALL IMMEDIATE` writer делает ANALYZE затронутых
+canonical таблиц. У свежей базы статистика до массовой загрузки не отражает
+кардинальности; FK lookups могут выбирать неселективные индексы. ANALYZE обновляет
+статистику, не факты или семантику идентификаторов. Таблицы перечисляются в одном
+стабильном порядке для конкурирующих writers; ANALYZE использует стандартные
+PG locks и права владельца/maintenance writer. MCP этот код не вызывает.
+В incremental reuse анализируется также известный реестр клонируемых UCM таблиц.
+
+Все deferred constraints проверяются одной командой вместо обхода каждого FK:
+это сохраняет полную проверку до commit и сокращает повторные проходы по очереди
+trigger events. Прежний publication pointer при любой ошибке остаётся прежним.
+Схема, FK, индексы и collation колонок не меняются; миграция не требуется.
+Воспроизводимый PG15 benchmark и измерения: [query-indexes.md](query-indexes.md#b04-bulk-load-fk-optimization).

@@ -8,8 +8,12 @@ import pytest
 
 from code_crawler import db, snapshots
 from code_crawler.incremental import SourceInput
-from code_crawler.ingestion import UcmBatch, ingest_batch
-from code_crawler.publication import publish_snapshot, validate_snapshot
+from code_crawler.ingestion import UcmBatch, ingest_batch, ingest_stream
+from code_crawler.publication import (
+    load_snapshot_batch,
+    publish_snapshot,
+    validate_snapshot,
+)
 from code_crawler.source_evidence import archive_sources
 from code_crawler.ucm import EntityType, SourceFile, Value, logical_id
 
@@ -365,6 +369,94 @@ def test_copy_preserves_literal_scalars(database_url: str, literal: object) -> N
                 await conn.fetchval("SELECT literal::text FROM ucm_values")
             )
             assert actual == literal and type(actual) is type(literal)
+        finally:
+            await conn.close()
+
+    asyncio.run(scenario())
+
+
+def test_chunked_batch_preserves_cyclic_facts_and_published_reader(
+    database_url: str,
+    ucm_batch_factory: Callable[[UUID], UcmBatch],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("code_crawler.ingestion._CHUNK", 1)
+
+    async def scenario() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            repo, snapshot = await initialize(conn)
+            batch = ucm_batch_factory(repo)
+            reversed_batch = UcmBatch(
+                repository_id=repo, entities=tuple(reversed(batch.entities))
+            )
+            await ingest_batch(conn, snapshot, reversed_batch)
+            await archive_sources(
+                conn,
+                snapshot,
+                tuple(
+                    SourceInput(e, b"class A { void run() {} }\n")
+                    for e in batch.entities
+                    if isinstance(e, SourceFile)
+                ),
+                origin="PROVIDED_BYTES",
+            )
+            await validate_snapshot(conn, snapshot)
+            await publish_snapshot(conn, repo, snapshot, expected_snapshot_id=None)
+            restored = await load_snapshot_batch(conn, snapshot)
+            assert {e.id: e for e in restored.entities} == {
+                e.id: e for e in batch.entities
+            }
+            assert await staged_count(conn) == 0
+        finally:
+            await conn.close()
+
+    asyncio.run(scenario())
+
+
+def test_dangling_fk_rolls_back_transferred_chunks_and_keeps_publication(
+    database_url: str, ucm_batch_factory: Callable[[UUID], UcmBatch]
+) -> None:
+    async def scenario() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            repo, previous = await initialize(conn)
+            batch = ucm_batch_factory(repo)
+            await ingest_batch(conn, previous, batch)
+            await archive_sources(
+                conn,
+                previous,
+                tuple(
+                    SourceInput(e, b"class A { void run() {} }\n")
+                    for e in batch.entities
+                    if isinstance(e, SourceFile)
+                ),
+                origin="PROVIDED_BYTES",
+            )
+            await validate_snapshot(conn, previous)
+            await publish_snapshot(conn, repo, previous, expected_snapshot_id=None)
+            attempted = await create(conn, repo)
+
+            async def chunks():
+                for entity in reversed(batch.entities):
+                    if not isinstance(entity, SourceFile):
+                        yield (entity,)
+
+            with pytest.raises(asyncpg.ForeignKeyViolationError):
+                await ingest_stream(conn, attempted, repo, chunks())
+            assert (
+                await conn.fetchval(
+                    "SELECT count(*) FROM ucm_entities WHERE snapshot_id=$1", attempted
+                )
+                == 0
+            )
+            assert await staged_count(conn) == 0
+            assert (await snapshots.published_snapshot(conn, repo))["id"] == previous
+            restored = await load_snapshot_batch(conn, previous)
+            assert {e.id: e for e in restored.entities} == {
+                e.id: e for e in batch.entities
+            }
+            await ingest_batch(conn, attempted, batch)
         finally:
             await conn.close()
 
