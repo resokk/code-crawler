@@ -61,3 +61,38 @@ TABLE, с `column` — уровня COLUMN.
 Межрепозиторный `trace_cross_repository` использует явный C03 context и доверенные
 repository grants. Контракт C06, лимиты и правила неопределённости:
 [cross-repository-graph.md](cross-repository-graph.md).
+
+## Контракт уверенности SQL (A04)
+
+Расширение совместимо с прежними полями и аргументами; UCM и схема БД не меняются.
+Новые поля `SqlSearchStatus` отделяют три независимых утверждения:
+
+| Поле | Значения и смысл |
+| --- | --- |
+| `discovery_status` | `FOUND`: обнаружен SQL access либо execution sink |
+| `execution_link_status` | `STATIC_PROVEN`: существует сохранённая RESOLVED связь с STATIC_PROVEN certainty; `INFERRED`: существует INFERRED связь; `NOT_ESTABLISHED`: статическая связь не доказана |
+| `target_resolution` | у access — сохранённое `resolution` DB-цели; у sink — `NOT_APPLICABLE`, поскольку sink сам по себе не определяет таблицу |
+
+У access статус execution относится к связи statement → sink (EXECUTES_STATEMENT
+хранится в направлении sink → statement). Каждый элемент `executions` сохраняет
+старое поле `certainty` и добавляет полную `relation` с Evidence и Coverage.
+`access_relations` содержит доказательства самого SQL access, независимо от execution.
+У sink статус относится к EXECUTES_SQL; `sink_relations` возвращает эти связи целиком.
+Связи statement остаются в `statements[].relation`, их certainty не повышается.
+`statement_relations` включает также неразрешённые связи, чтобы сохранять причины
+неизвестного SQL и исходные Coverage/Evidence при пустом `statements`.
+
+У sink `coverage` агрегирует неполноту возвращённых связей; отсутствие statements
+всегда даёт PARTIAL: `SQL_TEXT_NOT_RECOVERED`, либо
+`SQL_STATEMENT_LINK_NOT_RESOLVED`, если сохранены только кандидаты. Исходные capability,
+analyzer version, status и reasons доступны в каждой relation. Это покрытие
+статического анализа, не гарантия полноты runtime поведения.
+
+Безопасные формулировки ответа агентом:
+
+- FOUND + NOT_ESTABLISHED: «Найден DELETE для таблицы; связь с execution sink не установлена».
+- STATIC_PROVEN: «Статически установлена связь SQL с JDBC sink; Evidence указывает место в исходнике».
+- Пустой statements: «Обнаружен SQL sink, текст SQL не восстановлен».
+- target_resolution=UNRESOLVED: «Имя таблицы найдено в SQL, конкретный DATABASE_OBJECT не разрешён».
+
+Ни один статус не доказывает, что запрос действительно выполнялся при запуске приложения.

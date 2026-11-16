@@ -1,6 +1,6 @@
 """Read-only structural queries over the published UCM snapshot of a repository."""
 
-from typing import Literal
+from typing import Literal, TypedDict
 from uuid import UUID
 
 import asyncpg
@@ -17,6 +17,30 @@ MAX_OFFSET = 1000
 TEXT_TYPES = ("SYMBOL", "SOURCE_FILE", "DATABASE_OBJECT", "ORM_MAPPING", "ORM_QUERY")
 
 _WRITES = ("INSERT", "UPDATE", "DELETE", "MERGE", "DDL")
+
+
+class SqlSearchStatus(TypedDict):
+    """Discovery, static execution linkage and DB resolution are independent."""
+
+    discovery_status: Literal["FOUND"]
+    execution_link_status: Literal["STATIC_PROVEN", "INFERRED", "NOT_ESTABLISHED"]
+    target_resolution: str
+
+
+def _sql_status(relations: list[dict], target_resolution: str) -> SqlSearchStatus:
+    status: Literal["STATIC_PROVEN", "INFERRED", "NOT_ESTABLISHED"] = "NOT_ESTABLISHED"
+    if any(
+        r["resolution"] == "RESOLVED" and r["certainty"] == "STATIC_PROVEN"
+        for r in relations
+    ):
+        status = "STATIC_PROVEN"
+    elif any(r["certainty"] == "INFERRED" for r in relations):
+        status = "INFERRED"
+    return {
+        "discovery_status": "FOUND",
+        "execution_link_status": status,
+        "target_resolution": target_resolution,
+    }
 
 
 def _limit(limit: int) -> int:
@@ -338,7 +362,25 @@ async def _executions(
         snapshot_id,
         *arguments,
     )
-    return [dict(row) for row in rows]
+    relation_rows = await conn.fetch(
+        f"SELECT {_RELATION} FROM public.ucm_relations r "
+        "WHERE r.snapshot_id=$1 AND r.relation_kind='EXECUTES_SQL' "
+        "AND r.target_id=ANY($2) ORDER BY r.entity_id",
+        snapshot_id,
+        [row["id"] for row in rows],
+    )
+    relations = await _relations(conn, snapshot_id, relation_rows)
+    return [
+        dict(row)
+        | {
+            "sink_relations": [
+                relation
+                for link, relation in zip(relation_rows, relations, strict=True)
+                if link["target_id"] == row["id"]
+            ]
+        }
+        for row in rows
+    ]
 
 
 async def find_sql_executions(
@@ -360,7 +402,7 @@ async def find_sql_executions(
     page = executions[:limit]
     rows = await conn.fetch(
         f"SELECT {_RELATION}, st.text, st.operation, st.parse_status, st.dialect "
-        "FROM public.ucm_relations r JOIN public.ucm_sql_statements st "
+        "FROM public.ucm_relations r LEFT JOIN public.ucm_sql_statements st "
         "ON st.snapshot_id=r.snapshot_id AND st.entity_id=r.target_id "
         "WHERE r.snapshot_id=$1 AND r.relation_kind='EXECUTES_STATEMENT' "
         "AND r.source_id=ANY($2) ORDER BY r.entity_id",
@@ -380,9 +422,35 @@ async def find_sql_executions(
                 "relation": relation,
             }
             for row, relation in zip(rows, relations, strict=True)
+            if row["source_id"] == execution["id"] and row["target_id"] is not None
+        ]
+        execution["statement_relations"] = [
+            relation
+            for row, relation in zip(rows, relations, strict=True)
             if row["source_id"] == execution["id"]
         ]
-    return _page(snapshot_id, executions, executions, limit)
+        execution.update(_sql_status(execution["sink_relations"], "NOT_APPLICABLE"))
+        proofs = execution["sink_relations"] + execution["statement_relations"]
+        reasons = list(
+            dict.fromkeys(
+                reason for proof in proofs for reason in proof["coverage"]["reasons"]
+            )
+        )
+        if not execution["statements"]:
+            reasons.append(
+                "SQL_STATEMENT_LINK_NOT_RESOLVED"
+                if any(r.get("candidates") for r in execution["statement_relations"])
+                else "SQL_TEXT_NOT_RECOVERED"
+            )
+        execution["coverage"] = {
+            "status": "PARTIAL"
+            if not proofs
+            or reasons
+            or any(p["coverage"]["status"] != "COMPLETE" for p in proofs)
+            else "COMPLETE",
+            "reasons": reasons,
+        }
+    return _page(snapshot_id, page, executions, limit)
 
 
 async def _accesses(
@@ -427,12 +495,22 @@ async def _accesses(
     )
     page = rows[:limit]
     links = await conn.fetch(
-        "SELECT r.target_id AS statement_id, r.source_id AS execution_id, r.certainty "
+        f"SELECT {_RELATION}, r.target_id AS statement_id, r.source_id AS execution_id "
         "FROM public.ucm_relations r WHERE r.snapshot_id=$1 "
         "AND r.relation_kind='EXECUTES_STATEMENT' AND r.target_id=ANY($2)",
         snapshot_id,
         list({row["statement_id"] for row in page}),
     )
+    link_relations = await _relations(conn, snapshot_id, links)
+    access_rows = await conn.fetch(
+        f"SELECT {_RELATION} FROM public.ucm_relations r "
+        "WHERE r.snapshot_id=$1 AND r.target_id=ANY($2) "
+        "AND r.source_id=ANY($3) ORDER BY r.entity_id",
+        snapshot_id,
+        [row["access_id"] for row in page],
+        list({row["statement_id"] for row in page}),
+    )
+    access_relations = await _relations(conn, snapshot_id, access_rows)
     executions = {
         execution["id"]: execution
         for execution in await _executions(
@@ -445,12 +523,21 @@ async def _accesses(
     items = []
     for row in page:
         item = dict(row)
+        item["access_relations"] = [
+            relation
+            for link, relation in zip(access_rows, access_relations, strict=True)
+            if link["target_id"] == row["access_id"]
+        ]
         # Пустой список — SQL найден в коде, но его выполнение не доказано.
         item["executions"] = [
-            executions[link["execution_id"]] | {"certainty": link["certainty"]}
-            for link in links
+            executions[link["execution_id"]]
+            | {"certainty": link["certainty"], "relation": relation}
+            for link, relation in zip(links, link_relations, strict=True)
             if link["statement_id"] == row["statement_id"]
         ]
+        item.update(
+            _sql_status([e["relation"] for e in item["executions"]], row["resolution"])
+        )
         items.append(item)
     return _page(snapshot_id, items, rows, limit)
 

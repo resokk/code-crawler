@@ -213,6 +213,18 @@ def test_mcp_tool_reads_published_snapshot(
             writers = await client.call_tool(
                 "find_table_writers", {"repository_key": "app", "table": "users"}
             )
+            assert all(
+                i["discovery_status"] == "FOUND"
+                and i["target_resolution"] == i["resolution"]
+                and i["access_relations"]
+                for i in writers.data["items"]
+            )
+            assert all(
+                e["relation"]["certainty"] == e["certainty"]
+                and e["relation"]["evidence"]
+                for i in writers.data["items"]
+                for e in i["executions"]
+            )
             assert {
                 e["owner_symbol_id"]
                 for i in writers.data["items"]
@@ -359,6 +371,79 @@ def test_symbol_hydration_does_not_scan_all_symbols(database_url: str) -> None:
                 for node in scans
                 if node["Node Type"] == "Seq Scan"
             ]
+        finally:
+            await conn.close()
+
+    asyncio.run(run())
+
+
+def test_sql_certainty_is_independent_of_discovery(
+    database_url: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fixture = REPO.replace(
+        "    public void save",
+        """    public void unused() { String sql = "DELETE FROM never_executed"; }
+    public void dynamic(String sql) throws Exception {
+        connection.prepareStatement(sql).executeUpdate();
+    }
+    public void save""",
+    ).replace(
+        '"UPDATE users SET name = ? WHERE id = 1"',
+        '"UPDATE " + "users SET name = ? WHERE id = 1"',
+    )
+    monkeypatch.setitem(globals(), "REPO", fixture)
+
+    async def run() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            await publish(conn, tmp_path)
+            before = await conn.fetchval("SELECT count(*) FROM public.ucm_relations")
+            literal = (await search.find_table_writers(conn, "app", "never_executed"))[
+                "items"
+            ]
+            assert literal
+            assert all(
+                i["discovery_status"] == "FOUND"
+                and i["execution_link_status"] == "NOT_ESTABLISHED"
+                and not i["executions"]
+                for i in literal
+            )
+            writers = (await search.find_table_writers(conn, "app", "users"))["items"]
+            assert writers and any(i["executions"] for i in writers)
+            linked = [i for i in writers if i["executions"]]
+            assert linked and all(
+                i["execution_link_status"] == "INFERRED" for i in linked
+            )
+            assert all(
+                e["certainty"] == "INFERRED" for i in linked for e in i["executions"]
+            )
+            assert all(
+                i["execution_link_status"] == "NOT_ESTABLISHED"
+                for i in writers
+                if not i["executions"]
+            )
+            for item in writers:
+                assert item["target_resolution"] == item["resolution"] == "UNRESOLVED"
+                assert all(e["relation"]["evidence"] for e in item["executions"])
+            executions = (await search.find_sql_executions(conn, "app"))["items"]
+            unknown = [e for e in executions if e["owner"] == "app.Repo.dynamic"]
+            assert unknown
+            assert all(e["statement_relations"] for e in unknown)
+            assert all(
+                r["resolution"] == "UNRESOLVED" and r["reason"] and r["evidence"]
+                for e in unknown
+                for r in e["statement_relations"]
+            )
+            assert all(
+                not e["statements"]
+                and e["coverage"]["status"] == "PARTIAL"
+                and "SQL_TEXT_NOT_RECOVERED" in e["coverage"]["reasons"]
+                for e in unknown
+            )
+            assert (
+                await conn.fetchval("SELECT count(*) FROM public.ucm_relations")
+                == before
+            )
         finally:
             await conn.close()
 

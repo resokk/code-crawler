@@ -68,3 +68,8 @@ PARTIAL availability и pagination fingerprint возвращаются явно
 GC пропускает используемую версию; следующий вызов GC может удалить её после
 освобождения lease. Прямым SQL-читателям доступен `snapshots.pin_snapshot` внутри
 транзакции. Подробности и отчёт очистки: [ingest-jobs.md](ingest-jobs.md).
+
+SQL-инструменты возвращают отдельные `discovery_status`, `execution_link_status`
+и `target_resolution`; Evidence/certainty сохранённых связей доступны в relation.
+См. [контракт уверенности SQL](structural-search.md#контракт-уверенности-sql-a04)
+с примерами формулировок: обнаруженный SQL и статический sink не доказывают runtime execution.

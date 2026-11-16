@@ -209,7 +209,9 @@ async def find_sql_executions(
 ) -> dict:
     """Места выполнения SQL (всего репозитория или одного метода) и их SQL-тексты.
 
-    Пустой `statements` значит, что текст запроса статически не восстановлен.
+    Пустой `statements` и coverage SQL_TEXT_NOT_RECOVERED означают неизвестный SQL.
+    sink_relations сохраняет Evidence/certainty. Статическая связь не доказывает
+    выполнение во время работы приложения.
     """
     return await _query(
         ctx,
@@ -231,7 +233,9 @@ async def find_table_readers(
 ) -> dict:
     """SQL-запросы, читающие таблицу (или её колонку), и методы, которые их выполняют.
 
-    Пустой `executions` значит, что SQL найден в коде, но его выполнение не доказано.
+    discovery_status=FOUND означает обнаружение SQL. execution_link_status отдельно
+    показывает статическую связь с sink; NOT_ESTABLISHED — связь не доказана.
+    target_resolution относится только к DB-цели. Evidence/certainty — в relation.
     """
     return await _query(
         ctx,
@@ -253,7 +257,9 @@ async def find_table_writers(
 ) -> dict:
     """SQL-запросы, изменяющие таблицу или колонку (INSERT, UPDATE, DELETE, MERGE, DDL).
 
-    Пустой `executions` значит, что SQL найден в коде, но его выполнение не доказано.
+    discovery_status=FOUND означает обнаружение SQL. execution_link_status отдельно
+    показывает статическую связь с sink; NOT_ESTABLISHED — связь не доказана.
+    target_resolution относится только к DB-цели. Evidence/certainty — в relation.
     """
     return await _query(
         ctx,
