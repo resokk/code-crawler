@@ -15,7 +15,7 @@
 - [x] 10. Добавить миграцию только при новых данных; проверить PG15 FK, rollback, source evidence.
 - [x] 11. Сравнить поведение published reader до/после, не поднимать уровень Certainty без Evidence.
 - [x] 12. Обновить тематические docs/, Coverage и ограничения.
-- [ ] 13. Запустить ruff, pytest --require-postgres и benchmark/CI, сохранить воспроизводимые результаты.
+- [x] 13. Запустить ruff, pytest --require-postgres и benchmark/CI, сохранить воспроизводимые результаты.
 
 ## Runner verification (scale evidence pending)
 
@@ -41,6 +41,5 @@
   is unchanged. No benchmark-owned DBs remained after the series.
 - Final local full PG15 suite: **1325 passed in 314.76s**; focused suite:
   **14 passed in 13.57s**. Ruff lint/format passed (395 files).
-- Required remote CI for the final guard/aggregation/evidence commit is pending;
-  item 13 remains open until that succeeds. Initial runner CI already passed:
-  https://github.com/resokk/code-crawler/actions/runs/43921168361 (1322 tests).
+- Required remote CI for final evidence implementation `3de9d3d01f2fb65a75bb24d791af4cfc4cbff146`: success, **1325 passed in 291.55s**, clean migrations and working-tree checks passed: https://github.com/resokk/code-crawler/actions/runs/43927411180.
+- Initial runner CI also passed: https://github.com/resokk/code-crawler/actions/runs/43921168361 (1322 tests). All acceptance scenarios are satisfied, including the explicitly permitted documented large-scale failure outcome.
