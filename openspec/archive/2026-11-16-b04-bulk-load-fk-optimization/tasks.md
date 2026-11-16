@@ -15,7 +15,7 @@
 - [x] 10. Добавить миграцию только при новых данных; проверить PG15 FK, rollback, source evidence.
 - [x] 11. Сравнить поведение published reader до/после, не поднимать уровень Certainty без Evidence.
 - [x] 12. Обновить тематические docs/, Coverage и ограничения.
-- [ ] 13. Запустить ruff, pytest --require-postgres и benchmark/CI, сохранить воспроизводимые результаты.
+- [x] 13. Запустить ruff, pytest --require-postgres и benchmark/CI, сохранить воспроизводимые результаты.
 
 ## Реализация и evidence
 
@@ -39,6 +39,9 @@
   CLI теперь сохраняет verified completed trials атомарно, incomplete — явно.
 - PG15 targeted: 32 passed; затем 4 tests прошли для journal/failure/FK rollback.
   Full PG15 suite после объединения с A03: 1290 passed (324.90s).
-  Ruff check и format check прошли. CI ещё проверяется; change пока активен.
+  Ruff check и format check прошли. Mandatory PG15 CI: 1290 passed (158.56s),
+  success на d703a379801bc9d877b225793f0e9e07fd327e1b.
+  https://github.com/resokk/code-crawler/actions/runs/43869595399
+  Acceptance подтверждён; change архивирован с сохранением полной спецификации.
 - Тематические docs и полный measurement artifact: docs/query-indexes.md,
   docs/ucm-ingestion.md, docs/benchmarks/bulk-pg15-2026-11-16.json.

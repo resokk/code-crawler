@@ -9,7 +9,7 @@
 | Группа | Уже в main | Что ещё открыто |
 | --- | --- | --- |
 | A Security/Correctness | A01 safe GC | A02 открыт PR #8; A03 DB-qualified SQL search [done]; A04 certainty [done]; A05 strict no-bypass; A06 redaction |
-| B Scale/Operations | Sliced indexing, server-side cloning, PG15 1.06M, sliced validation | B01 formal CI performance baseline; B02 SQL invariants; B03 short transactions; B04 tune measured FK, B05 true bounded pipeline; B06 GC; B07/08 mixed/100 repos |
+| B Scale/Operations | Sliced indexing, server-side cloning, PG15 1.06M, sliced validation, B04 FK/staging tuning | B01 formal CI performance baseline; B02 SQL invariants; B03 short transactions; B05 true bounded pipeline; B06 GC; B07/08 mixed/100 repos |
 | C Search/Graph | C01–C06 complete | C07 embeddings/model selection, C08 hybrid retrieval, C09 MCP global; C10 Kafka and C11 BPMN worker discovery integration; C12 memory-bounded document rebuild |
 | D Adapters | D01/D02 BPMN; D05/D06 OpenAPI; D07 Kafka; D10 Kotlin; D11 JS/TS; D12 VBScript | D03/D04 reference JSON + loaders; D08/D09 GraphQL schema + Java; increase partial coverage based on tests |
 | E Prod | Some OpenSpec archive operations | E01 metrics, E02 retention, E03 restore; E04 verify archive policy |
@@ -43,6 +43,8 @@ Separate CPU parsing from PostgreSQL write transaction; keep capture immutabilit
 
 ### B01/B04/B07/B08: measured regression coverage (P1)
 Treat successful 1M benchmark as a **completed milestone**, not a reason to mark all baseline tasks complete. Add controlled PG15 400/1000/3000-file runs, end-to-end stage budgets, FK/WAL/GC, compare mixed-language full vs incremental and 100+ concurrent repository publications. Limit new optimizations to measured bottlenecks.
+
+B04 is complete: fresh-table FK plans, per-slice fact staging, C/en_US measurements and two synthetic 1M full-cycle repetitions within 900 s on PG15/tmpfs. [Acceptance and CI](../openspec/archive/2026-11-16-b04-bulk-load-fk-optimization/completion.md). Parser, production-disk, mixed-language and concurrent-repository baselines remain B01/B07/B08 work.
 
 ### C12: bounded search document rebuild (P1)
 Current C01 storage rebuild materializes full snapshot via `load_snapshot_batch`. Stream projection with bounded batches and atomic generation swap while preserving authorization, redaction, deterministic hashes and old generation on failure.
