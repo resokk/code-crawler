@@ -39,7 +39,8 @@ from code_crawler.ucm import (
     logical_id,
 )
 
-_MAX_PATHS = 32
+_MAX_PATHS = 1024
+_TRUNCATED = "path limit reached: variants truncated"
 
 
 class _SqlFlow(java._Flow):
@@ -211,12 +212,17 @@ class _SqlFlow(java._Flow):
             self.queries.append(query)
 
 
-def _limit(flows: list[_SqlFlow]) -> list[_SqlFlow]:
-    if len(flows) > _MAX_PATHS:
-        raise ValueError(
-            "SQL construction path limit exceeded; variants were not silently dropped"
-        )
+def _limit(flows: list[_SqlFlow], limit: int) -> list[_SqlFlow]:
+    if len(flows) > limit:
+        flows = flows[:limit]
+        for flow in flows:
+            flow.path_reasons = tuple(dict.fromkeys((*flow.path_reasons, _TRUNCATED)))
     return flows
+
+
+def _fork(flows: list[_SqlFlow]) -> list[_SqlFlow]:
+    # A branch at least doubles the paths, so the excess is cut before it is cloned.
+    return _limit(flows, (_MAX_PATHS + 1) // 2)
 
 
 def _ternaries(node: Node) -> list[Node]:
@@ -250,7 +256,7 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
         return flows
     if node.type == "if_statement":
         result = []
-        for flow in flows:
+        for flow in _fork(flows):
             condition = node.child_by_field_name("condition")
             if condition:
                 flow._visit(condition, 0)
@@ -260,10 +266,10 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
             result.extend(
                 _paths(node.child_by_field_name("alternative"), [flow.clone()])
             )
-        return _limit(result)
+        return _limit(result, _MAX_PATHS)
     if node.type in ("for_statement", "while_statement", "do_statement"):
         result = []
-        for flow in flows:
+        for flow in _fork(flows):
             zero = flow.clone()
             zero.path_reasons = tuple(
                 dict.fromkeys((*zero.path_reasons, "loop repetition is bounded"))
@@ -271,7 +277,7 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
             one = zero.clone()
             result.append(zero)
             result.extend(_paths(node.child_by_field_name("body"), [one]))
-        return _limit(result)
+        return _limit(result, _MAX_PATHS)
     if node.type in (
         "local_variable_declaration",
         *java._FIELDS,
@@ -294,7 +300,7 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
                         variant = flow.clone()
                         variant.choices[ternary.id] = selected
                         expanded.append(variant)
-            flows = _limit(expanded)
+            flows = _limit(expanded, _MAX_PATHS)
         for flow in flows:
             flow._visit(node, 0)
         return flows
@@ -390,10 +396,16 @@ def _recover(
             )
         pending.extend(reversed(current.named_children))
     queries.extend(literal_flow.queries)
+    truncated = any(_TRUNCATED in state.path_reasons for state in flows)
     for state in flows:
         for variable in state.variables.values():
             if variable.dirty:
                 state._emit(variable.value, variable.line, variable.source_span)
+        for query in state.queries:
+            # Variants emitted before the cut are complete texts of an incomplete set.
+            if truncated and _TRUNCATED not in query.partial_reasons:
+                query.partial = True
+                query.partial_reasons = (*query.partial_reasons, _TRUNCATED)
         queries.extend(state.queries)
     return queries
 
@@ -410,7 +422,7 @@ class JavaSqlAnalyzer(JavaCallAnalyzer):
             status="PARTIAL",
             reasons=(
                 "SQL discovery is not execution; sink detection is separate",
-                "bounded paths, same-file constants and partial Java string semantics",
+                "bounded and truncated paths, same-file constants and partial Java string semantics",
             ),
         )
 

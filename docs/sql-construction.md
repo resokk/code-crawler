@@ -15,8 +15,15 @@ concatenation, builders, String.join/format/formatted. Неизвестная ч
 DYNAMIC fragment __unknown__, static literal с таким текстом не становится dynamic.
 Каждый fragment может иметь точный origin SourceRange; decoded text не считается
 однозначным offset mapping к escaped Java literal. Условия дают отдельные варианты;
-loops ограниченно моделируются и помечаются partial. При превышении path limit
-анализ отклоняется, варианты не теряются молча.
+loops ограниченно моделируются и помечаются partial.
+
+Число путей одного метода ограничено 1024. При превышении анализ не отклоняется:
+лишние пути отбрасываются, а все варианты, собранные по путям этого метода,
+получают partial и причину `path limit reached: variants truncated` — включая
+полные тексты, найденные до обрезки, потому что неполон сам набор вариантов.
+Остаются первые пути в порядке обхода, поэтому SQL, который строится только в
+отброшенных ветках поздних условий, в индекс не попадает. Отдельно найденные
+строковые литералы от путей не зависят и причину не получают.
 
 SQL_CONSTRUCTION принадлежит owner Symbol и содержит nonempty variants.
 SqlVariant содержит candidate_id, recovered text, partial/reasons и ordered
