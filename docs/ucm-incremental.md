@@ -169,3 +169,37 @@ validation/publication. Peak RSS is through indexing, including the catalog;
 validation time is separate. Canonical digest removes snapshot UUIDs and compares
 all subtype/auxiliary facts plus file manifests/dependencies. One paired local run
 is evidence of transaction separation, not a statistical throughput/RAM SLA.
+
+#### Recorded B03 comparison
+
+[Raw PG15 report](benchmarks/b03-transactions-pg15.json): baseline `6eaa984`,
+candidate `0844725`, 400 Java files / 140717 entities, identical fixture/harness and
+normalized canonical digest; both snapshots validated. One sequential run each,
+Linux / Python 3.12.14 / PostgreSQL 15.20, CPU/settings/limits in the report.
+
+| Metric | Before | B03 |
+| --- | ---: | ---: |
+| Index seconds (excluding capture/catalog/validation) | 72.05 | 70.46 |
+| Maximum sampled backend transaction age, seconds | 72.03 | 25.11 |
+| Analyzer calls inside transaction / all calls | 7 / 7 | 0 / 7 |
+| Peak client RSS through indexing, MiB | 405.74 | 428.97 |
+| New preparation / write seconds | n/a | 45.31 / 25.11 |
+| Spool bytes | n/a | 64191473 |
+
+Transaction age dropped about 65%; total indexing time was similar. Peak RSS grew
+about 5.7%, so this is **not** a memory reduction claim. Catalog/capture memory,
+large single-file analyses and PostgreSQL buffers/trigger queues remain separate
+B02/B05 concerns. One ordered local pair is not a latency SLA; cache/load bias and
+sampling resolution remain limitations. No production sources/databases used.
+
+To reproduce the baseline with exactly the same harness:
+
+```sh
+git worktree add --detach /tmp/crawler-b03-parent 6eaa984
+cp src/code_crawler/transaction_benchmark.py /tmp/b03-measure.py
+PYTHONPATH=/tmp/crawler-b03-parent/src TEST_DATABASE_URL=postgresql://... \
+  uv run --locked python /tmp/b03-measure.py --groups 199 --output /tmp/b03-before.json
+TEST_DATABASE_URL=postgresql://... uv run --locked python -m code_crawler.transaction_benchmark \
+  --groups 199 --output /tmp/b03-after.json
+git worktree remove /tmp/crawler-b03-parent
+```

@@ -16,7 +16,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 ## Stream B — performance/reliability (measure first)
 - B01 pg15-end-to-end-performance-baseline: [completed](archive/2026-11-16-b01-pg15-end-to-end-performance-baseline/completion.md), 400/1000-file results and documented >1M-target disk limit; PG15 CI 1325 passed
 - B02 [done] bounded-memory-snapshot-validation: SQL/streamed semantic readiness; [acceptance](archive/2026-11-17-b02-bounded-memory-snapshot-validation/completion.md)
-- B03 short-transaction-indexing: move CPU analysis outside long DB writes
+- B03 short-transaction-indexing: move CPU analysis outside long DB writes — [completed](archive/2026-11-16-b03-short-transaction-indexing/completion.md), PG15 CI 1336 passed
 - B04 bulk-load-fk-optimization: evidence-backed PG15 transfer/FK tuning
 - B05 incremental-streaming-pipeline: bounded in-flight analysis+clone+staging
 - B06 large-snapshot-gc-performance: locks, WAL, orphan blob cleanup
