@@ -8,7 +8,7 @@
 
 | Группа | Уже в main | Что ещё открыто |
 | --- | --- | --- |
-| A Security/Correctness | A01 safe GC | A02 открыт PR #8; A03 DB-qualified SQL search; A04 certainty [done]; A05 strict no-bypass; A06 redaction |
+| A Security/Correctness | A01 safe GC | A02 открыт PR #8; A03 DB-qualified SQL search [done]; A04 certainty [done]; A05 strict no-bypass; A06 redaction |
 | B Scale/Operations | Sliced indexing, server-side cloning, PG15 1.06M, sliced validation | B01 formal CI performance baseline; B02 SQL invariants; B03 short transactions; B04 tune measured FK, B05 true bounded pipeline; B06 GC; B07/08 mixed/100 repos |
 | C Search/Graph | C01–C06 complete | C07 embeddings/model selection, C08 hybrid retrieval, C09 MCP global; C10 Kafka and C11 BPMN worker discovery integration; C12 memory-bounded document rebuild |
 | D Adapters | D01/D02 BPMN; D05/D06 OpenAPI; D07 Kafka; D10 Kotlin; D11 JS/TS; D12 VBScript | D03/D04 reference JSON + loaders; D08/D09 GraphQL schema + Java; increase partial coverage based on tests |
@@ -26,7 +26,7 @@ Keep mandatory `PostgreSQL 15` check. Administrator must require PR and protect 
 Decide who may read original Evidence vs redacted search/embedding documents. Implement secret policy, approved redaction and non-leaking diagnostics; test concurrent repo ACL, known secrets and false positives.
 
 ### A03 and A04: SQL retrieval correctness (P1)
-- A03 exact physical DB/version/object mode distinct from syntactic table-name search; honor quoted identifiers and unbound/ambiguous targets.
+- A03 [done](../openspec/archive/2026-11-16-a03-database-qualified-structural-search/completion.md): exact physical DB/version/object mode distinct from syntactic table-name search; honor quoted identifiers and unbound/ambiguous targets.
 - A04 [done]: SQL discovery, execution linkage and DB resolution are independent; an unused `DELETE` is NOT_ESTABLISHED. Evidence/Coverage and canonical certainty are preserved. [Acceptance and PG15 CI](../openspec/archive/2026-11-16-a04-sql-search-certainty-contract/completion.md).
 - Required tests: two databases both containing `public.orders`, quoted identifiers, partial and ambiguous execution, cross-snapshot version isolation.
 

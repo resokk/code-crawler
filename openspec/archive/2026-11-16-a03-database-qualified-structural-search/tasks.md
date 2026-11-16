@@ -16,8 +16,8 @@
 - [x] 12. Проверить негативные сценарии спецификации: никакой ложной resolved-связи, повреждения snapshot или раскрытия данных.
 - [x] 13. При изменении БД добавить новую миграцию и PG15 integration test; не редактировать применённые миграции.
 - [x] 14. Обновить соответствующие docs/ и указать ограничения Coverage, а не скрывать их.
-- [ ] 15. Запустить `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` и обязательный PG15 CI при затрагивании хранилища.
-- [ ] 16. Подтвердить критерии приёмки; только затем отмечать чекбоксы и архивировать OpenSpec.
+- [x] 15. Запустить `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest` и обязательный PG15 CI при затрагивании хранилища.
+- [x] 16. Подтвердить критерии приёмки; только затем отмечать чекбоксы и архивировать OpenSpec.
 
 ## Verification evidence
 
@@ -25,4 +25,4 @@
 - Ruff lint and formatting: passed (380 files).
 - Combined A03/A04 focused regressions: 33 passed; strengthened execution/context proof regression: 1 passed.
 - Migration 0030 preserves results; captured PG15 plans and workload are in `docs/benchmarks/database-qualified-search-pg15.json`.
-- Mandatory remote PG15 CI and final acceptance remain pending before archive.
+- Mandatory [PostgreSQL 15 CI](https://github.com/resokk/code-crawler/actions/runs/43863262370): success, 1284 passed in 230.50s; clean-database migrations and working-tree checks passed. All acceptance scenarios verified.
