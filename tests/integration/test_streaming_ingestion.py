@@ -48,6 +48,42 @@ def test_stream_loads_forward_references_in_any_order(
     asyncio.run(scenario())
 
 
+def test_staging_is_empty_between_chunks(
+    database_url: str, ucm_batch_factory: Callable[[UUID], UcmBatch]
+) -> None:
+    async def scenario() -> None:
+        conn = await asyncpg.connect(database_url)
+        try:
+            repo, snapshot = await initialize(conn)
+            entities = tuple(reversed(ucm_batch_factory(repo).entities))
+            peak_tables = 0
+
+            async def chunks() -> AsyncIterator[tuple[Entity, ...]]:
+                nonlocal peak_tables
+                for entity in entities:
+                    yield (entity,)
+                    tables = await conn.fetch(
+                        "SELECT relname FROM pg_class WHERE relnamespace=pg_my_temp_schema() "
+                        "AND relkind='r' AND relname LIKE 'ingest_%'"
+                    )
+                    peak_tables = max(peak_tables, len(tables))
+                    for table in tables:
+                        assert (
+                            await conn.fetchval(
+                                f"SELECT count(*) FROM pg_temp.{table['relname']}"
+                            )
+                            == 0
+                        )
+
+            assert await ingest_stream(conn, snapshot, repo, chunks()) == len(entities)
+            assert peak_tables > 0
+            assert await staged_count(conn) == 0
+        finally:
+            await conn.close()
+
+    asyncio.run(scenario())
+
+
 @pytest.mark.parametrize(
     "fault", ["producer", "dangling", "duplicate", "foreign", "cancel"]
 )

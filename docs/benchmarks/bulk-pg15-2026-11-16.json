@@ -1,0 +1,3496 @@
+{
+  "scope": "Synthetic typed UCM, committed ingest + source archive + full semantic validation + publication; parser excluded",
+  "environment": {
+    "cpu_quota": "2 CPUs",
+    "memory_limit_bytes": 8589934592,
+    "pgdata": "5 GiB tmpfs",
+    "concurrent_workloads": false,
+    "initial_disk_attempt": "Cancelled before commit for workspace free-space protection; excluded from timings",
+    "million_repetition": "Two completed fresh-database trials. The first invocation requested 2 trials, but its following trial was cancelled for tmpfs capacity after the first completed. The repeat uses a new database with --repeats 1."
+  },
+  "baseline_commit": "08d9708",
+  "regression": "test_bulk_fk_lookup_uses_entity_id_after_initial_load fails on 08d9708 because Index Cond omits entity_id; passes with B04",
+  "controlled_20k": {
+    "baseline-c": {
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "platform": "Linux x86_64",
+      "cpu_count": 3,
+      "peak_rss_kib": 131752.0,
+      "ingestion_sha256": "72916b1652839beeabf89c76727220ccb937d811d7f3d6bfa915b20277add8d5",
+      "settings": {
+        "lc_collate": "C",
+        "shared_buffers": "128MB",
+        "work_mem": "4MB",
+        "temp_file_limit": "-1",
+        "plan_cache_mode": "auto",
+        "max_wal_size": "128MB",
+        "checkpoint_timeout": "1min",
+        "fsync": "on",
+        "synchronous_commit": "on"
+      },
+      "pairs": 10000,
+      "chunk_size": 5000,
+      "budget_seconds": 900,
+      "indexes": [
+        {
+          "indexrelname": "data_columns_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_columns_table_id_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_foreign_keys_column_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_foreign_keys_ref_column_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_refs_node_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_refs_target_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_name_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_schema_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "edges_dst_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "edges_src_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_dependencies_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_dependencies_reverse_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_entities_path_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_entities_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_repository_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_running_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_edges_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_nodes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_refs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_snapshots_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_snapshot_adapters_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_snapshot_profiles_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "nodes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "nodes_repo_kind_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "repos_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "repos_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_age_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_dependencies_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_dependency_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_entries_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_expiry_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_source_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_context_selections_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_context_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_contexts_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployment_bindings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployment_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployments_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "schema_migrations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_entries_pkey",
+          "bytes": 6864896
+        },
+        {
+          "indexrelname": "search_discovery_generations_generation_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_generations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_generations_snapshot_id_generation_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_identifier_idx",
+          "bytes": 4530176
+        },
+        {
+          "indexrelname": "search_discovery_lookup_idx",
+          "bytes": 4628480
+        },
+        {
+          "indexrelname": "search_discovery_snapshot_idx",
+          "bytes": 278528
+        },
+        {
+          "indexrelname": "search_documents_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_generations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_generations_repository_id_snapshot_id_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_publications_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_coverage_reasons_pkey",
+          "bytes": 3227648
+        },
+        {
+          "indexrelname": "ucm_data_accesses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_accesses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_catalogs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_contexts_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_objects_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_objects_database_key_version_key_object_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_objects_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_versions_database_key_version_key_finge_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_versions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_search_paths_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_search_paths_snapshot_id_context_id_schema_nam_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_entities_name_trgm_idx",
+          "bytes": 1843200
+        },
+        {
+          "indexrelname": "ucm_entities_name_words_idx",
+          "bytes": 1163264
+        },
+        {
+          "indexrelname": "ucm_entities_pkey",
+          "bytes": 6144000
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+          "bytes": 6496256
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_id_entity_type_logical_key_key",
+          "bytes": 4612096
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_type_idx",
+          "bytes": 294912
+        },
+        {
+          "indexrelname": "ucm_entities_source_idx",
+          "bytes": 303104
+        },
+        {
+          "indexrelname": "ucm_entities_symbol_name_idx",
+          "bytes": 1392640
+        },
+        {
+          "indexrelname": "ucm_evidence_pkey",
+          "bytes": 3227648
+        },
+        {
+          "indexrelname": "ucm_external_references_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_legacy_repositories_legacy_repo_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_legacy_repositories_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_occurrences_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_one_published_snapshot_idx",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_operation_unique_output_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operation_values_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operation_values_reverse_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_mapping_names_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_mappings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_operations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_queries_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_candidates_candidate_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_candidates_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_endpoints_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_relation_sources_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_relations_pkey",
+          "bytes": 3137536
+        },
+        {
+          "indexrelname": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+          "bytes": 3555328
+        },
+        {
+          "indexrelname": "ucm_relations_source_idx",
+          "bytes": 3284992
+        },
+        {
+          "indexrelname": "ucm_relations_target_idx",
+          "bytes": 3293184
+        },
+        {
+          "indexrelname": "ucm_repositories_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_repositories_repository_key_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_repository_publications_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_scopes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_snapshot_sources_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshot_validations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_repository_created_idx",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_repository_id_id_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_analyses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analyses_snapshot_id_source_file_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analysis_capabilities_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analysis_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_blobs_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_diagnostics_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_evidence_legacy_snapshots_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_files_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_files_snapshot_id_path_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_sql_access_names_normalized_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_access_names_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_binding_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_bindings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_constructions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_executions_owner_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_executions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_fragments_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_partial_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_placeholders_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_placeholders_snapshot_id_statement_id_ordinal_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statement_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statements_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statements_snapshot_id_candidate_id_statement_index_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_variants_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_symbols_name_idx",
+          "bytes": 1744896
+        },
+        {
+          "indexrelname": "ucm_symbols_pkey",
+          "bytes": 3063808
+        },
+        {
+          "indexrelname": "ucm_symbols_qualified_words_idx",
+          "bytes": 1392640
+        },
+        {
+          "indexrelname": "ucm_type_refs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_values_pkey",
+          "bytes": 8192
+        }
+      ],
+      "trials": [
+        {
+          "entities": 20001,
+          "ingest_seconds": 51.17693016899284,
+          "sql_seconds": {
+            "other_sql": 0.011885892017744482,
+            "copy": 0.24264377396320924,
+            "insert_select": 2.5374986680108123,
+            "constraints": 44.95124481111998
+          },
+          "sql_calls": {
+            "other_sql": 6,
+            "copy": 12,
+            "insert_select": 6,
+            "constraints": 88
+          },
+          "stage_peak_bytes": 14786560,
+          "fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.29,
+                "Total Cost": 8.32,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_symbol_name_idx",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.29,
+                    "Total Cost": 8.31,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "(snapshot_id = 'e8169be2-e098-4c46-9246-dacbd14c52c9'::uuid)",
+                    "Filter": "((entity_id = 'ucm:2fe7b753f3569bed3843327a80db9e1f520beff88cd058e80abf3cb0f4fe8e95'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "before_analyze_fk_plan": null,
+          "archive_seconds": 0.012340068002231419,
+          "validation_seconds": 3.597673364012735,
+          "publish_seconds": 15.587760296009947,
+          "total_seconds": 70.37841720500728,
+          "budget_passed": true
+        },
+        {
+          "entities": 20001,
+          "ingest_seconds": 6.514729497983353,
+          "sql_seconds": {
+            "other_sql": 0.0162176969461143,
+            "copy": 0.15350455601583235,
+            "insert_select": 2.2996102959732525,
+            "constraints": 1.0848500498686917
+          },
+          "sql_calls": {
+            "other_sql": 6,
+            "copy": 12,
+            "insert_select": 6,
+            "constraints": 88
+          },
+          "stage_peak_bytes": 14786560,
+          "fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.41,
+                "Total Cost": 8.45,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.41,
+                    "Total Cost": 8.44,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "((snapshot_id = 'e8169be2-e098-4c46-9246-dacbd14c52c9'::uuid) AND (entity_id = 'ucm:2fe7b753f3569bed3843327a80db9e1f520beff88cd058e80abf3cb0f4fe8e95'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "before_analyze_fk_plan": null,
+          "archive_seconds": 0.0036479159898590297,
+          "validation_seconds": 2.949572900979547,
+          "publish_seconds": 1.6003576389921363,
+          "total_seconds": 11.0689614249859,
+          "budget_passed": true
+        }
+      ]
+    },
+    "optimized-c": {
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "platform": "Linux x86_64",
+      "cpu_count": 3,
+      "peak_rss_kib": 141240.0,
+      "ingestion_sha256": "3c81d2085a3e9cc04bacc83841859d18a1a128f541643f8c45c4a1a36870c133",
+      "settings": {
+        "lc_collate": "C",
+        "shared_buffers": "128MB",
+        "work_mem": "4MB",
+        "temp_file_limit": "-1",
+        "plan_cache_mode": "auto",
+        "max_wal_size": "128MB",
+        "checkpoint_timeout": "1min",
+        "fsync": "on",
+        "synchronous_commit": "on"
+      },
+      "pairs": 10000,
+      "chunk_size": 5000,
+      "budget_seconds": 900,
+      "indexes": [
+        {
+          "indexrelname": "data_columns_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_columns_table_id_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_foreign_keys_column_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_foreign_keys_ref_column_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_refs_node_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_refs_target_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_name_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_schema_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "edges_dst_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "edges_src_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_dependencies_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_dependencies_reverse_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_entities_path_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_entities_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_repository_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_running_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_edges_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_nodes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_refs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_snapshots_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_snapshot_adapters_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_snapshot_profiles_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "nodes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "nodes_repo_kind_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "repos_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "repos_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_age_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_dependencies_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_dependency_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_entries_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_expiry_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_source_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_context_selections_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_context_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_contexts_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployment_bindings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployment_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployments_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "schema_migrations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_entries_pkey",
+          "bytes": 6946816
+        },
+        {
+          "indexrelname": "search_discovery_generations_generation_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_generations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_generations_snapshot_id_generation_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_identifier_idx",
+          "bytes": 4546560
+        },
+        {
+          "indexrelname": "search_discovery_lookup_idx",
+          "bytes": 4644864
+        },
+        {
+          "indexrelname": "search_discovery_snapshot_idx",
+          "bytes": 278528
+        },
+        {
+          "indexrelname": "search_documents_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_generations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_generations_repository_id_snapshot_id_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_publications_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_coverage_reasons_pkey",
+          "bytes": 3293184
+        },
+        {
+          "indexrelname": "ucm_data_accesses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_accesses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_catalogs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_contexts_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_objects_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_objects_database_key_version_key_object_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_objects_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_versions_database_key_version_key_finge_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_versions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_search_paths_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_search_paths_snapshot_id_context_id_schema_nam_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_entities_name_trgm_idx",
+          "bytes": 1843200
+        },
+        {
+          "indexrelname": "ucm_entities_name_words_idx",
+          "bytes": 1163264
+        },
+        {
+          "indexrelname": "ucm_entities_pkey",
+          "bytes": 6062080
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+          "bytes": 6569984
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_id_entity_type_logical_key_key",
+          "bytes": 4612096
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_type_idx",
+          "bytes": 294912
+        },
+        {
+          "indexrelname": "ucm_entities_source_idx",
+          "bytes": 303104
+        },
+        {
+          "indexrelname": "ucm_entities_symbol_name_idx",
+          "bytes": 1392640
+        },
+        {
+          "indexrelname": "ucm_evidence_pkey",
+          "bytes": 3293184
+        },
+        {
+          "indexrelname": "ucm_external_references_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_legacy_repositories_legacy_repo_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_legacy_repositories_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_occurrences_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_one_published_snapshot_idx",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_operation_unique_output_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operation_values_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operation_values_reverse_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_mapping_names_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_mappings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_operations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_queries_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_candidates_candidate_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_candidates_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_endpoints_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_relation_sources_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_relations_pkey",
+          "bytes": 3006464
+        },
+        {
+          "indexrelname": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+          "bytes": 3588096
+        },
+        {
+          "indexrelname": "ucm_relations_source_idx",
+          "bytes": 3276800
+        },
+        {
+          "indexrelname": "ucm_relations_target_idx",
+          "bytes": 3293184
+        },
+        {
+          "indexrelname": "ucm_repositories_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_repositories_repository_key_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_repository_publications_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_scopes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_snapshot_sources_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshot_validations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_repository_created_idx",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_repository_id_id_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_analyses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analyses_snapshot_id_source_file_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analysis_capabilities_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analysis_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_blobs_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_diagnostics_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_evidence_legacy_snapshots_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_files_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_files_snapshot_id_path_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_sql_access_names_normalized_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_access_names_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_binding_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_bindings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_constructions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_executions_owner_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_executions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_fragments_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_partial_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_placeholders_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_placeholders_snapshot_id_statement_id_ordinal_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statement_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statements_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statements_snapshot_id_candidate_id_statement_index_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_variants_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_symbols_name_idx",
+          "bytes": 1744896
+        },
+        {
+          "indexrelname": "ucm_symbols_pkey",
+          "bytes": 2981888
+        },
+        {
+          "indexrelname": "ucm_symbols_qualified_words_idx",
+          "bytes": 1392640
+        },
+        {
+          "indexrelname": "ucm_type_refs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_values_pkey",
+          "bytes": 8192
+        }
+      ],
+      "trials": [
+        {
+          "entities": 20001,
+          "ingest_seconds": 5.941004038992105,
+          "sql_seconds": {
+            "other_sql": 0.028404354001395404,
+            "copy": 0.1769584059366025,
+            "insert_select": 1.8640178980713245,
+            "analyze": 0.24645513299037702,
+            "constraints": 0.7297751480073202
+          },
+          "sql_calls": {
+            "other_sql": 18,
+            "copy": 12,
+            "insert_select": 12,
+            "analyze": 1,
+            "constraints": 1
+          },
+          "stage_peak_bytes": 7421952,
+          "fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.41,
+                "Total Cost": 8.44,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.41,
+                    "Total Cost": 8.43,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "((snapshot_id = 'ce3431d3-b02f-4497-882f-75e0d09e535e'::uuid) AND (entity_id = 'ucm:82f3c3de13a8268ff96cea6379fe5134cb6b149d75f2581a026309f927ed2246'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "before_analyze_fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.29,
+                "Total Cost": 8.32,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_symbol_name_idx",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.29,
+                    "Total Cost": 8.31,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "(snapshot_id = 'ce3431d3-b02f-4497-882f-75e0d09e535e'::uuid)",
+                    "Filter": "((entity_id = 'ucm:82f3c3de13a8268ff96cea6379fe5134cb6b149d75f2581a026309f927ed2246'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "archive_seconds": 0.0071944050141610205,
+          "validation_seconds": 3.8970324299880303,
+          "publish_seconds": 1.059647160989698,
+          "total_seconds": 10.905693003995111,
+          "budget_passed": true
+        },
+        {
+          "entities": 20001,
+          "ingest_seconds": 5.765444488002686,
+          "sql_seconds": {
+            "other_sql": 0.023864072922151536,
+            "copy": 0.19503425594302826,
+            "insert_select": 1.6408864730619825,
+            "analyze": 0.3539034010027535,
+            "constraints": 0.631696747004753
+          },
+          "sql_calls": {
+            "other_sql": 18,
+            "copy": 12,
+            "insert_select": 12,
+            "analyze": 1,
+            "constraints": 1
+          },
+          "stage_peak_bytes": 7421952,
+          "fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.41,
+                "Total Cost": 8.45,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.41,
+                    "Total Cost": 8.44,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "((snapshot_id = 'ce3431d3-b02f-4497-882f-75e0d09e535e'::uuid) AND (entity_id = 'ucm:82f3c3de13a8268ff96cea6379fe5134cb6b149d75f2581a026309f927ed2246'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "before_analyze_fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.41,
+                "Total Cost": 8.45,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.41,
+                    "Total Cost": 8.44,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "((snapshot_id = 'ce3431d3-b02f-4497-882f-75e0d09e535e'::uuid) AND (entity_id = 'ucm:82f3c3de13a8268ff96cea6379fe5134cb6b149d75f2581a026309f927ed2246'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "archive_seconds": 0.005478537001181394,
+          "validation_seconds": 2.430167274986161,
+          "publish_seconds": 1.075660594011424,
+          "total_seconds": 9.277178261021618,
+          "budget_passed": true
+        }
+      ]
+    },
+    "baseline-locale": {
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "platform": "Linux x86_64",
+      "cpu_count": 3,
+      "peak_rss_kib": 130820.0,
+      "ingestion_sha256": "72916b1652839beeabf89c76727220ccb937d811d7f3d6bfa915b20277add8d5",
+      "settings": {
+        "lc_collate": "en_US.utf8",
+        "shared_buffers": "128MB",
+        "work_mem": "4MB",
+        "temp_file_limit": "-1",
+        "plan_cache_mode": "auto",
+        "max_wal_size": "128MB",
+        "checkpoint_timeout": "1min",
+        "fsync": "on",
+        "synchronous_commit": "on"
+      },
+      "pairs": 10000,
+      "chunk_size": 5000,
+      "budget_seconds": 900,
+      "indexes": [
+        {
+          "indexrelname": "data_columns_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_columns_table_id_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_foreign_keys_column_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_foreign_keys_ref_column_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_refs_node_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_refs_target_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_name_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_schema_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "edges_dst_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "edges_src_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_dependencies_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_dependencies_reverse_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_entities_path_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_entities_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_repository_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_running_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_edges_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_nodes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_refs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_snapshots_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_snapshot_adapters_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_snapshot_profiles_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "nodes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "nodes_repo_kind_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "repos_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "repos_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_age_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_dependencies_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_dependency_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_entries_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_expiry_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_source_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_context_selections_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_context_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_contexts_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployment_bindings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployment_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployments_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "schema_migrations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_entries_pkey",
+          "bytes": 6856704
+        },
+        {
+          "indexrelname": "search_discovery_generations_generation_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_generations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_generations_snapshot_id_generation_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_identifier_idx",
+          "bytes": 4538368
+        },
+        {
+          "indexrelname": "search_discovery_lookup_idx",
+          "bytes": 4644864
+        },
+        {
+          "indexrelname": "search_discovery_snapshot_idx",
+          "bytes": 278528
+        },
+        {
+          "indexrelname": "search_documents_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_generations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_generations_repository_id_snapshot_id_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_publications_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_coverage_reasons_pkey",
+          "bytes": 3342336
+        },
+        {
+          "indexrelname": "ucm_data_accesses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_accesses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_catalogs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_contexts_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_objects_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_objects_database_key_version_key_object_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_objects_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_versions_database_key_version_key_finge_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_versions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_search_paths_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_search_paths_snapshot_id_context_id_schema_nam_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_entities_name_trgm_idx",
+          "bytes": 1843200
+        },
+        {
+          "indexrelname": "ucm_entities_name_words_idx",
+          "bytes": 1163264
+        },
+        {
+          "indexrelname": "ucm_entities_pkey",
+          "bytes": 6012928
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+          "bytes": 6610944
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_id_entity_type_logical_key_key",
+          "bytes": 4612096
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_type_idx",
+          "bytes": 294912
+        },
+        {
+          "indexrelname": "ucm_entities_source_idx",
+          "bytes": 303104
+        },
+        {
+          "indexrelname": "ucm_entities_symbol_name_idx",
+          "bytes": 1392640
+        },
+        {
+          "indexrelname": "ucm_evidence_pkey",
+          "bytes": 3342336
+        },
+        {
+          "indexrelname": "ucm_external_references_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_legacy_repositories_legacy_repo_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_legacy_repositories_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_occurrences_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_one_published_snapshot_idx",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_operation_unique_output_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operation_values_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operation_values_reverse_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_mapping_names_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_mappings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_operations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_queries_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_candidates_candidate_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_candidates_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_endpoints_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_relation_sources_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_relations_pkey",
+          "bytes": 3039232
+        },
+        {
+          "indexrelname": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+          "bytes": 3514368
+        },
+        {
+          "indexrelname": "ucm_relations_source_idx",
+          "bytes": 3194880
+        },
+        {
+          "indexrelname": "ucm_relations_target_idx",
+          "bytes": 3227648
+        },
+        {
+          "indexrelname": "ucm_repositories_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_repositories_repository_key_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_repository_publications_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_scopes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_snapshot_sources_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshot_validations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_repository_created_idx",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_repository_id_id_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_analyses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analyses_snapshot_id_source_file_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analysis_capabilities_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analysis_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_blobs_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_diagnostics_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_evidence_legacy_snapshots_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_files_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_files_snapshot_id_path_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_sql_access_names_normalized_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_access_names_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_binding_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_bindings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_constructions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_executions_owner_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_executions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_fragments_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_partial_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_placeholders_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_placeholders_snapshot_id_statement_id_ordinal_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statement_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statements_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statements_snapshot_id_candidate_id_statement_index_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_variants_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_symbols_name_idx",
+          "bytes": 1744896
+        },
+        {
+          "indexrelname": "ucm_symbols_pkey",
+          "bytes": 2981888
+        },
+        {
+          "indexrelname": "ucm_symbols_qualified_words_idx",
+          "bytes": 1392640
+        },
+        {
+          "indexrelname": "ucm_type_refs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_values_pkey",
+          "bytes": 8192
+        }
+      ],
+      "trials": [
+        {
+          "entities": 20001,
+          "ingest_seconds": 50.20603308599675,
+          "sql_seconds": {
+            "other_sql": 0.011969011975452304,
+            "copy": 0.24472867901204154,
+            "insert_select": 2.343721923069097,
+            "constraints": 44.4287699428678
+          },
+          "sql_calls": {
+            "other_sql": 6,
+            "copy": 12,
+            "insert_select": 6,
+            "constraints": 88
+          },
+          "stage_peak_bytes": 14786560,
+          "fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.29,
+                "Total Cost": 8.32,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_symbol_name_idx",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.29,
+                    "Total Cost": 8.31,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "(snapshot_id = '7cfcb725-9c4e-4f18-946f-bbba8dfe1f47'::uuid)",
+                    "Filter": "((entity_id = 'ucm:aa902987672c774abca68bbaa5144118cee682f526e4ebbd726773ea3444304a'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "before_analyze_fk_plan": null,
+          "archive_seconds": 0.011861449980642647,
+          "validation_seconds": 3.4348421299946494,
+          "publish_seconds": 16.674079645017628,
+          "total_seconds": 70.32851800500066,
+          "budget_passed": true
+        },
+        {
+          "entities": 20001,
+          "ingest_seconds": 6.137499275995651,
+          "sql_seconds": {
+            "other_sql": 0.007845312007702887,
+            "copy": 0.1738572400645353,
+            "insert_select": 2.2636891149450094,
+            "constraints": 1.1451064969878644
+          },
+          "sql_calls": {
+            "other_sql": 6,
+            "copy": 12,
+            "insert_select": 6,
+            "constraints": 88
+          },
+          "stage_peak_bytes": 14786560,
+          "fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.41,
+                "Total Cost": 8.45,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.41,
+                    "Total Cost": 8.44,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "((snapshot_id = '7cfcb725-9c4e-4f18-946f-bbba8dfe1f47'::uuid) AND (entity_id = 'ucm:aa902987672c774abca68bbaa5144118cee682f526e4ebbd726773ea3444304a'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "before_analyze_fk_plan": null,
+          "archive_seconds": 0.0036179580201860517,
+          "validation_seconds": 2.9859881839947775,
+          "publish_seconds": 1.4918735010141972,
+          "total_seconds": 10.619773656013422,
+          "budget_passed": true
+        }
+      ]
+    },
+    "optimized-locale": {
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "platform": "Linux x86_64",
+      "cpu_count": 3,
+      "peak_rss_kib": 142928.0,
+      "ingestion_sha256": "3c81d2085a3e9cc04bacc83841859d18a1a128f541643f8c45c4a1a36870c133",
+      "settings": {
+        "lc_collate": "en_US.utf8",
+        "shared_buffers": "128MB",
+        "work_mem": "4MB",
+        "temp_file_limit": "-1",
+        "plan_cache_mode": "auto",
+        "max_wal_size": "128MB",
+        "checkpoint_timeout": "1min",
+        "fsync": "on",
+        "synchronous_commit": "on"
+      },
+      "pairs": 10000,
+      "chunk_size": 5000,
+      "budget_seconds": 900,
+      "indexes": [
+        {
+          "indexrelname": "data_columns_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_columns_table_id_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_foreign_keys_column_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_foreign_keys_ref_column_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_refs_node_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_refs_target_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_name_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "data_tables_schema_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "edges_dst_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "edges_src_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_dependencies_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_dependencies_reverse_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_entities_path_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_file_entities_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_repository_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_jobs_running_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_edges_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_nodes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_refs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_legacy_snapshots_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_snapshot_adapters_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ingest_snapshot_profiles_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "nodes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "nodes_repo_kind_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "repos_name_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "repos_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_age_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_dependencies_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_dependency_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_entries_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_expiry_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_cache_source_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_context_selections_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_context_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_contexts_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployment_bindings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployment_snapshot_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "resolver_deployments_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "schema_migrations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_entries_pkey",
+          "bytes": 6774784
+        },
+        {
+          "indexrelname": "search_discovery_generations_generation_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_generations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_generations_snapshot_id_generation_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "search_discovery_identifier_idx",
+          "bytes": 4546560
+        },
+        {
+          "indexrelname": "search_discovery_lookup_idx",
+          "bytes": 4644864
+        },
+        {
+          "indexrelname": "search_discovery_snapshot_idx",
+          "bytes": 278528
+        },
+        {
+          "indexrelname": "search_documents_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_generations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_generations_repository_id_snapshot_id_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "search_index_publications_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_coverage_reasons_pkey",
+          "bytes": 3227648
+        },
+        {
+          "indexrelname": "ucm_data_accesses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_accesses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_catalogs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_contexts_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_objects_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_objects_database_key_version_key_object_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_objects_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_versions_database_key_version_key_finge_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_schema_versions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_search_paths_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_database_search_paths_snapshot_id_context_id_schema_nam_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_entities_name_trgm_idx",
+          "bytes": 1843200
+        },
+        {
+          "indexrelname": "ucm_entities_name_words_idx",
+          "bytes": 1163264
+        },
+        {
+          "indexrelname": "ucm_entities_pkey",
+          "bytes": 5939200
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+          "bytes": 6488064
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_id_entity_type_logical_key_key",
+          "bytes": 4612096
+        },
+        {
+          "indexrelname": "ucm_entities_snapshot_type_idx",
+          "bytes": 294912
+        },
+        {
+          "indexrelname": "ucm_entities_source_idx",
+          "bytes": 303104
+        },
+        {
+          "indexrelname": "ucm_entities_symbol_name_idx",
+          "bytes": 1392640
+        },
+        {
+          "indexrelname": "ucm_evidence_pkey",
+          "bytes": 3227648
+        },
+        {
+          "indexrelname": "ucm_external_references_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_legacy_repositories_legacy_repo_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_legacy_repositories_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_occurrences_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_one_published_snapshot_idx",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_operation_unique_output_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operation_values_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operation_values_reverse_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_operations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_mapping_names_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_mappings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_operations_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_queries_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_orm_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_candidates_candidate_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_candidates_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_relation_endpoints_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_relation_sources_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_relations_pkey",
+          "bytes": 2957312
+        },
+        {
+          "indexrelname": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+          "bytes": 3473408
+        },
+        {
+          "indexrelname": "ucm_relations_source_idx",
+          "bytes": 3203072
+        },
+        {
+          "indexrelname": "ucm_relations_target_idx",
+          "bytes": 3252224
+        },
+        {
+          "indexrelname": "ucm_repositories_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_repositories_repository_key_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_repository_publications_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_scopes_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_snapshot_sources_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshot_validations_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_repository_created_idx",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_snapshots_repository_id_id_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_analyses_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analyses_snapshot_id_source_file_id_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analysis_capabilities_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_analysis_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_blobs_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_diagnostics_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_evidence_legacy_snapshots_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_source_files_pkey",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_source_files_snapshot_id_path_key",
+          "bytes": 16384
+        },
+        {
+          "indexrelname": "ucm_sql_access_names_normalized_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_access_names_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_binding_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_bindings_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_constructions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_executions_owner_idx",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_executions_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_fragments_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_partial_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_placeholders_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_placeholders_snapshot_id_statement_id_ordinal_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statement_reasons_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statements_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_statements_snapshot_id_candidate_id_statement_index_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_variants_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_symbols_name_idx",
+          "bytes": 1744896
+        },
+        {
+          "indexrelname": "ucm_symbols_pkey",
+          "bytes": 3104768
+        },
+        {
+          "indexrelname": "ucm_symbols_qualified_words_idx",
+          "bytes": 1392640
+        },
+        {
+          "indexrelname": "ucm_type_refs_pkey",
+          "bytes": 8192
+        },
+        {
+          "indexrelname": "ucm_values_pkey",
+          "bytes": 8192
+        }
+      ],
+      "trials": [
+        {
+          "entities": 20001,
+          "ingest_seconds": 6.865358045994071,
+          "sql_seconds": {
+            "other_sql": 0.023486810008762404,
+            "copy": 0.2289750979107339,
+            "insert_select": 2.29680236504646,
+            "analyze": 0.40012236798065715,
+            "constraints": 0.6883393560128752
+          },
+          "sql_calls": {
+            "other_sql": 18,
+            "copy": 12,
+            "insert_select": 12,
+            "analyze": 1,
+            "constraints": 1
+          },
+          "stage_peak_bytes": 7421952,
+          "fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.41,
+                "Total Cost": 8.44,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.41,
+                    "Total Cost": 8.43,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "((snapshot_id = 'f8db4553-833b-4045-b371-d81a62582a57'::uuid) AND (entity_id = 'ucm:f846901eec528af1d2b94e4b5f841acf315415dd093e9c105970bbe896ebd3f3'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "before_analyze_fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.29,
+                "Total Cost": 8.32,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_symbol_name_idx",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.29,
+                    "Total Cost": 8.31,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "(snapshot_id = 'f8db4553-833b-4045-b371-d81a62582a57'::uuid)",
+                    "Filter": "((entity_id = 'ucm:f846901eec528af1d2b94e4b5f841acf315415dd093e9c105970bbe896ebd3f3'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "archive_seconds": 0.005723194015445188,
+          "validation_seconds": 2.9375928939844016,
+          "publish_seconds": 1.0401067030034028,
+          "total_seconds": 10.849470286018914,
+          "budget_passed": true
+        },
+        {
+          "entities": 20001,
+          "ingest_seconds": 8.121980298979906,
+          "sql_seconds": {
+            "other_sql": 0.028549654030939564,
+            "copy": 0.15345599708962254,
+            "insert_select": 2.7313137739838567,
+            "analyze": 0.9220689770008903,
+            "constraints": 0.8327094090054743
+          },
+          "sql_calls": {
+            "other_sql": 18,
+            "copy": 12,
+            "insert_select": 12,
+            "analyze": 1,
+            "constraints": 1
+          },
+          "stage_peak_bytes": 7421952,
+          "fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.41,
+                "Total Cost": 8.45,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.41,
+                    "Total Cost": 8.44,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "((snapshot_id = 'f8db4553-833b-4045-b371-d81a62582a57'::uuid) AND (entity_id = 'ucm:f846901eec528af1d2b94e4b5f841acf315415dd093e9c105970bbe896ebd3f3'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "before_analyze_fk_plan": [
+            {
+              "Plan": {
+                "Node Type": "LockRows",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 0.41,
+                "Total Cost": 8.45,
+                "Plan Rows": 1,
+                "Plan Width": 10,
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Scan Direction": "Forward",
+                    "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                    "Relation Name": "ucm_entities",
+                    "Alias": "x",
+                    "Startup Cost": 0.41,
+                    "Total Cost": 8.44,
+                    "Plan Rows": 1,
+                    "Plan Width": 10,
+                    "Index Cond": "((snapshot_id = 'f8db4553-833b-4045-b371-d81a62582a57'::uuid) AND (entity_id = 'ucm:f846901eec528af1d2b94e4b5f841acf315415dd093e9c105970bbe896ebd3f3'::text) AND (entity_type = 'SYMBOL'::text))"
+                  }
+                ]
+              }
+            }
+          ],
+          "archive_seconds": 0.008096492005279288,
+          "validation_seconds": 3.3022697549895383,
+          "publish_seconds": 1.3604378500021994,
+          "total_seconds": 12.793568111985223,
+          "budget_passed": true
+        }
+      ]
+    }
+  },
+  "million_first_completed_trial": {
+    "provenance": "Original completed-trial log excerpt; recorded before per-trial JSON checkpoints were implemented. The following trial was cancelled; missing metrics are deliberately not synthesized.",
+    "entities": 1000001,
+    "pairs": 500000,
+    "chunk_size": 5000,
+    "locale": "en_US.utf8",
+    "ingestion_sha256": "3c81d2085a3e9cc04bacc83841859d18a1a128f541643f8c45c4a1a36870c133",
+    "ingest_seconds": 427.134,
+    "sql_seconds": {
+      "other_sql": 8.436901939450763,
+      "copy": 9.210170478036162,
+      "insert_select": 197.0903997378773,
+      "analyze": 2.191328285000054,
+      "constraints": 55.97586973599391
+    },
+    "validation_seconds": 234.197,
+    "publish_seconds": 101.071,
+    "total_seconds": 762.416,
+    "budget_seconds": 900,
+    "budget_passed": true,
+    "log_excerpt": [
+      "2026-11-16 15:10:25,963 Trial 1/2: 1000001 entities, locale en_US.utf8",
+      "2026-11-16 15:10:52,184 Transferred 100001/1000001 entities",
+      "2026-11-16 15:11:22,417 Transferred 200001/1000001 entities",
+      "2026-11-16 15:12:01,587 Transferred 300001/1000001 entities",
+      "2026-11-16 15:12:36,485 Transferred 400001/1000001 entities",
+      "2026-11-16 15:13:18,485 Transferred 500001/1000001 entities",
+      "2026-11-16 15:13:55,394 Transferred 600001/1000001 entities",
+      "2026-11-16 15:14:32,850 Transferred 700001/1000001 entities",
+      "2026-11-16 15:15:13,511 Transferred 800001/1000001 entities",
+      "2026-11-16 15:15:54,461 Transferred 900001/1000001 entities",
+      "2026-11-16 15:16:34,817 Transferred 1000001/1000001 entities",
+      "2026-11-16 15:17:33,102 Committed ingest 427.134s; SQL phases {'other_sql': 8.436901939450763, 'copy': 9.210170478036162, 'insert_select': 197.0903997378773, 'analyze': 2.191328285000054, 'constraints': 55.97586973599391}",
+      "2026-11-16 15:21:27,313 Validated all entities in 234.197s",
+      "2026-11-16 15:23:08,384 Published in 101.071s; full trial 762.416s"
+    ]
+  },
+  "million_fresh_repeat": {
+    "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "platform": "Linux x86_64",
+    "cpu_count": 3,
+    "peak_rss_kib": 141968.0,
+    "ingestion_sha256": "3c81d2085a3e9cc04bacc83841859d18a1a128f541643f8c45c4a1a36870c133",
+    "settings": {
+      "lc_collate": "en_US.utf8",
+      "shared_buffers": "128MB",
+      "work_mem": "4MB",
+      "temp_file_limit": "-1",
+      "plan_cache_mode": "auto",
+      "max_wal_size": "128MB",
+      "checkpoint_timeout": "1min",
+      "fsync": "on",
+      "synchronous_commit": "on"
+    },
+    "pairs": 500000,
+    "chunk_size": 5000,
+    "budget_seconds": 900.0,
+    "indexes": [
+      {
+        "indexrelname": "data_columns_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "data_columns_table_id_name_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "data_foreign_keys_column_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "data_foreign_keys_ref_column_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "data_refs_node_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "data_refs_target_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "data_tables_name_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "data_tables_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "data_tables_schema_name_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "edges_dst_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "edges_src_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_file_dependencies_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_file_dependencies_reverse_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_file_entities_path_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_file_entities_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_jobs_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_jobs_repository_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_jobs_running_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_legacy_edges_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_legacy_nodes_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_legacy_refs_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_legacy_snapshots_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_snapshot_adapters_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ingest_snapshot_profiles_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "nodes_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "nodes_repo_kind_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "repos_name_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "repos_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_cache_age_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_cache_dependencies_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_cache_dependency_snapshot_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_cache_entries_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_cache_expiry_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_cache_source_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_context_selections_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_context_snapshot_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_contexts_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_deployment_bindings_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_deployment_snapshot_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "resolver_deployments_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "schema_migrations_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "search_discovery_entries_pkey",
+        "bytes": 169992192
+      },
+      {
+        "indexrelname": "search_discovery_generations_generation_key",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "search_discovery_generations_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "search_discovery_generations_snapshot_id_generation_key",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "search_discovery_identifier_idx",
+        "bytes": 112328704
+      },
+      {
+        "indexrelname": "search_discovery_lookup_idx",
+        "bytes": 112082944
+      },
+      {
+        "indexrelname": "search_discovery_snapshot_idx",
+        "bytes": 6504448
+      },
+      {
+        "indexrelname": "search_documents_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "search_index_generations_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "search_index_generations_repository_id_snapshot_id_id_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "search_index_publications_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_coverage_reasons_pkey",
+        "bytes": 80986112
+      },
+      {
+        "indexrelname": "ucm_data_accesses_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_accesses_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_catalogs_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_contexts_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_objects_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_schema_objects_database_key_version_key_object_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_schema_objects_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_schema_versions_database_key_version_key_finge_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_schema_versions_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_search_paths_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_database_search_paths_snapshot_id_context_id_schema_nam_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_entities_name_trgm_idx",
+        "bytes": 16433152
+      },
+      {
+        "indexrelname": "ucm_entities_name_words_idx",
+        "bytes": 38371328
+      },
+      {
+        "indexrelname": "ucm_entities_pkey",
+        "bytes": 150151168
+      },
+      {
+        "indexrelname": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+        "bytes": 161808384
+      },
+      {
+        "indexrelname": "ucm_entities_snapshot_id_entity_type_logical_key_key",
+        "bytes": 121184256
+      },
+      {
+        "indexrelname": "ucm_entities_snapshot_type_idx",
+        "bytes": 6602752
+      },
+      {
+        "indexrelname": "ucm_entities_source_idx",
+        "bytes": 6774784
+      },
+      {
+        "indexrelname": "ucm_entities_symbol_name_idx",
+        "bytes": 35397632
+      },
+      {
+        "indexrelname": "ucm_evidence_pkey",
+        "bytes": 80986112
+      },
+      {
+        "indexrelname": "ucm_external_references_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_legacy_repositories_legacy_repo_id_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_legacy_repositories_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_occurrences_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_one_published_snapshot_idx",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_operation_unique_output_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_operation_values_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_operation_values_reverse_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_operations_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_orm_mapping_names_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_orm_mappings_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_orm_operations_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_orm_queries_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_orm_reasons_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_relation_candidates_candidate_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_relation_candidates_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_relation_endpoints_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_relation_sources_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_relations_pkey",
+        "bytes": 75522048
+      },
+      {
+        "indexrelname": "ucm_relations_snapshot_id_entity_id_relation_kind_source_ty_key",
+        "bytes": 86949888
+      },
+      {
+        "indexrelname": "ucm_relations_source_idx",
+        "bytes": 80723968
+      },
+      {
+        "indexrelname": "ucm_relations_target_idx",
+        "bytes": 80756736
+      },
+      {
+        "indexrelname": "ucm_repositories_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_repositories_repository_key_key",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_repository_publications_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_scopes_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_snapshot_sources_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_snapshot_validations_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_snapshots_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_snapshots_repository_created_idx",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_snapshots_repository_id_id_key",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_source_analyses_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_source_analyses_snapshot_id_source_file_id_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_source_analysis_capabilities_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_source_analysis_reasons_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_source_blobs_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_source_diagnostics_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_source_evidence_legacy_snapshots_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_source_files_pkey",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_source_files_snapshot_id_path_key",
+        "bytes": 16384
+      },
+      {
+        "indexrelname": "ucm_sql_access_names_normalized_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_access_names_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_binding_reasons_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_bindings_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_constructions_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_executions_owner_idx",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_executions_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_fragments_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_partial_reasons_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_placeholders_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_placeholders_snapshot_id_statement_id_ordinal_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_statement_reasons_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_statements_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_statements_snapshot_id_candidate_id_statement_index_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_variants_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_sql_variants_snapshot_id_construction_id_position_key",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_symbols_name_idx",
+        "bytes": 43491328
+      },
+      {
+        "indexrelname": "ucm_symbols_pkey",
+        "bytes": 74964992
+      },
+      {
+        "indexrelname": "ucm_symbols_qualified_words_idx",
+        "bytes": 40402944
+      },
+      {
+        "indexrelname": "ucm_type_refs_pkey",
+        "bytes": 8192
+      },
+      {
+        "indexrelname": "ucm_values_pkey",
+        "bytes": 8192
+      }
+    ],
+    "trials": [
+      {
+        "entities": 1000001,
+        "ingest_seconds": 401.0748681190016,
+        "sql_seconds": {
+          "other_sql": 8.003513815754559,
+          "copy": 8.456660588417435,
+          "insert_select": 183.74255272003938,
+          "analyze": 1.9221854899951722,
+          "constraints": 54.051191859995015
+        },
+        "sql_calls": {
+          "other_sql": 508,
+          "copy": 502,
+          "insert_select": 502,
+          "analyze": 1,
+          "constraints": 1
+        },
+        "stage_peak_bytes": 7512064,
+        "fk_plan": [
+          {
+            "Plan": {
+              "Node Type": "LockRows",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 0.55,
+              "Total Cost": 8.58,
+              "Plan Rows": 1,
+              "Plan Width": 10,
+              "Plans": [
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                  "Relation Name": "ucm_entities",
+                  "Alias": "x",
+                  "Startup Cost": 0.55,
+                  "Total Cost": 8.57,
+                  "Plan Rows": 1,
+                  "Plan Width": 10,
+                  "Index Cond": "((snapshot_id = '7231481e-d86a-493c-a7e0-4b61c363da28'::uuid) AND (entity_id = 'ucm:4e777852638b30afc4e82b4eb643587a5dc97cab69a390d8543be72b77b02dd2'::text) AND (entity_type = 'SYMBOL'::text))"
+                }
+              ]
+            }
+          }
+        ],
+        "before_analyze_fk_plan": [
+          {
+            "Plan": {
+              "Node Type": "LockRows",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 0.55,
+              "Total Cost": 8.58,
+              "Plan Rows": 1,
+              "Plan Width": 10,
+              "Plans": [
+                {
+                  "Node Type": "Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Scan Direction": "Forward",
+                  "Index Name": "ucm_entities_snapshot_id_entity_id_entity_type_key",
+                  "Relation Name": "ucm_entities",
+                  "Alias": "x",
+                  "Startup Cost": 0.55,
+                  "Total Cost": 8.57,
+                  "Plan Rows": 1,
+                  "Plan Width": 10,
+                  "Index Cond": "((snapshot_id = '7231481e-d86a-493c-a7e0-4b61c363da28'::uuid) AND (entity_id = 'ucm:4e777852638b30afc4e82b4eb643587a5dc97cab69a390d8543be72b77b02dd2'::text) AND (entity_type = 'SYMBOL'::text))"
+                }
+              ]
+            }
+          }
+        ],
+        "archive_seconds": 0.0209037649910897,
+        "validation_seconds": 228.0940520199947,
+        "publish_seconds": 89.99424014100805,
+        "total_seconds": 719.1855648139899,
+        "budget_passed": true
+      }
+    ],
+    "requested_trials": 1,
+    "complete": true,
+    "database_bytes": 2737356135
+  }
+}

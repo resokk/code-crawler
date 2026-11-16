@@ -1070,7 +1070,7 @@ async def ingest_stream(
 
     Only the current chunk is held in memory. Chunks may arrive in any order and
     refer to entities of later chunks: references are checked by deferred foreign
-    keys once everything is staged. The load is one transaction, so a failing
+    keys once everything is transferred. The load is one transaction, so a failing
     producer, a dangling reference or a duplicate ID leaves the snapshot empty.
 
     Cross-entity semantic rules of UcmBatch are not checked here: validate_snapshot
@@ -1093,12 +1093,14 @@ async def ingest_stream(
         stages: dict[str, tuple[str, str]] = {}
         prefix = "ingest_" + uuid4().hex
         async for chunk in chunks:
-            # Подготовка порции нагружает процессор; в потоке она не блокирует цикл событий.
-            await _stage(conn, prefix, stages, await asyncio.to_thread(rows, chunk))
+            for start in range(0, len(chunk), _CHUNK):
+                # Подготовка порции нагружает процессор; в потоке она не блокирует цикл событий.
+                records = await asyncio.to_thread(rows, chunk[start : start + _CHUNK])
+                await _stage(conn, prefix, stages, records)
+                await _transfer(conn, {table: stages[table] for table in records})
+                tick("Запись в БД: загрузка")
             count += len(chunk)
-            tick("Запись в БД: загрузка")
-        await _transfer(conn, stages)
-        await _check(conn)
+        await _check(conn, stages)
     return count
 
 
@@ -1153,19 +1155,17 @@ async def _transfer(
         await conn.execute(
             f"INSERT INTO public.{table} ({columns}) SELECT {columns} FROM pg_temp.{stage}"
         )
+        # Staging has no constraints; canonical FKs stay deferred across chunks.
+        await conn.execute(f"TRUNCATE pg_temp.{stage}")
         tick("Запись в БД: перенос", len(stages))
 
 
-async def _check(conn: asyncpg.Connection) -> None:
-    # По одному ограничению — только ради прогресса; итог тот же, что у ALL IMMEDIATE.
-    constraints = await conn.fetch(
-        "SELECT format('%I.%I', n.nspname, c.conname) AS name FROM pg_constraint c "
-        "JOIN pg_namespace n ON n.oid=c.connamespace "
-        "WHERE c.condeferrable AND n.nspname='public' ORDER BY 1"
-    )
-    for constraint in constraints:
-        await conn.execute(f"SET CONSTRAINTS {constraint['name']} IMMEDIATE")
-        tick("Запись в БД: проверка связей", len(constraints))
+async def _check(conn: asyncpg.Connection, tables: Iterable[str]) -> None:
+    if names := sorted(set(tables)):
+        # Bulk inserts into new tables otherwise leave FK lookups with empty-table estimates.
+        await conn.execute("ANALYZE " + ",".join("public." + name for name in names))
+    # One flush avoids repeatedly walking PostgreSQL's deferred-trigger queue.
+    tick("Запись в БД: проверка связей")
     await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")
 
 
@@ -1182,5 +1182,5 @@ async def _ingest_records(
     # Подготовка порции нагружает процессор; в потоке она не блокирует цикл событий.
     while (rows := await asyncio.to_thread(next, chunks, None)) is not None:
         await _stage(conn, prefix, stages, rows)
-    await _transfer(conn, stages)
-    await _check(conn)
+        await _transfer(conn, {table: stages[table] for table in rows})
+    await _check(conn, stages)
