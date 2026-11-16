@@ -363,11 +363,8 @@ async def run_trial(
     return report
 
 
-async def _environment() -> dict:
-    root = Path(__file__).resolve().parents[2]
+def _local_environment(root: Path) -> dict:
     return {
-        "implementation_sha": await repos.git("rev-parse", "HEAD", cwd=root),
-        "working_tree": await repos.git("status", "--porcelain", cwd=root),
         "python": sys.version,
         "platform": platform.platform(),
         "cpu_count": os.cpu_count(),
@@ -382,9 +379,42 @@ async def _environment() -> dict:
         "memory": _read("/proc/meminfo"),
         "cgroup_memory_max": _read("/sys/fs/cgroup/memory.max"),
         "cgroup_cpu_max": _read("/sys/fs/cgroup/cpu.max"),
-        "uv_lock_sha256": await asyncio.to_thread(
-            lambda: hashlib.sha256((root / "uv.lock").read_bytes()).hexdigest()
-        ),
+        "uv_lock_sha256": hashlib.sha256((root / "uv.lock").read_bytes()).hexdigest(),
+    }
+
+
+async def _environment() -> dict:
+    root = Path(__file__).resolve().parents[2]
+    environment = await asyncio.to_thread(_local_environment, root)
+    environment["implementation_sha"] = await repos.git("rev-parse", "HEAD", cwd=root)
+    environment["working_tree"] = await repos.git("status", "--porcelain", cwd=root)
+    return environment
+
+
+def stage_distributions(runs: list[dict], groups: tuple[int, ...]) -> dict:
+    """Exclude incomplete slice totals from successful whole-workload distributions."""
+    sliced = {"analyze", "stage", "transfer", "foreign_keys", "archive"}
+
+    def complete(run: dict, stage: str) -> bool:
+        events = run.get("stages", {}).get(stage, [])
+        if not events or stage in run.get("active_stages", []):
+            return False
+        if stage in sliced and not complete(run, "index"):
+            return False
+        return all(e["status"] == "success" for e in events)
+
+    return {
+        str(size): {
+            stage: distribution(
+                [
+                    sum(e["seconds"] for e in run["stages"][stage])
+                    for run in runs
+                    if run["groups"] == size and complete(run, stage)
+                ]
+            )
+            for stage in STAGES
+        }
+        for size in groups
     }
 
 
@@ -411,7 +441,7 @@ async def benchmark_suite(
     ):
         raise ValueError("invalid baseline workload/repeats/timeouts")
     report = {
-        "format_version": 1,
+        "format_version": 2,
         "environment": await _environment(),
         "runs": [],
         "parameters": {
@@ -498,24 +528,7 @@ async def benchmark_suite(
                 finally:
                     await admin.execute(f'DROP DATABASE "{name}" WITH (FORCE)')
                     await write_report(output, report)
-        report["distributions_seconds"] = {
-            str(size): {
-                stage: distribution(
-                    [
-                        sum(
-                            event["seconds"]
-                            for event in run.get("stages", {}).get(stage, [])
-                        )
-                        for run in report["runs"]
-                        if run["groups"] == size
-                        and run.get("stages", {}).get(stage)
-                        and all(e["status"] == "success" for e in run["stages"][stage])
-                    ]
-                )
-                for stage in STAGES
-            }
-            for size in groups
-        }
+        report["distributions_seconds"] = stage_distributions(report["runs"], groups)
         report["status"] = (
             "success"
             if all(r["status"] == "success" for r in report["runs"])

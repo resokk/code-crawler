@@ -1,0 +1,2807 @@
+{
+  "format_version": 2,
+  "environment": {
+    "implementation_sha": "6eaa9841d9a1b4352ac8714c758d3b684afb8bf3",
+    "working_tree": "",
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "cpu_count": 3,
+    "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+    "memory": "MemTotal:       10207480 kB\nMemFree:         8988856 kB\nMemAvailable:    9275044 kB\nBuffers:           19912 kB\nCached:           310284 kB\nSwapCached:            0 kB\nActive:           174316 kB\nInactive:         269320 kB\nActive(anon):      66088 kB\nInactive(anon):   143108 kB\nActive(file):     108228 kB\nInactive(file):   126212 kB\nUnevictable:       29944 kB\nMlocked:               0 kB\nSwapTotal:             0 kB\nSwapFree:              0 kB\nDirty:             23816 kB\nWriteback:             0 kB\nAnonPages:        143384 kB\nMapped:           158440 kB\nShmem:             65984 kB\nKReclaimable:     365424 kB\nSlab:             436856 kB\nSReclaimable:     365424 kB\nSUnreclaim:        71432 kB\nKernelStack:        2752 kB\nPageTables:         5260 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:     5103740 kB\nCommitted_AS:     964536 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:        3952 kB\nVmallocChunk:          0 kB\nPercpu:              944 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:     16384 kB\nFilePmdMapped:         0 kB\nBalloon:               0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      198656 kB\nDirectMap2M:     8744960 kB\nDirectMap1G:    18874368 kB",
+    "cgroup_memory_max": "8589934592",
+    "cgroup_cpu_max": "200000 100000",
+    "uv_lock_sha256": "0f539bbf6fa5752f85ccee3fa794a26fd45f0173334687dabccebaf1784942fa"
+  },
+  "parameters": {
+    "groups": [
+      199,
+      499,
+      1500
+    ],
+    "trials_first_scale": 3,
+    "query_repeats": 7,
+    "trial_timeout_seconds": 1800,
+    "gc_timeout_seconds": 120
+  },
+  "limitations": [
+    "Synthetic Java/JDBC workload; no production SLO.",
+    "Stage index includes nested capture/prepare/analyze/stage/transfer/FK/archive; do not sum overlapping totals.",
+    "RSS is a cumulative per-process high-water mark; IO counters are client-process counters.",
+    "WAL LSN deltas are cluster-wide; run against an idle dedicated PG15 server.",
+    "Database stats can lag and include instrumentation; query samples are warm after VACUUM ANALYZE."
+  ],
+  "status": "completed_with_failures",
+  "raw_report": {
+    "file": "end-to-end-pg15-2026-11-16.raw.json.gz",
+    "uncompressed_sha256": "d0c8c1f6871b9c214cca39c03ae979a2373ff2a9547cf3bc446924f9853a6bdf",
+    "compressed_sha256": "1bd2a28ff1b6c61f6656f07518d04c10c586b3a68223c6f18dc69f39d61cc4ff",
+    "uncompressed_bytes": 7770659
+  },
+  "aggregation": {
+    "function": "performance_baseline.stage_distributions",
+    "source_sha256": "a964cfbc2ac38feb3e831127cf655d24c816db08dcedaf3b7a55af1980e18249",
+    "note": "Version 2 excludes incomplete slice totals from successful workload distributions. Original version 1 raw report is preserved unchanged; interrupted-run slice sums there are partial observations."
+  },
+  "disk_guard": {
+    "file": "end-to-end-pg15-2026-11-16.disk-guard.json",
+    "source_sha256": "08f60b981d7699ce8ed867e0d6d3af9f49dd4270399f20b0b2721345363e6606"
+  },
+  "distributions_seconds": {
+    "199": {
+      "capture": {
+        "samples": [
+          0.03249601600691676,
+          0.03449448599712923,
+          0.03302963401074521
+        ],
+        "count": 3,
+        "min": 0.03249601600691676,
+        "max": 0.03449448599712923,
+        "median": 0.03302963401074521,
+        "mean": 0.033340045338263735,
+        "stdev": 0.0010347642096795852
+      },
+      "prepare": {
+        "samples": [
+          3.492675287008751,
+          3.7841571110184304,
+          4.295921704993816
+        ],
+        "count": 3,
+        "min": 3.492675287008751,
+        "max": 4.295921704993816,
+        "median": 3.7841571110184304,
+        "mean": 3.8575847010069992,
+        "stdev": 0.40662625373936007
+      },
+      "analyze": {
+        "samples": [
+          36.162616773013724,
+          38.01088896096917,
+          37.29755860500154
+        ],
+        "count": 3,
+        "min": 36.162616773013724,
+        "max": 38.01088896096917,
+        "median": 37.29755860500154,
+        "mean": 37.157021446328145,
+        "stdev": 0.9321161622450258
+      },
+      "stage": {
+        "samples": [
+          2.748000800056616,
+          2.951718712982256,
+          2.660295822948683
+        ],
+        "count": 3,
+        "min": 2.660295822948683,
+        "max": 2.951718712982256,
+        "median": 2.748000800056616,
+        "mean": 2.786671778662518,
+        "stdev": 0.14951056366903848
+      },
+      "transfer": {
+        "samples": [
+          17.8343115549942,
+          15.75804359500762,
+          15.728933336009504
+        ],
+        "count": 3,
+        "min": 15.728933336009504,
+        "max": 17.8343115549942,
+        "median": 15.75804359500762,
+        "mean": 16.44042949533711,
+        "stdev": 1.207225020023259
+      },
+      "foreign_keys": {
+        "samples": [
+          10.39126678899629,
+          10.760945604997687,
+          11.780894069001079
+        ],
+        "count": 3,
+        "min": 10.39126678899629,
+        "max": 11.780894069001079,
+        "median": 10.760945604997687,
+        "mean": 10.977702154331686,
+        "stdev": 0.7197246317813244
+      },
+      "archive": {
+        "samples": [
+          0.03765838698018342,
+          0.03303250399767421,
+          0.045187515002908185
+        ],
+        "count": 3,
+        "min": 0.03303250399767421,
+        "max": 0.045187515002908185,
+        "median": 0.03765838698018342,
+        "mean": 0.03862613532692194,
+        "stdev": 0.006135020438539801
+      },
+      "index": {
+        "samples": [
+          92.28298311101389,
+          92.57588114999817,
+          93.09375452599488
+        ],
+        "count": 3,
+        "min": 92.28298311101389,
+        "max": 93.09375452599488,
+        "median": 92.57588114999817,
+        "mean": 92.65087292900232,
+        "stdev": 0.41055498660499123
+      },
+      "validation": {
+        "samples": [
+          40.79172185101197,
+          43.13173072101199,
+          51.34662365398253
+        ],
+        "count": 3,
+        "min": 40.79172185101197,
+        "max": 51.34662365398253,
+        "median": 43.13173072101199,
+        "mean": 45.09002540866883,
+        "stdev": 5.543255052797639
+      },
+      "publication": {
+        "samples": [
+          0.35075213099480607,
+          0.43302627399680205,
+          0.6355225990118925
+        ],
+        "count": 3,
+        "min": 0.35075213099480607,
+        "max": 0.6355225990118925,
+        "median": 0.43302627399680205,
+        "mean": 0.4731003346678335,
+        "stdev": 0.1465537533387212
+      },
+      "readers": {
+        "samples": [
+          0.7177738570026122,
+          0.9091337700083386,
+          0.906163696985459
+        ],
+        "count": 3,
+        "min": 0.7177738570026122,
+        "max": 0.9091337700083386,
+        "median": 0.906163696985459,
+        "mean": 0.8443571079988033,
+        "stdev": 0.10963436919148045
+      },
+      "clone": {
+        "samples": [
+          33.471496098994976,
+          32.37892797301174,
+          35.20917444699444
+        ],
+        "count": 3,
+        "min": 32.37892797301174,
+        "max": 35.20917444699444,
+        "median": 33.471496098994976,
+        "mean": 33.68653283966705,
+        "stdev": 1.4273242013474112
+      },
+      "gc": {
+        "samples": [],
+        "count": 0
+      }
+    },
+    "499": {
+      "capture": {
+        "samples": [
+          0.09609537900541909
+        ],
+        "count": 1,
+        "min": 0.09609537900541909,
+        "max": 0.09609537900541909,
+        "median": 0.09609537900541909,
+        "mean": 0.09609537900541909,
+        "stdev": 0.0
+      },
+      "prepare": {
+        "samples": [
+          9.111498849000782
+        ],
+        "count": 1,
+        "min": 9.111498849000782,
+        "max": 9.111498849000782,
+        "median": 9.111498849000782,
+        "mean": 9.111498849000782,
+        "stdev": 0.0
+      },
+      "analyze": {
+        "samples": [
+          108.44036037602928
+        ],
+        "count": 1,
+        "min": 108.44036037602928,
+        "max": 108.44036037602928,
+        "median": 108.44036037602928,
+        "mean": 108.44036037602928,
+        "stdev": 0.0
+      },
+      "stage": {
+        "samples": [
+          8.330278492008802
+        ],
+        "count": 1,
+        "min": 8.330278492008802,
+        "max": 8.330278492008802,
+        "median": 8.330278492008802,
+        "mean": 8.330278492008802,
+        "stdev": 0.0
+      },
+      "transfer": {
+        "samples": [
+          47.077495949022705
+        ],
+        "count": 1,
+        "min": 47.077495949022705,
+        "max": 47.077495949022705,
+        "median": 47.077495949022705,
+        "mean": 47.077495949022705,
+        "stdev": 0.0
+      },
+      "foreign_keys": {
+        "samples": [
+          24.946148949995404
+        ],
+        "count": 1,
+        "min": 24.946148949995404,
+        "max": 24.946148949995404,
+        "median": 24.946148949995404,
+        "mean": 24.946148949995404,
+        "stdev": 0.0
+      },
+      "archive": {
+        "samples": [
+          0.08362747600767761
+        ],
+        "count": 1,
+        "min": 0.08362747600767761,
+        "max": 0.08362747600767761,
+        "median": 0.08362747600767761,
+        "mean": 0.08362747600767761,
+        "stdev": 0.0
+      },
+      "index": {
+        "samples": [
+          258.44216042698827
+        ],
+        "count": 1,
+        "min": 258.44216042698827,
+        "max": 258.44216042698827,
+        "median": 258.44216042698827,
+        "mean": 258.44216042698827,
+        "stdev": 0.0
+      },
+      "validation": {
+        "samples": [
+          130.8653308049834
+        ],
+        "count": 1,
+        "min": 130.8653308049834,
+        "max": 130.8653308049834,
+        "median": 130.8653308049834,
+        "mean": 130.8653308049834,
+        "stdev": 0.0
+      },
+      "publication": {
+        "samples": [
+          0.8871099929965567
+        ],
+        "count": 1,
+        "min": 0.8871099929965567,
+        "max": 0.8871099929965567,
+        "median": 0.8871099929965567,
+        "mean": 0.8871099929965567,
+        "stdev": 0.0
+      },
+      "readers": {
+        "samples": [
+          0.9153024609840941
+        ],
+        "count": 1,
+        "min": 0.9153024609840941,
+        "max": 0.9153024609840941,
+        "median": 0.9153024609840941,
+        "mean": 0.9153024609840941,
+        "stdev": 0.0
+      },
+      "clone": {
+        "samples": [],
+        "count": 0
+      },
+      "gc": {
+        "samples": [],
+        "count": 0
+      }
+    },
+    "1500": {
+      "capture": {
+        "samples": [
+          0.19011091999709606
+        ],
+        "count": 1,
+        "min": 0.19011091999709606,
+        "max": 0.19011091999709606,
+        "median": 0.19011091999709606,
+        "mean": 0.19011091999709606,
+        "stdev": 0.0
+      },
+      "prepare": {
+        "samples": [
+          33.8973879260011
+        ],
+        "count": 1,
+        "min": 33.8973879260011,
+        "max": 33.8973879260011,
+        "median": 33.8973879260011,
+        "mean": 33.8973879260011,
+        "stdev": 0.0
+      },
+      "analyze": {
+        "samples": [],
+        "count": 0
+      },
+      "stage": {
+        "samples": [],
+        "count": 0
+      },
+      "transfer": {
+        "samples": [],
+        "count": 0
+      },
+      "foreign_keys": {
+        "samples": [],
+        "count": 0
+      },
+      "archive": {
+        "samples": [],
+        "count": 0
+      },
+      "index": {
+        "samples": [],
+        "count": 0
+      },
+      "validation": {
+        "samples": [],
+        "count": 0
+      },
+      "publication": {
+        "samples": [],
+        "count": 0
+      },
+      "readers": {
+        "samples": [],
+        "count": 0
+      },
+      "clone": {
+        "samples": [],
+        "count": 0
+      },
+      "gc": {
+        "samples": [],
+        "count": 0
+      }
+    }
+  },
+  "runs": [
+    {
+      "status": "failed",
+      "started_at": "2026-11-16T17:42:28.371348+00:00",
+      "postgres": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "shared_buffers": "128MB",
+        "work_mem": "4MB",
+        "maintenance_work_mem": "64MB",
+        "max_connections": "100",
+        "plan_cache_mode": "auto",
+        "track_io_timing": "off",
+        "synchronous_commit": "on",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "wal_level": "replica",
+        "lc_collate": "en_US.utf8"
+      },
+      "migrations": [
+        "0001_graph.sql",
+        "0002_data_layer.sql",
+        "0003_ucm_repository_snapshots.sql",
+        "0004_ucm_core_storage.sql",
+        "0005_ucm_atomic_publication.sql",
+        "0006_ucm_incremental_indexing.sql",
+        "0007_ucm_legacy_migration.sql",
+        "0008_sql_candidates_construction.sql",
+        "0009_sql_execution_sinks.sql",
+        "0010_sql_semantic_access_analysis.sql",
+        "0011_sql_parameter_lineage.sql",
+        "0012_database_schema_identity.sql",
+        "0013_jpa_orm_semantic_analysis.sql",
+        "0014_source_adapter_registry.sql",
+        "0015_per_adapter_invalidation.sql",
+        "0016_ingest_jobs_recovery.sql",
+        "0017_reproducible_source_evidence.sql",
+        "0018_ucm_query_indexes.sql",
+        "0019_lexical_search_index.sql",
+        "0020_bpmn_schema_adapter.sql",
+        "0021_search_document_persistence.sql",
+        "0022_discovery_catalog.sql",
+        "0023_resolver_contexts.sql",
+        "0024_bpmn_java_bindings.sql",
+        "0025_openapi_contract_adapter.sql",
+        "0026_discovery_catalog_read_api.sql",
+        "0027_kafka_message_intelligence.sql",
+        "0028_resolver_cache.sql",
+        "0029_openapi_java_bindings.sql",
+        "0030_database_qualified_search.sql",
+        "0030_search_generation_security.sql"
+      ],
+      "fixture": {
+        "generator": "query_benchmark.fixture_sources",
+        "groups": 199,
+        "files": 400,
+        "source_bytes": 296720,
+        "sha256": "37b12c41a9b97dbad028351d0dd3d7f8a75920647cc76ed4e04daae78549e573",
+        "profile": "java/orm",
+        "kind": "synthetic JDBC/calls/duplicate types"
+      },
+      "pg_before": {
+        "wal_lsn": "4/48BB0D80",
+        "database_bytes": 11697511,
+        "xact_commit": 1,
+        "xact_rollback": 0,
+        "blks_read": 0,
+        "blks_hit": 1405,
+        "temp_files": 0,
+        "temp_bytes": 0,
+        "blk_read_time": 0.0,
+        "blk_write_time": 0.0,
+        "deadlocks": 0,
+        "stats_reset": null
+      },
+      "last_stage": "gc",
+      "active_stages": [],
+      "snapshot_id": "61944ad1-154f-4c33-b61a-cbd0788c1358",
+      "counts": {
+        "DATA_ACCESS": 4577,
+        "DATABASE_ACCESS": 4577,
+        "EXTERNAL_REFERENCE": 3980,
+        "OCCURRENCE": 27466,
+        "OPERATION": 2985,
+        "RELATION": 74032,
+        "SCOPE": 3988,
+        "SOURCE_ANALYSIS": 400,
+        "SOURCE_FILE": 400,
+        "SQL_BINDING": 1990,
+        "SQL_CANDIDATE": 995,
+        "SQL_CONSTRUCTION": 995,
+        "SQL_EXECUTE": 995,
+        "SQL_PLACEHOLDER": 1990,
+        "SQL_STATEMENT": 995,
+        "SYMBOL": 6372,
+        "VALUE": 3980
+      },
+      "entity_count": 140717,
+      "gc_snapshot_id": "a85b9628-3665-410e-9cf4-f864f8052f82",
+      "failure": {
+        "type": "TimeoutError",
+        "stage": "gc"
+      },
+      "reader_results_unchanged_after_gc": true,
+      "process": {
+        "peak_rss_kib": 423888.0,
+        "user_seconds": 93.500317,
+        "system_seconds": 2.570966,
+        "major_faults": 3,
+        "minor_faults": 123842,
+        "block_inputs": 11744,
+        "block_outputs": 22392,
+        "proc_io": {
+          "rchar": 10259903,
+          "wchar": 8901718,
+          "syscr": 4194,
+          "syscw": 1005,
+          "read_bytes": 6012928,
+          "write_bytes": 13471744,
+          "cancelled_write_bytes": 45056
+        }
+      },
+      "pg_after": {
+        "wal_lsn": "4/99B7D708",
+        "database_bytes": 770531843,
+        "xact_commit": 7002,
+        "xact_rollback": 1,
+        "blks_read": 860125,
+        "blks_hit": 119407282,
+        "temp_files": 56,
+        "temp_bytes": 217078683,
+        "blk_read_time": 0.0,
+        "blk_write_time": 0.0,
+        "deadlocks": 0,
+        "stats_reset": null
+      },
+      "cluster_wal_bytes": 1358743944,
+      "finished_at": "2026-11-16T17:47:19.361951+00:00",
+      "groups": 199,
+      "attempt": 1,
+      "stages": {
+        "capture": {
+          "completed_call_seconds": [
+            0.03249601600691676
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 55004.0
+        },
+        "prepare": {
+          "completed_call_seconds": [
+            3.492675287008751
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 148272.0
+        },
+        "stage": {
+          "completed_call_seconds": [
+            0.008291411999380216,
+            0.6856859590043314,
+            0.929355089989258,
+            0.4068278180202469,
+            0.4832273170177359,
+            0.10397904200362973,
+            0.10248701000818983,
+            0.02814715201384388
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "transfer": {
+          "completed_call_seconds": [
+            0.025327618001028895,
+            5.0304849020030815,
+            4.664850931003457,
+            4.857181580999168,
+            1.3556170289812144,
+            0.8631579529901501,
+            0.836807748011779,
+            0.2008837930043228
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "analyze": {
+          "completed_call_seconds": [
+            10.60868410297553,
+            10.89657830199576,
+            9.079283287021099,
+            2.2345179990225006,
+            1.6791376559995115,
+            1.418865821993677,
+            0.24554960400564596
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "archive": {
+          "completed_call_seconds": [
+            0.03765838698018342
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "foreign_keys": {
+          "completed_call_seconds": [
+            10.39126678899629
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "index": {
+          "completed_call_seconds": [
+            92.28298311101389
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "validation": {
+          "completed_call_seconds": [
+            40.79172185101197
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "publication": {
+          "completed_call_seconds": [
+            0.35075213099480607
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "readers": {
+          "completed_call_seconds": [
+            0.7177738570026122
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "clone": {
+          "completed_call_seconds": [
+            33.471496098994976
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        },
+        "gc": {
+          "completed_call_seconds": [
+            120.10709271600354
+          ],
+          "event_statuses": [
+            "failed_or_cancelled"
+          ],
+          "observed_peak_rss_kib": 423888.0
+        }
+      },
+      "queries": {
+        "symbol_simple": {
+          "wall_ms": [
+            3.547116997651756,
+            3.8904729881323874,
+            3.253135015256703,
+            3.4698410017881542,
+            3.0312100134324282,
+            2.890249015763402,
+            3.136043989798054
+          ],
+          "median_wall_ms": 3.253135015256703,
+          "sql_execution_ms": 1.935,
+          "sql_count": 3
+        },
+        "symbol_signature": {
+          "wall_ms": [
+            1.3746479817200452,
+            0.9859380079433322,
+            1.1761400091927499,
+            1.0262939904350787,
+            0.8488570165354759,
+            1.2364299909677356,
+            0.9656329930294305
+          ],
+          "median_wall_ms": 1.0262939904350787,
+          "sql_execution_ms": 0.116,
+          "sql_count": 3
+        },
+        "callers": {
+          "wall_ms": [
+            1.8643149815034121,
+            1.702622015727684,
+            2.0992080098949373,
+            1.8593370041344315,
+            1.8455069803167135,
+            1.8453560187481344,
+            1.738906023092568
+          ],
+          "median_wall_ms": 1.8455069803167135,
+          "sql_execution_ms": 0.2,
+          "sql_count": 6
+        },
+        "callees": {
+          "wall_ms": [
+            2.4745420087128878,
+            2.3704959894530475,
+            2.5077780010178685,
+            2.1538900036830455,
+            1.6855660069268197,
+            2.807563985697925,
+            2.0304399949964136
+          ],
+          "median_wall_ms": 2.3704959894530475,
+          "sql_execution_ms": 0.551,
+          "sql_count": 6
+        },
+        "executions_owner": {
+          "wall_ms": [
+            4.9381690041627735,
+            4.827202006708831,
+            5.228496011113748,
+            6.264911004109308,
+            4.977663978934288,
+            5.013913003494963,
+            5.8575130242388695
+          ],
+          "median_wall_ms": 5.013913003494963,
+          "sql_execution_ms": 0.613,
+          "sql_count": 12
+        },
+        "executions_page": {
+          "wall_ms": [
+            13.255283003672957,
+            13.706266006920487,
+            12.921615008963272,
+            12.049197015585378,
+            13.315793010406196,
+            13.13153700903058,
+            13.24787101475522
+          ],
+          "median_wall_ms": 13.24787101475522,
+          "sql_execution_ms": 6.94,
+          "sql_count": 12
+        },
+        "table_readers": {
+          "wall_ms": [
+            7.478151004761457,
+            7.495027006370947,
+            7.338651019381359,
+            8.224263990996405,
+            7.260974001837894,
+            7.326102000661194,
+            7.376397988991812
+          ],
+          "median_wall_ms": 7.376397988991812,
+          "sql_execution_ms": 1.778,
+          "sql_count": 18
+        },
+        "column_writers": {
+          "wall_ms": [
+            7.172411016654223,
+            7.0092559908516705,
+            7.018918986432254,
+            7.033842004602775,
+            7.024078018730506,
+            7.0268209965433925,
+            7.094903994584456
+          ],
+          "median_wall_ms": 7.0268209965433925,
+          "sql_execution_ms": 1.3860000000000001,
+          "sql_count": 18
+        },
+        "trace_out": {
+          "wall_ms": [
+            5.568427994148806,
+            5.992496007820591,
+            5.470050004078075,
+            5.436639999970794,
+            5.360505019780248,
+            5.516499018995091,
+            5.631201987853274
+          ],
+          "median_wall_ms": 5.516499018995091,
+          "sql_execution_ms": 2.55,
+          "sql_count": 6
+        },
+        "trace_in": {
+          "wall_ms": [
+            2.334332006284967,
+            2.3023340036161244,
+            2.309153991518542,
+            2.419229014776647,
+            2.3017229977995157,
+            2.362683997489512,
+            2.2922090138308704
+          ],
+          "median_wall_ms": 2.309153991518542,
+          "sql_execution_ms": 0.548,
+          "sql_count": 6
+        },
+        "evidence": {
+          "wall_ms": [
+            1.4403270033653826,
+            1.387636992149055,
+            1.3969819992780685,
+            1.7645449843257666,
+            1.7561319982632995,
+            1.7876089841593057,
+            1.7417210037820041
+          ],
+          "median_wall_ms": 1.7417210037820041,
+          "sql_execution_ms": 0.228,
+          "sql_count": 6
+        },
+        "typed_entity": {
+          "wall_ms": [
+            5.407875985838473,
+            5.64918399322778,
+            4.656997014535591,
+            5.066862999228761,
+            7.618881994858384,
+            6.58895299420692,
+            7.618202012963593
+          ],
+          "median_wall_ms": 5.64918399322778,
+          "sql_execution_ms": 0.32,
+          "sql_count": 18
+        },
+        "typed_incoming": {
+          "wall_ms": [
+            5.836001015268266,
+            5.780325998784974,
+            5.5622479994781315,
+            5.663791002007201,
+            5.759445019066334,
+            5.388507008319721,
+            5.3269939962774515
+          ],
+          "median_wall_ms": 5.663791002007201,
+          "sql_execution_ms": 0.663,
+          "sql_count": 20
+        }
+      },
+      "table_total_bytes": {
+        "data_columns": 24576,
+        "data_foreign_keys": 24576,
+        "data_refs": 24576,
+        "data_tables": 32768,
+        "edges": 24576,
+        "ingest_file_dependencies": 401408,
+        "ingest_file_entities": 82132992,
+        "ingest_jobs": 32768,
+        "ingest_legacy_edges": 16384,
+        "ingest_legacy_nodes": 16384,
+        "ingest_legacy_refs": 16384,
+        "ingest_legacy_snapshots": 8192,
+        "ingest_snapshot_adapters": 65536,
+        "ingest_snapshot_profiles": 65536,
+        "nodes": 24576,
+        "repos": 24576,
+        "resolver_cache_dependencies": 24576,
+        "resolver_cache_entries": 40960,
+        "resolver_context_selections": 16384,
+        "resolver_contexts": 16384,
+        "resolver_deployment_bindings": 24576,
+        "resolver_deployments": 16384,
+        "schema_migrations": 65536,
+        "search_discovery_entries": 3596288,
+        "search_discovery_generations": 98304,
+        "search_documents": 16384,
+        "search_index_generations": 24576,
+        "search_index_publications": 8192,
+        "ucm_coverage_reasons": 117424128,
+        "ucm_data_accesses": 4063232,
+        "ucm_database_accesses": 3866624,
+        "ucm_database_catalogs": 16384,
+        "ucm_database_contexts": 16384,
+        "ucm_database_objects": 24576,
+        "ucm_database_schema_objects": 24576,
+        "ucm_database_schema_versions": 24576,
+        "ucm_database_search_paths": 24576,
+        "ucm_entities": 241836032,
+        "ucm_evidence": 79634432,
+        "ucm_external_references": 4415488,
+        "ucm_legacy_repositories": 24576,
+        "ucm_occurrences": 22659072,
+        "ucm_operation_values": 4202496,
+        "ucm_operations": 2195456,
+        "ucm_orm_mapping_names": 16384,
+        "ucm_orm_mappings": 16384,
+        "ucm_orm_operations": 16384,
+        "ucm_orm_queries": 16384,
+        "ucm_orm_reasons": 16384,
+        "ucm_relation_candidates": 835584,
+        "ucm_relation_endpoints": 65536,
+        "ucm_relation_sources": 65536,
+        "ucm_relations": 140795904,
+        "ucm_repositories": 81920,
+        "ucm_repository_publications": 57344,
+        "ucm_scopes": 3121152,
+        "ucm_snapshot_sources": 360448,
+        "ucm_snapshot_validations": 57344,
+        "ucm_snapshots": 114688,
+        "ucm_source_analyses": 811008,
+        "ucm_source_analysis_capabilities": 2670592,
+        "ucm_source_analysis_reasons": 5955584,
+        "ucm_source_blobs": 475136,
+        "ucm_source_diagnostics": 16384,
+        "ucm_source_evidence_legacy_snapshots": 8192,
+        "ucm_source_files": 417792,
+        "ucm_sql_access_names": 4718592,
+        "ucm_sql_binding_reasons": 16384,
+        "ucm_sql_bindings": 2285568,
+        "ucm_sql_constructions": 770048,
+        "ucm_sql_executions": 1269760,
+        "ucm_sql_fragments": 876544,
+        "ucm_sql_partial_reasons": 16384,
+        "ucm_sql_placeholders": 2301952,
+        "ucm_sql_statement_reasons": 16384,
+        "ucm_sql_statements": 1261568,
+        "ucm_sql_variants": 1220608,
+        "ucm_symbols": 6725632,
+        "ucm_type_refs": 9986048,
+        "ucm_values": 2392064
+      }
+    },
+    {
+      "status": "failed",
+      "started_at": "2026-11-16T17:47:20.697707+00:00",
+      "postgres": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "shared_buffers": "128MB",
+        "work_mem": "4MB",
+        "maintenance_work_mem": "64MB",
+        "max_connections": "100",
+        "plan_cache_mode": "auto",
+        "track_io_timing": "off",
+        "synchronous_commit": "on",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "wal_level": "replica",
+        "lc_collate": "en_US.utf8"
+      },
+      "migrations": [
+        "0001_graph.sql",
+        "0002_data_layer.sql",
+        "0003_ucm_repository_snapshots.sql",
+        "0004_ucm_core_storage.sql",
+        "0005_ucm_atomic_publication.sql",
+        "0006_ucm_incremental_indexing.sql",
+        "0007_ucm_legacy_migration.sql",
+        "0008_sql_candidates_construction.sql",
+        "0009_sql_execution_sinks.sql",
+        "0010_sql_semantic_access_analysis.sql",
+        "0011_sql_parameter_lineage.sql",
+        "0012_database_schema_identity.sql",
+        "0013_jpa_orm_semantic_analysis.sql",
+        "0014_source_adapter_registry.sql",
+        "0015_per_adapter_invalidation.sql",
+        "0016_ingest_jobs_recovery.sql",
+        "0017_reproducible_source_evidence.sql",
+        "0018_ucm_query_indexes.sql",
+        "0019_lexical_search_index.sql",
+        "0020_bpmn_schema_adapter.sql",
+        "0021_search_document_persistence.sql",
+        "0022_discovery_catalog.sql",
+        "0023_resolver_contexts.sql",
+        "0024_bpmn_java_bindings.sql",
+        "0025_openapi_contract_adapter.sql",
+        "0026_discovery_catalog_read_api.sql",
+        "0027_kafka_message_intelligence.sql",
+        "0028_resolver_cache.sql",
+        "0029_openapi_java_bindings.sql",
+        "0030_database_qualified_search.sql",
+        "0030_search_generation_security.sql"
+      ],
+      "fixture": {
+        "generator": "query_benchmark.fixture_sources",
+        "groups": 199,
+        "files": 400,
+        "source_bytes": 296720,
+        "sha256": "37b12c41a9b97dbad028351d0dd3d7f8a75920647cc76ed4e04daae78549e573",
+        "profile": "java/orm",
+        "kind": "synthetic JDBC/calls/duplicate types"
+      },
+      "pg_before": {
+        "wal_lsn": "4/9A2FE720",
+        "database_bytes": 11697511,
+        "xact_commit": 52,
+        "xact_rollback": 0,
+        "blks_read": 277,
+        "blks_hit": 99726,
+        "temp_files": 0,
+        "temp_bytes": 0,
+        "blk_read_time": 0.0,
+        "blk_write_time": 0.0,
+        "deadlocks": 0,
+        "stats_reset": null
+      },
+      "last_stage": "gc",
+      "active_stages": [],
+      "snapshot_id": "4451c58c-b4bd-4da4-b3df-a714c816c660",
+      "counts": {
+        "DATA_ACCESS": 4577,
+        "DATABASE_ACCESS": 4577,
+        "EXTERNAL_REFERENCE": 3980,
+        "OCCURRENCE": 27466,
+        "OPERATION": 2985,
+        "RELATION": 74032,
+        "SCOPE": 3988,
+        "SOURCE_ANALYSIS": 400,
+        "SOURCE_FILE": 400,
+        "SQL_BINDING": 1990,
+        "SQL_CANDIDATE": 995,
+        "SQL_CONSTRUCTION": 995,
+        "SQL_EXECUTE": 995,
+        "SQL_PLACEHOLDER": 1990,
+        "SQL_STATEMENT": 995,
+        "SYMBOL": 6372,
+        "VALUE": 3980
+      },
+      "entity_count": 140717,
+      "gc_snapshot_id": "c0954d0b-1002-476e-8244-e1713709c3a2",
+      "failure": {
+        "type": "TimeoutError",
+        "stage": "gc"
+      },
+      "reader_results_unchanged_after_gc": true,
+      "process": {
+        "peak_rss_kib": 429536.0,
+        "user_seconds": 98.592902,
+        "system_seconds": 2.060061,
+        "major_faults": 11,
+        "minor_faults": 126814,
+        "block_inputs": 4864,
+        "block_outputs": 22480,
+        "proc_io": {
+          "rchar": 11150550,
+          "wchar": 8978280,
+          "syscr": 5396,
+          "syscw": 1009,
+          "read_bytes": 2490368,
+          "write_bytes": 13475840,
+          "cancelled_write_bytes": 45056
+        }
+      },
+      "pg_after": {
+        "wal_lsn": "4/ED0016E8",
+        "database_bytes": 770286083,
+        "xact_commit": 6969,
+        "xact_rollback": 1,
+        "blks_read": 857013,
+        "blks_hit": 113366586,
+        "temp_files": 56,
+        "temp_bytes": 220635434,
+        "blk_read_time": 0.0,
+        "blk_write_time": 0.0,
+        "deadlocks": 0,
+        "stats_reset": null
+      },
+      "cluster_wal_bytes": 1389375432,
+      "finished_at": "2026-11-16T17:52:13.914771+00:00",
+      "groups": 199,
+      "attempt": 2,
+      "stages": {
+        "capture": {
+          "completed_call_seconds": [
+            0.03449448599712923
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 62808.0
+        },
+        "prepare": {
+          "completed_call_seconds": [
+            3.7841571110184304
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 148108.0
+        },
+        "stage": {
+          "completed_call_seconds": [
+            0.009677109977928922,
+            0.5881915480131283,
+            1.1725799599953461,
+            0.38864455997827463,
+            0.5625951089896262,
+            0.08007467901916243,
+            0.10456771601457149,
+            0.04538803099421784
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "transfer": {
+          "completed_call_seconds": [
+            0.03376433701487258,
+            3.8793384919990785,
+            4.366926032002084,
+            4.404865346994484,
+            1.2348100699891802,
+            0.7944343440176453,
+            0.816167412995128,
+            0.22773755999514833
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "analyze": {
+          "completed_call_seconds": [
+            11.463352613005554,
+            10.28066431300249,
+            10.15142086200649,
+            2.555242394999368,
+            1.6879387789813336,
+            1.6195506149961147,
+            0.25271938397781923
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "archive": {
+          "completed_call_seconds": [
+            0.03303250399767421
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "foreign_keys": {
+          "completed_call_seconds": [
+            10.760945604997687
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "index": {
+          "completed_call_seconds": [
+            92.57588114999817
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "validation": {
+          "completed_call_seconds": [
+            43.13173072101199
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "publication": {
+          "completed_call_seconds": [
+            0.43302627399680205
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "readers": {
+          "completed_call_seconds": [
+            0.9091337700083386
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "clone": {
+          "completed_call_seconds": [
+            32.37892797301174
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        },
+        "gc": {
+          "completed_call_seconds": [
+            120.04127895599231
+          ],
+          "event_statuses": [
+            "failed_or_cancelled"
+          ],
+          "observed_peak_rss_kib": 429536.0
+        }
+      },
+      "queries": {
+        "symbol_simple": {
+          "wall_ms": [
+            4.061125015141442,
+            3.401416994165629,
+            3.147400013403967,
+            2.631348994327709,
+            2.6587699830997735,
+            3.0894480005372316,
+            2.8350549982860684
+          ],
+          "median_wall_ms": 3.0894480005372316,
+          "sql_execution_ms": 2.274,
+          "sql_count": 3
+        },
+        "symbol_signature": {
+          "wall_ms": [
+            0.7438489992637187,
+            0.7006840023677796,
+            0.7528520072810352,
+            0.7307389751076698,
+            0.9593430149834603,
+            0.8975700184237212,
+            0.820463988929987
+          ],
+          "median_wall_ms": 0.7528520072810352,
+          "sql_execution_ms": 0.122,
+          "sql_count": 3
+        },
+        "callers": {
+          "wall_ms": [
+            2.459840994561091,
+            1.9004990172106773,
+            2.1854169899597764,
+            1.6646340081933886,
+            1.6828919760882854,
+            1.9169439910911024,
+            1.9599389925133437
+          ],
+          "median_wall_ms": 1.9169439910911024,
+          "sql_execution_ms": 0.196,
+          "sql_count": 6
+        },
+        "callees": {
+          "wall_ms": [
+            19.797542976448312,
+            21.587066003121436,
+            59.170006978092715,
+            8.643253007903695,
+            2.6106269797310233,
+            2.117144991643727,
+            2.0081609836779535
+          ],
+          "median_wall_ms": 8.643253007903695,
+          "sql_execution_ms": 1.427,
+          "sql_count": 6
+        },
+        "executions_owner": {
+          "wall_ms": [
+            3.4203610266558826,
+            5.413425009464845,
+            3.7479589809663594,
+            4.228360980050638,
+            3.639175003627315,
+            3.8410539855249226,
+            3.935095010092482
+          ],
+          "median_wall_ms": 3.8410539855249226,
+          "sql_execution_ms": 0.448,
+          "sql_count": 12
+        },
+        "executions_page": {
+          "wall_ms": [
+            14.273284003138542,
+            21.433575020637363,
+            14.844262012047693,
+            14.444450003793463,
+            14.363848982611671,
+            15.33844499499537,
+            19.432022992987186
+          ],
+          "median_wall_ms": 14.844262012047693,
+          "sql_execution_ms": 8.67,
+          "sql_count": 12
+        },
+        "table_readers": {
+          "wall_ms": [
+            8.601590001489967,
+            8.678835991304368,
+            8.376209996640682,
+            9.377457987284288,
+            8.128527988446876,
+            9.449896984733641,
+            8.342851011548191
+          ],
+          "median_wall_ms": 8.601590001489967,
+          "sql_execution_ms": 1.956,
+          "sql_count": 18
+        },
+        "column_writers": {
+          "wall_ms": [
+            9.438219014555216,
+            8.45481498981826,
+            8.339727006386966,
+            8.416886994382367,
+            8.85428101173602,
+            8.623969013569877,
+            8.316616993397474
+          ],
+          "median_wall_ms": 8.45481498981826,
+          "sql_execution_ms": 1.756,
+          "sql_count": 18
+        },
+        "trace_out": {
+          "wall_ms": [
+            9.584098006598651,
+            8.596277999458835,
+            7.385811011772603,
+            6.4707049750722945,
+            6.157202995382249,
+            5.352513020625338,
+            5.937492998782545
+          ],
+          "median_wall_ms": 6.4707049750722945,
+          "sql_execution_ms": 3.066,
+          "sql_count": 6
+        },
+        "trace_in": {
+          "wall_ms": [
+            2.222142997197807,
+            2.5329399795737118,
+            1.8806190055329353,
+            2.1593290148302913,
+            2.3385590175166726,
+            2.599972009193152,
+            2.2409710218198597
+          ],
+          "median_wall_ms": 2.2409710218198597,
+          "sql_execution_ms": 0.624,
+          "sql_count": 6
+        },
+        "evidence": {
+          "wall_ms": [
+            1.6381239984184504,
+            1.3693299842998385,
+            1.5041619772091508,
+            2.6225649926345795,
+            1.435609010513872,
+            1.7330270202364773,
+            1.4289800019469112
+          ],
+          "median_wall_ms": 1.5041619772091508,
+          "sql_execution_ms": 0.192,
+          "sql_count": 6
+        },
+        "typed_entity": {
+          "wall_ms": [
+            5.09074900764972,
+            4.817534005269408,
+            4.8856700013857335,
+            6.336112011922523,
+            5.020133015932515,
+            4.651046998333186,
+            4.3160030036233366
+          ],
+          "median_wall_ms": 4.8856700013857335,
+          "sql_execution_ms": 0.329,
+          "sql_count": 18
+        },
+        "typed_incoming": {
+          "wall_ms": [
+            6.058103987015784,
+            6.592586985789239,
+            5.451856995932758,
+            5.908899998757988,
+            5.643826007144526,
+            5.851502995938063,
+            6.1339579988271
+          ],
+          "median_wall_ms": 5.908899998757988,
+          "sql_execution_ms": 0.52,
+          "sql_count": 20
+        }
+      },
+      "table_total_bytes": {
+        "data_columns": 24576,
+        "data_foreign_keys": 24576,
+        "data_refs": 24576,
+        "data_tables": 32768,
+        "edges": 24576,
+        "ingest_file_dependencies": 401408,
+        "ingest_file_entities": 82247680,
+        "ingest_jobs": 32768,
+        "ingest_legacy_edges": 16384,
+        "ingest_legacy_nodes": 16384,
+        "ingest_legacy_refs": 16384,
+        "ingest_legacy_snapshots": 8192,
+        "ingest_snapshot_adapters": 65536,
+        "ingest_snapshot_profiles": 65536,
+        "nodes": 24576,
+        "repos": 24576,
+        "resolver_cache_dependencies": 24576,
+        "resolver_cache_entries": 40960,
+        "resolver_context_selections": 16384,
+        "resolver_contexts": 16384,
+        "resolver_deployment_bindings": 24576,
+        "resolver_deployments": 16384,
+        "schema_migrations": 65536,
+        "search_discovery_entries": 3555328,
+        "search_discovery_generations": 98304,
+        "search_documents": 16384,
+        "search_index_generations": 24576,
+        "search_index_publications": 8192,
+        "ucm_coverage_reasons": 117096448,
+        "ucm_data_accesses": 4161536,
+        "ucm_database_accesses": 3915776,
+        "ucm_database_catalogs": 16384,
+        "ucm_database_contexts": 16384,
+        "ucm_database_objects": 24576,
+        "ucm_database_schema_objects": 24576,
+        "ucm_database_schema_versions": 24576,
+        "ucm_database_search_paths": 24576,
+        "ucm_entities": 241557504,
+        "ucm_evidence": 79781888,
+        "ucm_external_references": 4399104,
+        "ucm_legacy_repositories": 24576,
+        "ucm_occurrences": 22634496,
+        "ucm_operation_values": 4161536,
+        "ucm_operations": 2236416,
+        "ucm_orm_mapping_names": 16384,
+        "ucm_orm_mappings": 16384,
+        "ucm_orm_operations": 16384,
+        "ucm_orm_queries": 16384,
+        "ucm_orm_reasons": 16384,
+        "ucm_relation_candidates": 827392,
+        "ucm_relation_endpoints": 65536,
+        "ucm_relation_sources": 65536,
+        "ucm_relations": 140877824,
+        "ucm_repositories": 81920,
+        "ucm_repository_publications": 57344,
+        "ucm_scopes": 3088384,
+        "ucm_snapshot_sources": 360448,
+        "ucm_snapshot_validations": 57344,
+        "ucm_snapshots": 114688,
+        "ucm_source_analyses": 802816,
+        "ucm_source_analysis_capabilities": 2695168,
+        "ucm_source_analysis_reasons": 6004736,
+        "ucm_source_blobs": 475136,
+        "ucm_source_diagnostics": 16384,
+        "ucm_source_evidence_legacy_snapshots": 8192,
+        "ucm_source_files": 417792,
+        "ucm_sql_access_names": 4759552,
+        "ucm_sql_binding_reasons": 16384,
+        "ucm_sql_bindings": 2260992,
+        "ucm_sql_constructions": 761856,
+        "ucm_sql_executions": 1253376,
+        "ucm_sql_fragments": 925696,
+        "ucm_sql_partial_reasons": 16384,
+        "ucm_sql_placeholders": 2236416,
+        "ucm_sql_statement_reasons": 16384,
+        "ucm_sql_statements": 1269760,
+        "ucm_sql_variants": 1228800,
+        "ucm_symbols": 6733824,
+        "ucm_type_refs": 9928704,
+        "ucm_values": 2375680
+      }
+    },
+    {
+      "status": "failed",
+      "started_at": "2026-11-16T17:52:15.406642+00:00",
+      "postgres": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "shared_buffers": "128MB",
+        "work_mem": "4MB",
+        "maintenance_work_mem": "64MB",
+        "max_connections": "100",
+        "plan_cache_mode": "auto",
+        "track_io_timing": "off",
+        "synchronous_commit": "on",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "wal_level": "replica",
+        "lc_collate": "en_US.utf8"
+      },
+      "migrations": [
+        "0001_graph.sql",
+        "0002_data_layer.sql",
+        "0003_ucm_repository_snapshots.sql",
+        "0004_ucm_core_storage.sql",
+        "0005_ucm_atomic_publication.sql",
+        "0006_ucm_incremental_indexing.sql",
+        "0007_ucm_legacy_migration.sql",
+        "0008_sql_candidates_construction.sql",
+        "0009_sql_execution_sinks.sql",
+        "0010_sql_semantic_access_analysis.sql",
+        "0011_sql_parameter_lineage.sql",
+        "0012_database_schema_identity.sql",
+        "0013_jpa_orm_semantic_analysis.sql",
+        "0014_source_adapter_registry.sql",
+        "0015_per_adapter_invalidation.sql",
+        "0016_ingest_jobs_recovery.sql",
+        "0017_reproducible_source_evidence.sql",
+        "0018_ucm_query_indexes.sql",
+        "0019_lexical_search_index.sql",
+        "0020_bpmn_schema_adapter.sql",
+        "0021_search_document_persistence.sql",
+        "0022_discovery_catalog.sql",
+        "0023_resolver_contexts.sql",
+        "0024_bpmn_java_bindings.sql",
+        "0025_openapi_contract_adapter.sql",
+        "0026_discovery_catalog_read_api.sql",
+        "0027_kafka_message_intelligence.sql",
+        "0028_resolver_cache.sql",
+        "0029_openapi_java_bindings.sql",
+        "0030_database_qualified_search.sql",
+        "0030_search_generation_security.sql"
+      ],
+      "fixture": {
+        "generator": "query_benchmark.fixture_sources",
+        "groups": 199,
+        "files": 400,
+        "source_bytes": 296720,
+        "sha256": "37b12c41a9b97dbad028351d0dd3d7f8a75920647cc76ed4e04daae78549e573",
+        "profile": "java/orm",
+        "kind": "synthetic JDBC/calls/duplicate types"
+      },
+      "pg_before": {
+        "wal_lsn": "4/ED7826D8",
+        "database_bytes": 11697511,
+        "xact_commit": 1,
+        "xact_rollback": 0,
+        "blks_read": 0,
+        "blks_hit": 1405,
+        "temp_files": 0,
+        "temp_bytes": 0,
+        "blk_read_time": 0.0,
+        "blk_write_time": 0.0,
+        "deadlocks": 0,
+        "stats_reset": null
+      },
+      "last_stage": "gc",
+      "active_stages": [],
+      "snapshot_id": "cef3f935-0137-4470-924c-6381aa3f17c9",
+      "counts": {
+        "DATA_ACCESS": 4577,
+        "DATABASE_ACCESS": 4577,
+        "EXTERNAL_REFERENCE": 3980,
+        "OCCURRENCE": 27466,
+        "OPERATION": 2985,
+        "RELATION": 74032,
+        "SCOPE": 3988,
+        "SOURCE_ANALYSIS": 400,
+        "SOURCE_FILE": 400,
+        "SQL_BINDING": 1990,
+        "SQL_CANDIDATE": 995,
+        "SQL_CONSTRUCTION": 995,
+        "SQL_EXECUTE": 995,
+        "SQL_PLACEHOLDER": 1990,
+        "SQL_STATEMENT": 995,
+        "SYMBOL": 6372,
+        "VALUE": 3980
+      },
+      "entity_count": 140717,
+      "gc_snapshot_id": "a027c21d-c84b-40f4-ae78-c1c5aca46de1",
+      "failure": {
+        "type": "TimeoutError",
+        "stage": "gc"
+      },
+      "reader_results_unchanged_after_gc": true,
+      "process": {
+        "peak_rss_kib": 424504.0,
+        "user_seconds": 105.290506,
+        "system_seconds": 2.337946,
+        "major_faults": 11,
+        "minor_faults": 124801,
+        "block_inputs": 14464,
+        "block_outputs": 22200,
+        "proc_io": {
+          "rchar": 11150550,
+          "wchar": 8989624,
+          "syscr": 5395,
+          "syscw": 1009,
+          "read_bytes": 7405568,
+          "write_bytes": 13299712,
+          "cancelled_write_bytes": 45056
+        }
+      },
+      "pg_after": {
+        "wal_lsn": "5/3E808BE8",
+        "database_bytes": 771670531,
+        "xact_commit": 6987,
+        "xact_rollback": 1,
+        "blks_read": 850530,
+        "blks_hit": 118422436,
+        "temp_files": 56,
+        "temp_bytes": 220445246,
+        "blk_read_time": 0.0,
+        "blk_write_time": 0.0,
+        "deadlocks": 0,
+        "stats_reset": null
+      },
+      "cluster_wal_bytes": 1359504656,
+      "finished_at": "2026-11-16T17:57:20.301315+00:00",
+      "groups": 199,
+      "attempt": 3,
+      "stages": {
+        "capture": {
+          "completed_call_seconds": [
+            0.03302963401074521
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 72768.0
+        },
+        "prepare": {
+          "completed_call_seconds": [
+            4.295921704993816
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 148248.0
+        },
+        "stage": {
+          "completed_call_seconds": [
+            0.008578879991546273,
+            0.5129068849782925,
+            0.8691617030126508,
+            0.4856974130088929,
+            0.5197206680022646,
+            0.10448578497744165,
+            0.12886021900339983,
+            0.030884269974194467
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "transfer": {
+          "completed_call_seconds": [
+            0.038598663988523185,
+            3.980891482991865,
+            3.991561131988419,
+            4.300427164998837,
+            1.2835716429981403,
+            0.8890450910257641,
+            0.9744146050070412,
+            0.2704235530109145
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "analyze": {
+          "completed_call_seconds": [
+            11.68402438701014,
+            9.695186833007028,
+            9.65400030199089,
+            2.131800059985835,
+            1.798575435008388,
+            1.9850354509835597,
+            0.3489361370156985
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "archive": {
+          "completed_call_seconds": [
+            0.045187515002908185
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "foreign_keys": {
+          "completed_call_seconds": [
+            11.780894069001079
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "index": {
+          "completed_call_seconds": [
+            93.09375452599488
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "validation": {
+          "completed_call_seconds": [
+            51.34662365398253
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "publication": {
+          "completed_call_seconds": [
+            0.6355225990118925
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "readers": {
+          "completed_call_seconds": [
+            0.906163696985459
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "clone": {
+          "completed_call_seconds": [
+            35.20917444699444
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        },
+        "gc": {
+          "completed_call_seconds": [
+            120.05482981799287
+          ],
+          "event_statuses": [
+            "failed_or_cancelled"
+          ],
+          "observed_peak_rss_kib": 424504.0
+        }
+      },
+      "queries": {
+        "symbol_simple": {
+          "wall_ms": [
+            4.020319000119343,
+            3.715675004059449,
+            3.6383300030138344,
+            3.0475770181510597,
+            3.40843599406071,
+            5.247110006166622,
+            4.154297988861799
+          ],
+          "median_wall_ms": 3.715675004059449,
+          "sql_execution_ms": 3.8760000000000003,
+          "sql_count": 3
+        },
+        "symbol_signature": {
+          "wall_ms": [
+            1.2478420103434473,
+            1.064242998836562,
+            1.3639749959111214,
+            1.3810860109515488,
+            1.3095640169922262,
+            1.2363349960651249,
+            1.0125609987881035
+          ],
+          "median_wall_ms": 1.2478420103434473,
+          "sql_execution_ms": 0.28900000000000003,
+          "sql_count": 3
+        },
+        "callers": {
+          "wall_ms": [
+            2.9767320083919913,
+            3.0521390144713223,
+            4.239175992552191,
+            3.6097170086577535,
+            2.465689991367981,
+            2.490330982254818,
+            4.431151988683268
+          ],
+          "median_wall_ms": 3.0521390144713223,
+          "sql_execution_ms": 0.22,
+          "sql_count": 6
+        },
+        "callees": {
+          "wall_ms": [
+            3.0113679822534323,
+            3.0044179875403643,
+            3.4630779991857708,
+            3.0514640093315393,
+            3.2184169976972044,
+            2.5627639843150973,
+            3.3763139799702913
+          ],
+          "median_wall_ms": 3.0514640093315393,
+          "sql_execution_ms": 0.711,
+          "sql_count": 6
+        },
+        "executions_owner": {
+          "wall_ms": [
+            5.483633023686707,
+            6.623838999075815,
+            7.192307006334886,
+            6.539138004882261,
+            5.841736972797662,
+            5.839860008563846,
+            5.854150978848338
+          ],
+          "median_wall_ms": 5.854150978848338,
+          "sql_execution_ms": 0.65,
+          "sql_count": 12
+        },
+        "executions_page": {
+          "wall_ms": [
+            17.931127978954464,
+            18.621437018737197,
+            16.922422015341,
+            15.675396978622302,
+            15.407074999529868,
+            17.958508018637076,
+            15.933997026877478
+          ],
+          "median_wall_ms": 16.922422015341,
+          "sql_execution_ms": 8.763,
+          "sql_count": 12
+        },
+        "table_readers": {
+          "wall_ms": [
+            11.577680998016149,
+            11.543444998096675,
+            10.62943201395683,
+            10.531374020501971,
+            12.109309987863526,
+            10.312838014215231,
+            8.389097987674177
+          ],
+          "median_wall_ms": 10.62943201395683,
+          "sql_execution_ms": 2.715,
+          "sql_count": 18
+        },
+        "column_writers": {
+          "wall_ms": [
+            9.957608010154217,
+            9.969753009499982,
+            8.11800902010873,
+            7.990153011633083,
+            8.122180006466806,
+            9.81230300385505,
+            8.416833996307105
+          ],
+          "median_wall_ms": 8.416833996307105,
+          "sql_execution_ms": 1.528,
+          "sql_count": 18
+        },
+        "trace_out": {
+          "wall_ms": [
+            8.294511993881315,
+            8.24750802712515,
+            7.317529001738876,
+            7.04487698385492,
+            7.842672988772392,
+            7.528654008638114,
+            8.814122003968805
+          ],
+          "median_wall_ms": 7.842672988772392,
+          "sql_execution_ms": 3.747,
+          "sql_count": 6
+        },
+        "trace_in": {
+          "wall_ms": [
+            2.7264539967291057,
+            2.55626899888739,
+            2.5552370061632246,
+            2.468958991812542,
+            2.3394319869112223,
+            2.520195994293317,
+            3.8519829977303743
+          ],
+          "median_wall_ms": 2.5552370061632246,
+          "sql_execution_ms": 0.71,
+          "sql_count": 6
+        },
+        "evidence": {
+          "wall_ms": [
+            3.1370859942398965,
+            2.497381006833166,
+            2.054334996500984,
+            2.334582997718826,
+            2.1930119837634265,
+            1.8495699914637953,
+            1.9208359881304204
+          ],
+          "median_wall_ms": 2.1930119837634265,
+          "sql_execution_ms": 0.207,
+          "sql_count": 6
+        },
+        "typed_entity": {
+          "wall_ms": [
+            9.373272012453526,
+            5.838442011736333,
+            4.7788819938432425,
+            5.284615996060893,
+            4.392734990688041,
+            4.951268987497315,
+            5.2248360007070005
+          ],
+          "median_wall_ms": 5.2248360007070005,
+          "sql_execution_ms": 0.247,
+          "sql_count": 18
+        },
+        "typed_incoming": {
+          "wall_ms": [
+            6.227628007763997,
+            5.790791008621454,
+            5.356373003451154,
+            6.1288499855436385,
+            6.044730020221323,
+            5.510107992449775,
+            5.36712899338454
+          ],
+          "median_wall_ms": 5.790791008621454,
+          "sql_execution_ms": 0.587,
+          "sql_count": 20
+        }
+      },
+      "table_total_bytes": {
+        "data_columns": 24576,
+        "data_foreign_keys": 24576,
+        "data_refs": 24576,
+        "data_tables": 32768,
+        "edges": 24576,
+        "ingest_file_dependencies": 434176,
+        "ingest_file_entities": 82583552,
+        "ingest_jobs": 32768,
+        "ingest_legacy_edges": 16384,
+        "ingest_legacy_nodes": 16384,
+        "ingest_legacy_refs": 16384,
+        "ingest_legacy_snapshots": 8192,
+        "ingest_snapshot_adapters": 65536,
+        "ingest_snapshot_profiles": 65536,
+        "nodes": 24576,
+        "repos": 24576,
+        "resolver_cache_dependencies": 24576,
+        "resolver_cache_entries": 40960,
+        "resolver_context_selections": 16384,
+        "resolver_contexts": 16384,
+        "resolver_deployment_bindings": 24576,
+        "resolver_deployments": 16384,
+        "schema_migrations": 65536,
+        "search_discovery_entries": 3612672,
+        "search_discovery_generations": 98304,
+        "search_documents": 16384,
+        "search_index_generations": 24576,
+        "search_index_publications": 8192,
+        "ucm_coverage_reasons": 117219328,
+        "ucm_data_accesses": 4096000,
+        "ucm_database_accesses": 3923968,
+        "ucm_database_catalogs": 16384,
+        "ucm_database_contexts": 16384,
+        "ucm_database_objects": 24576,
+        "ucm_database_schema_objects": 24576,
+        "ucm_database_schema_versions": 24576,
+        "ucm_database_search_paths": 24576,
+        "ucm_entities": 242311168,
+        "ucm_evidence": 79749120,
+        "ucm_external_references": 4341760,
+        "ucm_legacy_repositories": 24576,
+        "ucm_occurrences": 22724608,
+        "ucm_operation_values": 4169728,
+        "ucm_operations": 2154496,
+        "ucm_orm_mapping_names": 16384,
+        "ucm_orm_mappings": 16384,
+        "ucm_orm_operations": 16384,
+        "ucm_orm_queries": 16384,
+        "ucm_orm_reasons": 16384,
+        "ucm_relation_candidates": 819200,
+        "ucm_relation_endpoints": 65536,
+        "ucm_relation_sources": 65536,
+        "ucm_relations": 140795904,
+        "ucm_repositories": 81920,
+        "ucm_repository_publications": 57344,
+        "ucm_scopes": 3047424,
+        "ucm_snapshot_sources": 368640,
+        "ucm_snapshot_validations": 57344,
+        "ucm_snapshots": 114688,
+        "ucm_source_analyses": 811008,
+        "ucm_source_analysis_capabilities": 2678784,
+        "ucm_source_analysis_reasons": 6111232,
+        "ucm_source_blobs": 475136,
+        "ucm_source_diagnostics": 16384,
+        "ucm_source_evidence_legacy_snapshots": 8192,
+        "ucm_source_files": 450560,
+        "ucm_sql_access_names": 4800512,
+        "ucm_sql_binding_reasons": 16384,
+        "ucm_sql_bindings": 2310144,
+        "ucm_sql_constructions": 770048,
+        "ucm_sql_executions": 1277952,
+        "ucm_sql_fragments": 917504,
+        "ucm_sql_partial_reasons": 16384,
+        "ucm_sql_placeholders": 2277376,
+        "ucm_sql_statement_reasons": 16384,
+        "ucm_sql_statements": 1261568,
+        "ucm_sql_variants": 1220608,
+        "ucm_symbols": 6823936,
+        "ucm_type_refs": 9920512,
+        "ucm_values": 2383872
+      }
+    },
+    {
+      "status": "worker_exit",
+      "started_at": "2026-11-16T17:57:21.817040+00:00",
+      "postgres": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "shared_buffers": "128MB",
+        "work_mem": "4MB",
+        "maintenance_work_mem": "64MB",
+        "max_connections": "100",
+        "plan_cache_mode": "auto",
+        "track_io_timing": "off",
+        "synchronous_commit": "on",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "wal_level": "replica",
+        "lc_collate": "en_US.utf8"
+      },
+      "migrations": [
+        "0001_graph.sql",
+        "0002_data_layer.sql",
+        "0003_ucm_repository_snapshots.sql",
+        "0004_ucm_core_storage.sql",
+        "0005_ucm_atomic_publication.sql",
+        "0006_ucm_incremental_indexing.sql",
+        "0007_ucm_legacy_migration.sql",
+        "0008_sql_candidates_construction.sql",
+        "0009_sql_execution_sinks.sql",
+        "0010_sql_semantic_access_analysis.sql",
+        "0011_sql_parameter_lineage.sql",
+        "0012_database_schema_identity.sql",
+        "0013_jpa_orm_semantic_analysis.sql",
+        "0014_source_adapter_registry.sql",
+        "0015_per_adapter_invalidation.sql",
+        "0016_ingest_jobs_recovery.sql",
+        "0017_reproducible_source_evidence.sql",
+        "0018_ucm_query_indexes.sql",
+        "0019_lexical_search_index.sql",
+        "0020_bpmn_schema_adapter.sql",
+        "0021_search_document_persistence.sql",
+        "0022_discovery_catalog.sql",
+        "0023_resolver_contexts.sql",
+        "0024_bpmn_java_bindings.sql",
+        "0025_openapi_contract_adapter.sql",
+        "0026_discovery_catalog_read_api.sql",
+        "0027_kafka_message_intelligence.sql",
+        "0028_resolver_cache.sql",
+        "0029_openapi_java_bindings.sql",
+        "0030_database_qualified_search.sql",
+        "0030_search_generation_security.sql"
+      ],
+      "fixture": {
+        "generator": "query_benchmark.fixture_sources",
+        "groups": 499,
+        "files": 1000,
+        "source_bytes": 745520,
+        "sha256": "b011a49bb7e1c17c7e724e3cc755c254052ee501beb7cd2c0c611803000a6b11",
+        "profile": "java/orm",
+        "kind": "synthetic JDBC/calls/duplicate types"
+      },
+      "pg_before": {
+        "wal_lsn": "5/3EF89BC0",
+        "database_bytes": 11697511,
+        "xact_commit": 1,
+        "xact_rollback": 0,
+        "blks_read": 0,
+        "blks_hit": 1405,
+        "temp_files": 0,
+        "temp_bytes": 0,
+        "blk_read_time": 0.0,
+        "blk_write_time": 0.0,
+        "deadlocks": 0,
+        "stats_reset": null
+      },
+      "last_stage": "clone",
+      "active_stages": [
+        "clone"
+      ],
+      "snapshot_id": "3a391e8d-407f-43f9-ab31-27450f99d188",
+      "counts": {
+        "DATA_ACCESS": 11477,
+        "DATABASE_ACCESS": 11477,
+        "EXTERNAL_REFERENCE": 9980,
+        "OCCURRENCE": 68866,
+        "OPERATION": 7485,
+        "RELATION": 185632,
+        "SCOPE": 9988,
+        "SOURCE_ANALYSIS": 1000,
+        "SOURCE_FILE": 1000,
+        "SQL_BINDING": 4990,
+        "SQL_CANDIDATE": 2495,
+        "SQL_CONSTRUCTION": 2495,
+        "SQL_EXECUTE": 2495,
+        "SQL_PLACEHOLDER": 4990,
+        "SQL_STATEMENT": 2495,
+        "SYMBOL": 15972,
+        "VALUE": 9980
+      },
+      "entity_count": 352817,
+      "returncode": -15,
+      "failure": {
+        "type": "signal_or_exit",
+        "stage": "clone"
+      },
+      "groups": 499,
+      "attempt": 1,
+      "stages": {
+        "capture": {
+          "completed_call_seconds": [
+            0.09609537900541909
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 81880.0
+        },
+        "prepare": {
+          "completed_call_seconds": [
+            9.111498849000782
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 289588.0
+        },
+        "stage": {
+          "completed_call_seconds": [
+            0.011698260001139715,
+            1.7393619350041263,
+            1.413457827991806,
+            0.5878126460011117,
+            1.901538899022853,
+            0.6611879539850634,
+            0.5124350840051193,
+            0.42478092201054096,
+            0.34007439101696946,
+            0.09330654199584387,
+            0.07585299300262704,
+            0.08244294597534463,
+            0.07554871600586921,
+            0.08318540497566573,
+            0.17723500399733894,
+            0.0958219470048789,
+            0.05453702001250349
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 577620.0
+        },
+        "transfer": {
+          "completed_call_seconds": [
+            0.08190800301963463,
+            3.9794250300037675,
+            4.0520265189989,
+            5.344730996992439,
+            5.454014290007763,
+            6.673951218981529,
+            4.671823078009766,
+            4.834490811015712,
+            4.348121643997729,
+            0.9403638030053116,
+            0.9255746789858676,
+            0.971513224998489,
+            1.0160458280006424,
+            1.0125713160086889,
+            1.0835744529904332,
+            1.0273013630066998,
+            0.6600596909993328
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 577620.0
+        },
+        "analyze": {
+          "completed_call_seconds": [
+            11.816467447992181,
+            12.27320083399536,
+            11.1969136550033,
+            11.44835792700178,
+            13.093717289011693,
+            13.568217202002415,
+            11.637843005999457,
+            9.281118512008106,
+            1.379015768005047,
+            2.2819278730021324,
+            2.3218656049866695,
+            1.1936768210143782,
+            2.4401284869818483,
+            1.2454156330204569,
+            1.54512257699389,
+            1.7173717390105594
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 577620.0
+        },
+        "archive": {
+          "completed_call_seconds": [
+            0.08362747600767761
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 577620.0
+        },
+        "foreign_keys": {
+          "completed_call_seconds": [
+            24.946148949995404
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 577620.0
+        },
+        "index": {
+          "completed_call_seconds": [
+            258.44216042698827
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 577620.0
+        },
+        "validation": {
+          "completed_call_seconds": [
+            130.8653308049834
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 577620.0
+        },
+        "publication": {
+          "completed_call_seconds": [
+            0.8871099929965567
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 577620.0
+        },
+        "readers": {
+          "completed_call_seconds": [
+            0.9153024609840941
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 577620.0
+        }
+      },
+      "queries": {
+        "symbol_simple": {
+          "wall_ms": [
+            5.008893000194803,
+            5.471561016747728,
+            4.9388480256311595,
+            5.521815997781232,
+            4.894092009635642,
+            4.51463699573651,
+            4.136474017286673
+          ],
+          "median_wall_ms": 4.9388480256311595,
+          "sql_execution_ms": 3.649,
+          "sql_count": 3
+        },
+        "symbol_signature": {
+          "wall_ms": [
+            1.1001870152540505,
+            0.9612900030333549,
+            0.9348110179416835,
+            0.8884109847713262,
+            1.0446739906910807,
+            1.0056459868792444,
+            1.1600760044530034
+          ],
+          "median_wall_ms": 1.0056459868792444,
+          "sql_execution_ms": 0.15,
+          "sql_count": 3
+        },
+        "callers": {
+          "wall_ms": [
+            2.3253600229509175,
+            2.488391997758299,
+            3.7899890157859772,
+            4.961878003086895,
+            2.6557609962765127,
+            2.2646189900115132,
+            2.36836401745677
+          ],
+          "median_wall_ms": 2.488391997758299,
+          "sql_execution_ms": 0.244,
+          "sql_count": 6
+        },
+        "callees": {
+          "wall_ms": [
+            2.753397013293579,
+            3.2520990062039346,
+            3.5453960008453578,
+            2.8211769822519273,
+            2.658174984389916,
+            2.812744991388172,
+            2.6389670092612505
+          ],
+          "median_wall_ms": 2.812744991388172,
+          "sql_execution_ms": 0.623,
+          "sql_count": 6
+        },
+        "executions_owner": {
+          "wall_ms": [
+            5.7568459887988865,
+            5.126708012539893,
+            5.494895012816414,
+            5.787460977444425,
+            5.277502990793437,
+            5.328768020262942,
+            5.360365001251921
+          ],
+          "median_wall_ms": 5.360365001251921,
+          "sql_execution_ms": 0.475,
+          "sql_count": 12
+        },
+        "executions_page": {
+          "wall_ms": [
+            15.722884010756388,
+            16.920334979658946,
+            15.683784993598238,
+            17.067854991182685,
+            14.368519012350589,
+            13.631793000968173,
+            13.641837023897097
+          ],
+          "median_wall_ms": 15.683784993598238,
+          "sql_execution_ms": 8.697000000000001,
+          "sql_count": 12
+        },
+        "table_readers": {
+          "wall_ms": [
+            8.394139993470162,
+            8.69205201161094,
+            8.98603000678122,
+            10.086466994835064,
+            8.938465005485341,
+            7.8310219978448,
+            8.275828004116192
+          ],
+          "median_wall_ms": 8.69205201161094,
+          "sql_execution_ms": 2.089,
+          "sql_count": 18
+        },
+        "column_writers": {
+          "wall_ms": [
+            12.072035984601825,
+            46.91701600677334,
+            11.192453996045515,
+            10.323481023078784,
+            9.90530799026601,
+            9.591039997758344,
+            10.062973015010357
+          ],
+          "median_wall_ms": 10.323481023078784,
+          "sql_execution_ms": 1.7469999999999999,
+          "sql_count": 18
+        },
+        "trace_out": {
+          "wall_ms": [
+            9.372874977998435,
+            10.107258014613762,
+            9.602484991773963,
+            8.388222981011495,
+            8.862652990501374,
+            7.986012991750613,
+            9.270051989005879
+          ],
+          "median_wall_ms": 9.270051989005879,
+          "sql_execution_ms": 5.76,
+          "sql_count": 6
+        },
+        "trace_in": {
+          "wall_ms": [
+            2.8914310096297413,
+            3.2041689846664667,
+            3.1027579971123487,
+            3.168822993757203,
+            2.880643995013088,
+            3.0965780024416745,
+            2.92433297727257
+          ],
+          "median_wall_ms": 3.0965780024416745,
+          "sql_execution_ms": 0.413,
+          "sql_count": 6
+        },
+        "evidence": {
+          "wall_ms": [
+            2.431480010272935,
+            2.2143590031191707,
+            2.2831330134067684,
+            3.103492985246703,
+            2.2179090010467917,
+            2.322164975339547,
+            2.3867480049375445
+          ],
+          "median_wall_ms": 2.322164975339547,
+          "sql_execution_ms": 0.206,
+          "sql_count": 6
+        },
+        "typed_entity": {
+          "wall_ms": [
+            4.93359100073576,
+            4.696933989180252,
+            4.202247015200555,
+            5.845220992341638,
+            4.406311985803768,
+            4.175584006588906,
+            4.49289899552241
+          ],
+          "median_wall_ms": 4.49289899552241,
+          "sql_execution_ms": 0.238,
+          "sql_count": 18
+        },
+        "typed_incoming": {
+          "wall_ms": [
+            5.499872000655159,
+            7.986128999618813,
+            7.782613974995911,
+            7.929352985229343,
+            6.4345389837399125,
+            6.698640005197376,
+            6.1240400245878845
+          ],
+          "median_wall_ms": 6.698640005197376,
+          "sql_execution_ms": 0.403,
+          "sql_count": 20
+        }
+      },
+      "table_total_bytes": {},
+      "resource_stop": {
+        "pid": 83955,
+        "groups": 499,
+        "peak_rss": "577620 kB",
+        "checkpoint": "/tmp/crawler-baseline-report-_d76uf4a/trial.json",
+        "free_bytes": 528424960,
+        "signal": "SIGTERM",
+        "unix_time": 1794852254.316199
+      }
+    },
+    {
+      "status": "worker_exit",
+      "started_at": "2026-11-16T18:04:15.391366+00:00",
+      "postgres": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "shared_buffers": "128MB",
+        "work_mem": "4MB",
+        "maintenance_work_mem": "64MB",
+        "max_connections": "100",
+        "plan_cache_mode": "auto",
+        "track_io_timing": "off",
+        "synchronous_commit": "on",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "wal_level": "replica",
+        "lc_collate": "en_US.utf8"
+      },
+      "migrations": [
+        "0001_graph.sql",
+        "0002_data_layer.sql",
+        "0003_ucm_repository_snapshots.sql",
+        "0004_ucm_core_storage.sql",
+        "0005_ucm_atomic_publication.sql",
+        "0006_ucm_incremental_indexing.sql",
+        "0007_ucm_legacy_migration.sql",
+        "0008_sql_candidates_construction.sql",
+        "0009_sql_execution_sinks.sql",
+        "0010_sql_semantic_access_analysis.sql",
+        "0011_sql_parameter_lineage.sql",
+        "0012_database_schema_identity.sql",
+        "0013_jpa_orm_semantic_analysis.sql",
+        "0014_source_adapter_registry.sql",
+        "0015_per_adapter_invalidation.sql",
+        "0016_ingest_jobs_recovery.sql",
+        "0017_reproducible_source_evidence.sql",
+        "0018_ucm_query_indexes.sql",
+        "0019_lexical_search_index.sql",
+        "0020_bpmn_schema_adapter.sql",
+        "0021_search_document_persistence.sql",
+        "0022_discovery_catalog.sql",
+        "0023_resolver_contexts.sql",
+        "0024_bpmn_java_bindings.sql",
+        "0025_openapi_contract_adapter.sql",
+        "0026_discovery_catalog_read_api.sql",
+        "0027_kafka_message_intelligence.sql",
+        "0028_resolver_cache.sql",
+        "0029_openapi_java_bindings.sql",
+        "0030_database_qualified_search.sql",
+        "0030_search_generation_security.sql"
+      ],
+      "fixture": {
+        "generator": "query_benchmark.fixture_sources",
+        "groups": 1500,
+        "files": 3002,
+        "source_bytes": 2248016,
+        "sha256": "c25824f3c72dac85273f17b58211f397f6720b49f1a078c3e437b7458faa3769",
+        "profile": "java/orm",
+        "kind": "synthetic JDBC/calls/duplicate types"
+      },
+      "pg_before": {
+        "wal_lsn": "5/BD0C08D8",
+        "database_bytes": 11697511,
+        "xact_commit": 52,
+        "xact_rollback": 0,
+        "blks_read": 277,
+        "blks_hit": 99726,
+        "temp_files": 0,
+        "temp_bytes": 0,
+        "blk_read_time": 0.0,
+        "blk_write_time": 0.0,
+        "deadlocks": 0,
+        "stats_reset": null
+      },
+      "last_stage": "transfer",
+      "active_stages": [
+        "index",
+        "transfer"
+      ],
+      "returncode": -15,
+      "failure": {
+        "type": "signal_or_exit",
+        "stage": "transfer"
+      },
+      "groups": 1500,
+      "attempt": 1,
+      "stages": {
+        "capture": {
+          "completed_call_seconds": [
+            0.19011091999709606
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 97380.0
+        },
+        "prepare": {
+          "completed_call_seconds": [
+            33.8973879260011
+          ],
+          "event_statuses": [
+            "success"
+          ],
+          "observed_peak_rss_kib": 757832.0
+        },
+        "stage": {
+          "completed_call_seconds": [
+            0.021824600000400096,
+            3.582698147976771,
+            0.4539356649911497,
+            0.6212813800084405,
+            0.822437227005139,
+            0.8497586979938205,
+            0.9930772219959181,
+            0.456705663993489,
+            0.4914376669912599,
+            4.568888262001565,
+            0.4486215630022343,
+            0.42876191998948343
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 1045068.0
+        },
+        "transfer": {
+          "completed_call_seconds": [
+            0.2008164449944161,
+            4.516119343985338,
+            5.063570305996109,
+            5.2249291909975,
+            5.922733786981553,
+            5.619097555987537,
+            6.103861468000105,
+            5.628840635006782,
+            5.852951751003275,
+            5.407466347009176,
+            5.52091868701973
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 1044716.0
+        },
+        "analyze": {
+          "completed_call_seconds": [
+            12.011388896004064,
+            12.072001761000138,
+            14.60127073599142,
+            13.807459560019197,
+            16.52318668499356,
+            17.089734734006925,
+            12.553823921974981,
+            13.389856572001008,
+            12.36502727001789,
+            11.73881518401322,
+            15.118545831996016
+          ],
+          "event_statuses": [
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success",
+            "success"
+          ],
+          "observed_peak_rss_kib": 1044716.0
+        }
+      },
+      "queries": {},
+      "table_total_bytes": {},
+      "resource_stop": {
+        "pid": 84104,
+        "groups": 1500,
+        "peak_rss": "1045068 kB",
+        "checkpoint": "/tmp/crawler-baseline-report-r83ftx6f/trial.json",
+        "free_bytes": 531554304,
+        "signal": "SIGTERM",
+        "unix_time": 1794852599.3555062
+      }
+    }
+  ]
+}

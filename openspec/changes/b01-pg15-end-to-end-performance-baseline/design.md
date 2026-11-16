@@ -57,3 +57,20 @@ cancellation is followed by published pointer and reader-result verification.
 No new schema, migration, dependency, production query or certainty promotion is
 needed. Small deterministic positive, invalid-input, failure and timeout fixtures
 run in PG15 CI; expensive scale runs are explicit evidence, not timing assertions.
+
+## Observed resource limits and reporting revision
+
+The clean `6eaa984` controlled run reached 140,717 entities on each 400-file trial
+and 352,817 on 1,000 files. All three 400-file GC trials exceeded the explicit
+120-second budget and retained identical published-reader results after rollback.
+A verified shared PGDATA/local filesystem approached capacity. An external local
+supervisor with a 512 MiB reserve therefore stopped only owned workers: the
+1,000-file clone and the 3,002-file transfer. Both partial checkpoints and signal
+observations are retained; neither is classified as OOM or a successful >1M run.
+
+Original collector-v1 data is stored unchanged in compressed form. Aggregator-v2
+adds a necessary completion check: analyze/stage/transfer loop totals are successful
+scale samples only when the full index completed. Partial loops remain raw
+observations, not misleading successful distribution points. Tests cover this
+reporting distinction and supervisor ownership/signal recording. No measured
+pipeline calls, schema or canonical facts were changed by this reporting revision.
