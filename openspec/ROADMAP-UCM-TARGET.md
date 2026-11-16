@@ -14,7 +14,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - A06 source-data-security-policy: raw evidence ACL, redaction of search/embedding inputs — [completed](archive/2026-11-16-a06-source-data-security-policy/completion.md), PG15 CI 1305 passed
 
 ## Stream B — performance/reliability (measure first)
-- B01 pg15-end-to-end-performance-baseline: current SHA measurements at scale
+- B01 pg15-end-to-end-performance-baseline: [completed](archive/2026-11-16-b01-pg15-end-to-end-performance-baseline/completion.md), 400/1000-file results and documented >1M-target disk limit; PG15 CI 1325 passed
 - B02 bounded-memory-snapshot-validation: streamed semantic readiness
 - B03 short-transaction-indexing: move CPU analysis outside long DB writes
 - B04 bulk-load-fk-optimization: evidence-backed PG15 transfer/FK tuning

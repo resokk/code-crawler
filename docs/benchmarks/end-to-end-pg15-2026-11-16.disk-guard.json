@@ -1,0 +1,27 @@
+{
+  "parent_pid": 83376,
+  "filesystem": "/workspace",
+  "minimum_free_bytes": 536870912,
+  "poll_seconds": 1,
+  "events": [
+    {
+      "pid": 83955,
+      "groups": 499,
+      "peak_rss": "577620 kB",
+      "checkpoint": "/tmp/crawler-baseline-report-_d76uf4a/trial.json",
+      "free_bytes": 528424960,
+      "signal": "SIGTERM",
+      "unix_time": 1794852254.316199
+    },
+    {
+      "pid": 84104,
+      "groups": 1500,
+      "peak_rss": "1045068 kB",
+      "checkpoint": "/tmp/crawler-baseline-report-r83ftx6f/trial.json",
+      "free_bytes": 531554304,
+      "signal": "SIGTERM",
+      "unix_time": 1794852599.3555062
+    }
+  ],
+  "minimum_observed_free_bytes": 528424960
+}
