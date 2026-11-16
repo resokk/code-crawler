@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
+from contextlib import asynccontextmanager
 
 import asyncpg
 import pytest
@@ -25,6 +26,7 @@ from code_crawler.resolver_context import (
     DeploymentBinding,
     SnapshotPin,
     register_deployment,
+    release_deployment,
     select_context,
 )
 
@@ -548,5 +550,102 @@ def test_cli_warm_prune_and_cache_hit_query_reduction(
             )
         finally:
             await conn.close()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("change", ["snapshot_gc", "deployment_release"])
+def test_context_removed_after_compute_skips_cache_write(
+    database_url, ucm_batch_factory, change
+):
+    async def run():
+        conn = await asyncpg.connect(database_url)
+        other = await asyncpg.connect(database_url)
+        try:
+            _, target, src, dst, refs, context, grants = await fixture(
+                conn, ucm_batch_factory
+            )
+            replacement = await create(
+                other, target, target_batch(ucm_batch_factory, target)
+            )
+            await validate_snapshot(other, replacement)
+            if change == "deployment_release":
+                await register_deployment(
+                    conn,
+                    "cache-window",
+                    (
+                        DeploymentBinding(
+                            repository_key="repo", snapshot_id=src, service_key="app"
+                        ),
+                        DeploymentBinding(
+                            repository_key="target",
+                            snapshot_id=dst,
+                            service_key="library",
+                        ),
+                    ),
+                    allowed_repositories=grants,
+                )
+                context = await select_context(
+                    conn,
+                    "DEPLOYMENT_CONTEXT",
+                    ("repo", "target"),
+                    allowed_repositories=grants,
+                    deployment_key="cache-window",
+                )
+            baseline = await search.resolve_external_reference(
+                conn, "repo", refs["exact"], context, allowed_repositories=grants
+            )
+            source_rows = await conn.fetchval(
+                "SELECT count(*) FROM ucm_entities WHERE snapshot_id=$1", src
+            )
+
+            class RaceConnection:
+                switched = False
+
+                def __getattr__(self, name):
+                    return getattr(conn, name)
+
+                @asynccontextmanager
+                async def transaction(self, **kwargs):
+                    if not kwargs.get("readonly") and not self.switched:
+                        self.switched = True
+                        if change == "snapshot_gc":
+                            await publish_snapshot(
+                                other, target, replacement, expected_snapshot_id=dst
+                            )
+                            collected = await collect_garbage(other, keep_retired=0)
+                            assert dst in collected["retired"]
+                        else:
+                            await release_deployment(
+                                other, "cache-window", allowed_repositories=grants
+                            )
+                    async with conn.transaction(**kwargs):
+                        yield
+
+            report = await resolver_cache.warm_resolver_cache(
+                RaceConnection(),
+                "repo",
+                refs["exact"],
+                context,
+                allowed_repositories=grants,
+            )
+            assert not report.stored and report.reason == "CONTEXT_CHANGED"
+            assert report.result == baseline
+            assert (
+                await conn.fetchval("SELECT count(*) FROM resolver_cache_entries") == 0
+            )
+            assert (
+                await conn.fetchval("SELECT count(*) FROM resolver_cache_dependencies")
+                == 0
+            )
+            assert (
+                await conn.fetchval(
+                    "SELECT count(*) FROM ucm_entities WHERE snapshot_id=$1", src
+                )
+                == source_rows
+            )
+        finally:
+            await conn.close()
+            await other.close()
 
     asyncio.run(run())

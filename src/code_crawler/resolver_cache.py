@@ -341,9 +341,17 @@ async def warm_resolver_cache(
                 "SELECT generation FROM public.search_discovery_generations WHERE generation=ANY($1) ORDER BY generation FOR KEY SHARE",
                 [s.generation for s in context.selections],
             )
-            if await verify_context(
-                conn, context, allowed_repositories=allowed_repositories
-            ):
+            try:
+                changed = bool(
+                    await verify_context(
+                        conn, context, allowed_repositories=allowed_repositories
+                    )
+                )
+            except ValueError:
+                # The read already validated this immutable manifest; GC or
+                # deployment release can remove it before the write begins.
+                changed = True
+            if changed:
                 return CacheWarmResult(
                     result, False, identity.cache_key, "CONTEXT_CHANGED"
                 )
