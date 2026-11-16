@@ -21,6 +21,7 @@ from code_crawler import (
     ingestion,
     jobs,
     legacy,
+    profiling,
     publication,
     repos,
     resolver_cache,
@@ -698,6 +699,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="code-crawler", description="Управление индексами code-crawler."
     )
+    parser.add_argument(
+        "--profile",
+        type=Path,
+        metavar="ФАЙЛ",
+        help="записать профиль выполнения команды, см. docs/profiling.md",
+    )
     commands = parser.add_subparsers(metavar="команда", required=True)
     db_commands = commands.add_parser(
         "db", help="состояние, инициализация и миграции БД"
@@ -845,4 +852,13 @@ def main() -> None:
             command.add_argument("--backend", choices=("legacy", "ucm"), required=True)
         command.set_defaults(run=run)
     args = vars(parser.parse_args())
-    asyncio.run(args.pop("run")(**args))
+    profile = args.pop("profile")
+    command = args.pop("run")(**args)
+    if profile is None:
+        asyncio.run(command)
+        return
+    with profiling.profiled(profile) as stacks:
+        try:
+            asyncio.run(command)
+        finally:
+            console.print(f"Профиль: {profile}", *profiling.summary(stacks), sep="\n")

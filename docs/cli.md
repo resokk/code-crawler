@@ -21,6 +21,9 @@ uv run code-crawler <команда>
 | `index-sources ROOT --repository-key KEY [--publish]` | строит canonical BUILDING snapshot; `--publish` проверяет и публикует через существующий lifecycle API — см. [source-adapters.md](source-adapters.md) |
 | `index SOURCE [--backend ucm\|legacy]` | по умолчанию строит, проверяет и публикует canonical UCM; legacy только явно — [default-index.md](default-index.md) |
 
+Общий параметр `--profile ФАЙЛ` перед командой включает встроенный профилировщик:
+[profiling.md](profiling.md).
+
 `<источник>` — локальный каталог или URL репозитория. Пример:
 
 ```bash
