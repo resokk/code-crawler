@@ -8,6 +8,7 @@ import pytest
 from test_publication import create, setup
 
 from code_crawler import jobs, snapshots
+from code_crawler.data_security import DataSecurityError
 from code_crawler.ingestion import UcmBatch
 from code_crawler.publication import publish_snapshot, validate_snapshot
 from code_crawler.search_storage import read_search_documents, rebuild_search_documents
@@ -166,7 +167,7 @@ def test_atomic_failure_and_cancel(
             def fail_policy(text: str) -> str:
                 raise RuntimeError("policy unavailable")
 
-            with pytest.raises(RuntimeError, match="policy unavailable"):
+            with pytest.raises(DataSecurityError, match="redaction policy failed"):
                 await rebuild_search_documents(
                     writer,
                     repo,

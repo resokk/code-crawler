@@ -4,6 +4,7 @@ import pytest
 from test_search_documents import entities
 from test_source_adapters import REPO
 
+from code_crawler.data_security import DataSecurityError
 from code_crawler.ingestion import UcmBatch
 from code_crawler.search_storage import _records
 from code_crawler.ucm import EntityType, OrmMapping, OrmQuery, Symbol, logical_id
@@ -65,7 +66,7 @@ def test_redacted_content_and_deterministic_projection() -> None:
     changed = _records(batch, lambda text: text)
     assert [r[0] for r in first] == [r[0] for r in changed]
     assert [r[4] for r in first] != [r[4] for r in changed]
-    with pytest.raises(RuntimeError, match="policy failure"):
+    with pytest.raises(DataSecurityError, match="redaction policy failed"):
 
         def fail(text: str) -> str:
             raise RuntimeError("policy failure")

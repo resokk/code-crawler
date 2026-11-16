@@ -78,3 +78,10 @@ A03 extends `find_table_readers`/`find_table_writers` with explicit `mode` and
 `database_key`, `schema_version_key`, `database_object_id`. Default name search
 remains compatible; exact mode uses authorized published snapshot bindings only.
 [Selector, uncertainty and response contract](structural-search.md#database-qualified-sql-access-search-a03).
+
+A06 applies mandatory masking to all tool result payloads after authorized SQL,
+including SQL, Evidence descriptions and cross-repository traversal. Affected
+responses add data_security with PARTIAL derivative status and safe coordinates;
+original canonical Coverage/Certainty is retained. No RPC argument disables this
+policy. Source permission is used only by the explicit authorized source reader.
+See [source-data-security.md](source-data-security.md).

@@ -52,3 +52,14 @@ change; существующая модель доступа PostgreSQL сохр
 Отсутствие bytes исторической публикации имеет отдельный exception
 `SourceUnavailableError` (subclass ValueError), чтобы reader мог отличить legacy
 unavailability от integrity/range errors. Typed read API: [canonical-read.md](canonical-read.md).
+
+## Data security boundary (A06)
+
+Archived bytes and canonical facts are never redacted in place. Original source
+Evidence is available through the A02 authorized reader with repository membership
+and source permission; MCP's ordinary Evidence/SQL tools return masked derivative
+metadata even for source-authorized principals. Raw SQL/CLI readers remain trusted
+administrative interfaces. The detector does not add a source lookup bypass.
+Search generation/diagnostic data is deleted with snapshot GC; source blobs retain
+the existing independent lifetime until E02 defines orphan/backup retention.
+See [source-data-security.md](source-data-security.md).

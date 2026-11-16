@@ -39,3 +39,23 @@ src/code_crawler/source_evidence.py; src/code_crawler/search_documents.py; src/c
 
 ## Dependencies
 A02 для управления доступом; C01 для хранения документов
+
+## Implementation decisions
+
+- Versioned bounded detector over derivative JSON strings/keys, supported token
+  prefixes, private keys, bearer/URL credentials and labelled secret literals.
+  Mask by default; skip whole documents or reject atomic rebuild by trusted policy.
+- Scan both before and after custom C01 callbacks, retaining source context to
+  prevent reintroducing detected unlabelled values. Callback failures are generic;
+  callbacks cannot change canonical ID/status/certainty fields.
+- Preserve raw archived bytes and canonical facts. A02 identity/repository/source
+  grant protects the raw reader; common MCP result gate masks all ordinary tools.
+- New migration 0030 stores immutable generation security_report; document JSON
+  provenance contains safe redaction coordinates/categories without values. No
+  parallel canonical model or ingest-time relations are introduced.
+- Projection v2 requires rebuilding legacy derivatives; old sealed generations
+  are not rewritten or exposed. Readers/diagnostic APIs enforce repository scope.
+- Existing GC removes generation/documents/reports; raw blobs retain existing
+  lifetime until E02. Future embeddings consume sanitized content via embedding_input.
+- Regex coverage is explicitly bounded and not universal PII/secret detection.
+  Raw privileged DB/CLI access is outside the HTTP boundary.
