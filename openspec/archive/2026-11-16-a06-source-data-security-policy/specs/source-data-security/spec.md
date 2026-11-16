@@ -43,3 +43,35 @@ The change MUST preserve repository-scoped immutable published UCM facts and ret
 - GIVEN an existing published snapshot
 - WHEN this feature encounters an invalid input or a storage error
 - THEN the publication pointer and previously published facts remain unchanged
+
+### Requirement: Security failures preserve the previous derivative publication
+The system MUST abort a rejected, failed or unbounded redaction build without
+changing canonical or search publication pointers.
+
+#### Scenario: Reject policy detects a credential
+- GIVEN a published search generation and immutable captured source bytes
+- WHEN a replacement generation uses reject policy and detects a credential
+- THEN the previous generation remains readable and source hashes are unchanged.
+
+### Requirement: Skipped documents remain explainable
+The system MUST store repository-scoped immutable generation diagnostics for skip
+policy, without including matched values.
+
+#### Scenario: Skip policy removes unsafe documents
+- GIVEN projected documents contain a test-only token
+- WHEN skip policy builds a generation
+- THEN affected documents are omitted and security_report records partial coverage and counts.
+
+### Requirement: Custom policy cannot bypass baseline protection
+The system MUST scan before and after custom redaction, preserve machine facts
+and reject unsafe legacy derivative generations until rebuilt.
+
+#### Scenario: A custom callback reinserts an unlabelled detected secret
+- GIVEN the initial payload has a labelled credential
+- WHEN a callback removes its label and reinserts its value
+- THEN the value is still absent from persisted content and embedding input.
+
+#### Scenario: An old generation lacks current protection
+- GIVEN a sealed legacy search generation
+- WHEN the current reader requests it
+- THEN it reports a generic rebuild requirement without returning unsafe content.

@@ -5,6 +5,9 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable, Iterator
 from typing import Literal
 
+from pydantic import Field
+
+from code_crawler.data_security import DEFAULT_POLICY, SecretPolicy
 from code_crawler.ucm import (
     ContractModel,
     DataAccess,
@@ -48,6 +51,7 @@ class SearchDocument(ContractModel):
     path: str | None = None
     # Меняется только вместе с текстом: ключ для кэша эмбеддингов и пересчёта.
     content_sha256: str
+    redaction: dict = Field(default_factory=dict)
 
 
 def _document(
@@ -73,7 +77,35 @@ def _label(symbol: Symbol) -> str:
     return f"{symbol.qualified_name}({types})"
 
 
-def project(entities: Iterable[Entity]) -> Iterator[SearchDocument]:
+def project(
+    entities: Iterable[Entity], *, security_policy: SecretPolicy = DEFAULT_POLICY
+) -> Iterator[SearchDocument]:
+    """Yield sanitized derivative facts; original UCM entities remain unchanged."""
+    for document in _project_raw(entities):
+        payload = {
+            "title": document.title,
+            "text": document.text,
+            "language": document.language,
+            "path": document.path,
+        }
+        # A truncated SQL title could disclose part of a credential without context.
+        if document.kind == "SQL_STATEMENT":
+            payload["title"] = document.text.splitlines()[0]
+        safe, report = security_policy.clean(payload)
+        if safe is None:
+            continue
+        yield document.model_copy(
+            update={
+                **safe,
+                "redaction": report,
+                "content_sha256": hashlib.sha256(
+                    f"{safe['title']}\n{safe['text']}".encode()
+                ).hexdigest(),
+            }
+        )
+
+
+def _project_raw(entities: Iterable[Entity]) -> Iterator[SearchDocument]:
     """Yield deterministic documents for symbols, SQL, ORM, DB objects and calls.
 
     Parameters and local variables get no document of their own. Every relation

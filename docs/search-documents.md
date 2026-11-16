@@ -72,8 +72,8 @@ publication pointer не изменяются.
 Таблицы в `public`:
 
 - `search_index_generations`: UUID поколения, repository/snapshot,
-  `projection_version=search-documents-v1`, `policy_version`, document_count,
-  created_at и sealed. Запечатать поколение можно только при совпадении count.
+  `projection_version=search-documents-v2-security`, `policy_version`, document_count,
+  created_at, sealed и immutable security_report (миграция 0030). Запечатать поколение можно только при совпадении count.
 - `search_documents`: repository/snapshot/generation, document_id, entity_id,
   document_type, content (JSON), content_sha256, provenance (JSON). Составные FK
   запрещают смешивание repository/snapshot и потерю ссылки на исходную сущность.
@@ -98,9 +98,12 @@ policy_version. Смена одной версии без изменения т�
 Политика вызывается также для заголовков, путей, summary и строк provenance,
 включая Evidence descriptions и причины. Политика должна возвращать строки,
 сохранять структурные идентификаторы/статусы и быть детерминированной.
-Политики по умолчанию нет: доверенный вызывающий код обязан передать redactor и
-его непустую версию. Это точка подключения secret policy A06, а не универсальный
-детектор секретов. Сырые source blobs не копируются.
+Встроенная политика A06 обязательна до и после дополнительного caller redactor;
+последний и его непустая версия по-прежнему передаются явно. Сохранённая
+policy_version объединяет версию/режим A06 и версию caller policy. Изменение
+структурных IDs/enum-статусов callback запрещено; его исключения маскируются.
+Сырые source blobs не копируются. Детектор не является универсальным: см.
+[source-data-security.md](source-data-security.md).
 
 `provenance` сохраняет originating entity_id, source_range и относящиеся к
 сущности Relation (source, target или candidate), с исходными resolution,
@@ -125,7 +128,7 @@ read-only REPEATABLE READ (как canonical reader), иначе каждый в�
 allowed_repository_ids до чтения БД; отказ — PermissionError. Набор разрешений
 получает доверенный сервис из контекста авторизации, не из пользовательского
 MCP-аргумента. Это внутренний API для доверенного DB connection; он не заменяет
-HTTP authentication, RLS или будущий A02. MCP остаётся read-only и пока не
+HTTP authentication или RLS; A02 проверяет identity и права MCP до SQL. MCP остаётся read-only и пока не
 экспортирует этот API. Пересборку вызывает управляющий процесс, не MCP.
 
 Ограничения: loader и project пока материализуют полный snapshot; B02 ещё не
@@ -138,3 +141,27 @@ snapshot. Политика retention поколений и embeddings не вх�
 ORM/SQL/symbol provenance, redaction, full/incremental reuse, repository/snapshot
 isolation, denied access, CAS competition, pinned pagination, пустые поколения,
 SQL rollback и отмена во время публикации на PostgreSQL 15.
+
+## A06: protected derivatives
+
+Public `project` masks supported secret patterns by default, adds a `redaction`
+report and keeps canonical IDs and machine status/certainty unchanged. SQL titles
+no longer contain truncated source literals. Textual hashes refer to masked text.
+`security_policy=SecretPolicy("mask"|"skip"|"reject")` is a keyword-only option for
+project and rebuild. C01 applies baseline scanning to both content and provenance,
+including raw-context known values after caller redaction. Per-document metadata
+lives in provenance.redaction, separate from original analysis Coverage.
+
+Migration 0030 adds generation security_report: redacted/skipped counts, detector
+categories and up to 256 skipped entity IDs with a truncation flag. The field is
+immutable after sealing and removed with its generation.
+`read_search_security_report(conn, repository_id, *, allowed_repository_ids)` reads
+current-generation diagnostics even when every document was skipped. Both this
+API and document reader authorize before DB access.
+
+Readers reject legacy projection versions and unsafe stored content with a generic
+rebuild-required error; existing sealed generations and canonical publications are
+never rewritten. Rebuild with the new version to make derivatives readable.
+`data_security.embedding_input(content)` rechecks C01 content before producing
+future model input. No model/vector pipeline is added. Detector limits, false
+positives, unrecognized secret forms and retention are documented in the A06 guide.

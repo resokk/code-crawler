@@ -11,7 +11,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - A03 database-qualified-structural-search: database/version/object scoped SQL access search — [completed](archive/2026-11-16-a03-database-qualified-structural-search/completion.md), PG15 CI 1284 passed
 - A04 sql-search-certainty-contract: discovered SQL versus proven execution and target identity
 - A05 required-main-ci-check: main branch required status check, requires GitHub admin settings
-- A06 source-data-security-policy: raw evidence ACL, redaction of search/embedding inputs
+- A06 source-data-security-policy: raw evidence ACL, redaction of search/embedding inputs — [completed](archive/2026-11-16-a06-source-data-security-policy/completion.md), PG15 CI 1305 passed
 
 ## Stream B — performance/reliability (measure first)
 - B01 pg15-end-to-end-performance-baseline: current SHA measurements at scale

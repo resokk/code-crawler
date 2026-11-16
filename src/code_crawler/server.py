@@ -1,5 +1,6 @@
 """Stateless MCP server: structural queries over published UCM snapshots."""
 
+import asyncio
 import json
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -21,6 +22,7 @@ from code_crawler.access import (
     configure_audit,
     load_policy,
 )
+from code_crawler.data_security import SecretPolicy
 from code_crawler.resolver_context import ResolverContext
 from code_crawler.ucm import RelationKind
 
@@ -92,7 +94,11 @@ async def _query(
     async with ctx.lifespan_context["pool"].acquire() as conn:
         try:
             async with conn.transaction(isolation="repeatable_read", readonly=True):
-                return await run(conn)
+                result = await run(conn)
+                safe, report = await asyncio.to_thread(SecretPolicy().clean, result)
+                if report["findings"]:
+                    safe = {**safe, "data_security": report}
+                return safe
         except (
             ValueError,
             PermissionError,
