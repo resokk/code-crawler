@@ -5,6 +5,7 @@ from uuid import UUID
 import pytest
 from pydantic import ValidationError
 
+from code_crawler import java_sql
 from code_crawler.incremental import SourceInput
 from code_crawler.ingestion import UcmBatch
 from code_crawler.java_sql import JavaSqlAnalyzer
@@ -175,14 +176,25 @@ def test_loop_and_builder_alias_are_not_complete_values() -> None:
     )
 
 
-def test_path_limit_is_explicit() -> None:
+def test_path_limit_truncates_and_marks_every_variant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reason = "path limit reached: variants truncated"
     branches = "".join('if(f) q+=" x"; else q+=" y";' for _ in range(6))
-    with pytest.raises(ValueError, match="path limit"):
-        analyze(
-            'class A { void m(boolean f){ String q="select id from t";'
-            + branches
-            + "use(q); } }"
-        )
+    source = (
+        'class A { void m(boolean f){ String e="delete from early"; use(e);'
+        ' String q="select id from t";' + branches + "use(q); } }"
+    )
+    full = [v for c in constructions(analyze(source)) for v in c.variants]
+    assert sum(v.text.startswith("select id from t ") for v in full) == 64
+    assert not any(reason in v.partial_reasons for v in full)
+
+    monkeypatch.setattr(java_sql, "_MAX_PATHS", 5)
+    cut = [v for c in constructions(analyze(source)) for v in c.variants]
+    built = [v for v in cut if v.text.startswith("select id from t ")]
+    assert len(built) == 5
+    early = [v for v in cut if v.text == "delete from early" and v.partial]
+    assert early and all(reason in v.partial_reasons for v in (*built, *early))
 
 
 @pytest.mark.parametrize(
