@@ -27,6 +27,29 @@ def test_operation_reports_failure_and_exits(console: Console) -> None:
     assert "✗ Индексация: нет доступа к БД" in console.export_text()
 
 
+def test_stage_clock_attributes_time_between_ticks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    now = iter([0, 2, 5, 6, 10, 11, 20])
+    monkeypatch.setattr(cli.time, "monotonic", lambda: next(now))
+    clock = cli.StageClock()
+    clock.tick("каталог", 2)  # 0–2: первый элемент каталога
+    clock.tick("каталог", 2)  # 2–5
+    clock.tick("проверка")  # 5–6: до начала несчётного этапа — ничьё время
+    clock.tick("анализ", 1)  # 6–10: несчётный этап идёт до следующего тика
+    clock.tick("анализ", 1)  # 10–11
+    report = clock.report()  # 11–20: после последнего счётного тика
+
+    assert clock.spent == {"каталог": 5, "прочее": 10, "проверка": 4, "анализ": 1}
+    assert [line.split()[-1] for line in report] == [
+        "прочее",
+        "каталог",
+        "проверка",
+        "анализ",
+    ]
+    assert "50%" in report[0]
+
+
 @pytest.mark.parametrize(
     "arguments",
     [

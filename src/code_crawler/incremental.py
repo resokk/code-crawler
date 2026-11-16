@@ -609,6 +609,7 @@ async def index_incremental(
             rows, slice_owned, references, slice_explicit = await asyncio.to_thread(
                 _inspect, snap, repository_id, part, await analyze(part)
             )
+            tick("Сборка снимка: проверка и строки", -(-len(selected) // _SLICE))
             await _stage(conn, prefix, stages, rows)
             await _transfer(conn, {table: stages[table] for table in rows})
             owned += [(snap, path, entity_id) for path, entity_id in slice_owned]
