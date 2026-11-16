@@ -186,3 +186,77 @@ def test_cross_repository_tool_uses_server_grants(pool, monkeypatch):
     asyncio.run(run())
     assert calls[0]["allowed_repositories"] == frozenset(("repo",))
     assert pool.transactions == [(True, "repeatable_read")]
+
+
+def test_database_qualified_access_tool_contract_and_acl(pool: FakePool, monkeypatch):
+    calls = []
+
+    async def find(conn, repository_key, table=None, **options):
+        calls.append((repository_key, table, options))
+        return {
+            "mode": options["mode"],
+            "snapshot_id": "s",
+            "items": [],
+            "truncated": False,
+        }
+
+    monkeypatch.setattr(search, "find_table_readers", find)
+    monkeypatch.setattr(search, "find_table_writers", find)
+
+    async def run():
+        async with Client(mcp) as client:
+            for tool in ("find_table_readers", "find_table_writers"):
+                by_id = await client.call_tool(
+                    tool,
+                    {
+                        "repository_key": "app",
+                        "mode": "RESOLVED_DATABASE_OBJECT",
+                        "database_object_id": ID,
+                    },
+                )
+                assert by_id.data["mode"] == "RESOLVED_DATABASE_OBJECT"
+                await client.call_tool(
+                    tool,
+                    {
+                        "repository_key": "app",
+                        "table": "Users",
+                        "column": "ID",
+                        "schema": "public",
+                        "mode": "RESOLVED_DATABASE_OBJECT",
+                        "database_key": "db1",
+                        "schema_version_key": "v1",
+                        "limit": 7,
+                    },
+                )
+                await client.call_tool(
+                    tool, {"repository_key": "app", "table": "users"}
+                )
+                with pytest.raises(ToolError, match="access denied"):
+                    await client.call_tool(
+                        tool,
+                        {
+                            "repository_key": "private",
+                            "mode": "RESOLVED_DATABASE_OBJECT",
+                            "database_object_id": ID,
+                        },
+                    )
+                for invalid in (
+                    {"mode": "EXACT"},
+                    {
+                        "mode": "RESOLVED_DATABASE_OBJECT",
+                        "database_object_id": "db:" + "a" * 64,
+                    },
+                ):
+                    with pytest.raises(ToolError):
+                        await client.call_tool(
+                            tool, {"repository_key": "app", **invalid}
+                        )
+
+    asyncio.run(run())
+    assert len(calls) == 6
+    assert all(call[0] == "app" for call in calls)
+    assert calls[0][1] is None and calls[0][2]["database_object_id"] == ID
+    assert calls[1][1] == "Users" and calls[1][2]["database_key"] == "db1"
+    assert calls[1][2]["schema_version_key"] == "v1" and calls[1][2]["limit"] == 7
+    assert calls[2][2]["mode"] == "SYNTACTIC_NAME"
+    assert pool.transactions == [(True, "repeatable_read")] * 6

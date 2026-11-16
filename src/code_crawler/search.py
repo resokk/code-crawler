@@ -1,5 +1,6 @@
 """Read-only structural queries over the published UCM snapshot of a repository."""
 
+import re
 from typing import Literal, TypedDict
 from uuid import UUID
 
@@ -15,6 +16,8 @@ MAX_DEPTH = 6
 MAX_OFFSET = 1000
 # Тот же список — в предикате частичных индексов миграции 0019.
 TEXT_TYPES = ("SYMBOL", "SOURCE_FILE", "DATABASE_OBJECT", "ORM_MAPPING", "ORM_QUERY")
+
+AccessMode = Literal["SYNTACTIC_NAME", "RESOLVED_DATABASE_OBJECT"]
 
 _WRITES = ("INSERT", "UPDATE", "DELETE", "MERGE", "DDL")
 
@@ -453,17 +456,318 @@ async def find_sql_executions(
     return _page(snapshot_id, page, executions, limit)
 
 
+def _access_selector(
+    table: str | None,
+    column: str | None,
+    schema: str | None,
+    mode: AccessMode,
+    database_key: str | None,
+    schema_version_key: str | None,
+    database_object_id: str | None,
+    limit: int,
+) -> None:
+    if mode not in ("SYNTACTIC_NAME", "RESOLVED_DATABASE_OBJECT"):
+        raise ValueError("invalid SQL access search mode")
+    if type(limit) is not int:
+        raise ValueError("limit must be an integer")
+    _limit(limit)
+    for name in (table, column, schema):
+        if name is not None and (not isinstance(name, str) or not name or "\0" in name):
+            raise ValueError("identifiers must be nonempty strings without NUL")
+    for value in (database_key, schema_version_key):
+        if value is not None and (
+            not isinstance(value, str) or not value.strip() or "\0" in value
+        ):
+            raise ValueError(
+                "database/version keys must be nonblank strings without NUL"
+            )
+    if (database_key is None) != (schema_version_key is None):
+        raise ValueError(
+            "database_key and schema_version_key must be provided together"
+        )
+    if mode == "SYNTACTIC_NAME":
+        if database_key is not None or database_object_id is not None:
+            raise ValueError("physical selectors require RESOLVED_DATABASE_OBJECT mode")
+        if table is None:
+            raise ValueError("syntactic search requires table")
+    else:
+        if database_object_id is not None and (
+            not isinstance(database_object_id, str)
+            or re.fullmatch(r"ucm:[0-9a-f]{64}", database_object_id) is None
+        ):
+            raise ValueError("database_object_id must be a canonical UCM entity ID")
+        if database_object_id is None and (database_key is None or table is None):
+            raise ValueError(
+                "exact search requires an object ID or database/version and table"
+            )
+
+
+async def _database_selector(
+    conn: asyncpg.Connection,
+    snapshot_id: UUID,
+    table: str | None,
+    column: str | None,
+    schema: str | None,
+    database_key: str | None,
+    schema_version_key: str | None,
+    database_object_id: str | None,
+) -> tuple:
+    object_key = None
+    if database_object_id is not None:
+        target = await conn.fetchrow(
+            "SELECT * FROM public.ucm_database_objects WHERE snapshot_id=$1 AND entity_id=$2",
+            snapshot_id,
+            database_object_id,
+        )
+        if target is None or target["table_name"] is None:
+            raise ValueError(
+                "database object is not a table/column in the selected snapshot"
+            )
+        for supplied, actual in (
+            (database_key, target["database_key"]),
+            (schema_version_key, target["version_key"]),
+            (table, target["table_name"]),
+            (schema, target["schema_name"]),
+            (column, target["column_name"]),
+        ):
+            if supplied is not None and supplied != actual:
+                raise ValueError(
+                    "physical selectors conflict with database object identity"
+                )
+        database_key, schema_version_key = target["database_key"], target["version_key"]
+        table, column, schema = (
+            target["table_name"],
+            target["column_name"],
+            target["schema_name"],
+        )
+        object_key = target["object_key"]
+    return table, column, schema, database_key, schema_version_key, object_key
+
+
+async def _physical_access_rows(
+    conn: asyncpg.Connection,
+    snapshot_id: UUID,
+    kinds: tuple[str, ...],
+    limit: int,
+    table: str,
+    column: str | None,
+    schema: str | None,
+    database_key: str,
+    schema_version_key: str,
+    object_key: str | None,
+) -> list[asyncpg.Record]:
+    return await conn.fetch(
+        "SELECT a.entity_id AS access_id, a.object_kind, a.access_kind, a.role, "
+        "a.binding_status, a.resolution, a.reason, a.statement_id, st.text, st.operation, "
+        "st.parse_status, da.entity_id AS database_access_id, da.execution_id, "
+        "r.entity_id AS database_relation_id, d.entity_id AS database_object_id, "
+        "d.object_key, d.database_key, d.version_key, d.schema_fingerprint, "
+        "d.object_kind AS database_object_kind, d.catalog_name, d.schema_name, d.table_name, d.column_name, "
+        "c.entity_id AS context_id, c.connection_key "
+        "FROM public.ucm_database_objects d "
+        "JOIN public.ucm_relations r ON r.snapshot_id=d.snapshot_id AND r.target_id=d.entity_id "
+        " AND r.relation_kind='RESOLVES_DATABASE_OBJECT' AND r.resolution='RESOLVED' "
+        "JOIN public.ucm_database_accesses da ON da.snapshot_id=r.snapshot_id AND da.entity_id=r.source_id "
+        "JOIN public.ucm_database_contexts c ON c.snapshot_id=da.snapshot_id AND c.entity_id=da.context_id "
+        " AND c.database_key=d.database_key AND c.version_key=d.version_key "
+        " AND c.schema_fingerprint=d.schema_fingerprint "
+        "JOIN public.ucm_data_accesses a ON a.snapshot_id=da.snapshot_id AND a.entity_id=da.access_id "
+        "JOIN public.ucm_sql_statements st ON st.snapshot_id=a.snapshot_id AND st.entity_id=a.statement_id "
+        "WHERE d.snapshot_id=$1 AND d.database_key=$2 AND d.version_key=$3 AND d.table_name=$4 "
+        "AND ($5::text IS NULL OR d.schema_name=$5) "
+        "AND d.column_name IS NOT DISTINCT FROM $6::text "
+        "AND ($7::text IS NULL OR d.object_key=$7) "
+        "AND a.access_kind=ANY($8) "
+        "ORDER BY da.entity_id,r.entity_id LIMIT $9",
+        snapshot_id,
+        database_key,
+        schema_version_key,
+        table,
+        schema,
+        column,
+        object_key,
+        list(kinds),
+        limit + 1,
+    )
+
+
 async def _accesses(
     conn: asyncpg.Connection,
     repository_key: str,
+    table: str | None,
+    column: str | None,
+    schema: str | None,
+    kinds: tuple[str, ...],
+    limit: int,
+    mode: AccessMode,
+    database_key: str | None,
+    schema_version_key: str | None,
+    database_object_id: str | None,
+) -> dict:
+    _access_selector(
+        table,
+        column,
+        schema,
+        mode,
+        database_key,
+        schema_version_key,
+        database_object_id,
+        limit,
+    )
+    snapshot_id = await _snapshot(conn, repository_key)
+    exact = mode == "RESOLVED_DATABASE_OBJECT"
+    if exact:
+        selector = await _database_selector(
+            conn,
+            snapshot_id,
+            table,
+            column,
+            schema,
+            database_key,
+            schema_version_key,
+            database_object_id,
+        )
+        rows = await _physical_access_rows(conn, snapshot_id, kinds, limit, *selector)
+    else:
+        rows = await _syntactic_access_rows(
+            conn, snapshot_id, table, column, schema, kinds, limit
+        )
+    page = rows[:limit]
+    links = await conn.fetch(
+        f"SELECT {_RELATION}, r.target_id AS statement_id, r.source_id AS execution_id "
+        "FROM public.ucm_relations r WHERE r.snapshot_id=$1 "
+        "AND r.relation_kind='EXECUTES_STATEMENT' AND r.target_id=ANY($2) "
+        "AND ($3::text[] IS NULL OR r.source_id=ANY($3))",
+        snapshot_id,
+        list({row["statement_id"] for row in page}),
+        [row["execution_id"] for row in page if row["execution_id"] is not None]
+        if exact
+        else None,
+    )
+    link_relations = await _relations(conn, snapshot_id, links)
+    access_rows = await conn.fetch(
+        f"SELECT {_RELATION} FROM public.ucm_relations r "
+        "WHERE r.snapshot_id=$1 AND r.target_id=ANY($2) "
+        "AND r.source_id=ANY($3) ORDER BY r.entity_id",
+        snapshot_id,
+        [row["access_id"] for row in page],
+        list({row["statement_id"] for row in page}),
+    )
+    access_relations = await _relations(conn, snapshot_id, access_rows)
+    execution_ids = (
+        {row["execution_id"] for row in page}
+        if exact
+        else {link["execution_id"] for link in links}
+    )
+    executions = {
+        execution["id"]: execution
+        for execution in await _executions(
+            conn,
+            snapshot_id,
+            "x.entity_id=ANY($2)",
+            list(execution_ids - {None}),
+        )
+    }
+    relations = {}
+    if exact:
+        proof_rows = await conn.fetch(
+            f"SELECT {_RELATION} FROM public.ucm_relations r WHERE r.snapshot_id=$1 AND r.entity_id=ANY($2) ORDER BY r.entity_id",
+            snapshot_id,
+            [row["database_relation_id"] for row in page],
+        )
+        relations = {
+            r["relation_id"]: r for r in await _relations(conn, snapshot_id, proof_rows)
+        }
+    items = []
+    for row in page:
+        item = {
+            key: row[key]
+            for key in (
+                "access_id",
+                "object_kind",
+                "access_kind",
+                "role",
+                "binding_status",
+                "resolution",
+                "reason",
+                "statement_id",
+                "text",
+                "operation",
+                "parse_status",
+            )
+        }
+        item["access_relations"] = [
+            relation
+            for edge, relation in zip(access_rows, access_relations, strict=True)
+            if edge["target_id"] == row["access_id"]
+        ]
+        item["executions"] = [
+            executions[link["execution_id"]]
+            | {"certainty": link["certainty"], "relation": relation}
+            for link, relation in zip(links, link_relations, strict=True)
+            if link["statement_id"] == row["statement_id"]
+            and (not exact or link["execution_id"] == row["execution_id"])
+        ]
+        if exact:
+            item["database_access_id"] = row["database_access_id"]
+            item["database_object"] = {
+                key: row[key]
+                for key in (
+                    "database_object_id",
+                    "object_key",
+                    "database_key",
+                    "version_key",
+                    "schema_fingerprint",
+                    "database_object_kind",
+                    "catalog_name",
+                    "schema_name",
+                    "table_name",
+                    "column_name",
+                )
+            }
+            item["database_context"] = {
+                key: row[key]
+                for key in (
+                    "context_id",
+                    "connection_key",
+                    "database_key",
+                    "version_key",
+                    "schema_fingerprint",
+                )
+            }
+            item["database_relation"] = relations[row["database_relation_id"]]
+        item.update(
+            _sql_status(
+                [e["relation"] for e in item["executions"]],
+                item["database_relation"]["resolution"] if exact else row["resolution"],
+            )
+        )
+        items.append(item)
+    result = _page(snapshot_id, items, rows, limit)
+    result["mode"] = mode
+    if exact:
+        result["coverage"] = {
+            "capability": "search.database_object",
+            "analyzer_version": "1",
+            "status": "PARTIAL",
+            "reasons": [
+                "Only stored RESOLVED database-object bindings are returned; unassigned, PARTIAL, AMBIGUOUS and UNRESOLVED accesses are excluded.",
+                "A physical object binding does not prove SQL execution or complete analysis coverage.",
+            ],
+            "excluded_resolutions": ["PARTIAL", "AMBIGUOUS", "UNRESOLVED"],
+        }
+    return result
+
+
+async def _syntactic_access_rows(
+    conn: asyncpg.Connection,
+    snapshot_id: UUID,
     table: str,
     column: str | None,
     schema: str | None,
     kinds: tuple[str, ...],
     limit: int,
-) -> dict:
-    snapshot_id = await _snapshot(conn, repository_key)
-
+) -> list[asyncpg.Record]:
     def named(part: str, index: int) -> str:
         return (
             "EXISTS (SELECT 1 FROM public.ucm_sql_access_names n "
@@ -471,7 +775,7 @@ async def _accesses(
             f"AND n.part='{part}' AND n.normalized IN (${index}, lower(${index})))"
         )
 
-    rows = await conn.fetch(
+    return await conn.fetch(
         "SELECT a.entity_id AS access_id, a.object_kind, a.access_kind, a.role, "
         "a.binding_status, a.resolution, a.reason, a.statement_id, st.text, st.operation, "
         "st.parse_status FROM public.ucm_data_accesses a "
@@ -493,81 +797,64 @@ async def _accesses(
         schema,
         _limit(limit) + 1,
     )
-    page = rows[:limit]
-    links = await conn.fetch(
-        f"SELECT {_RELATION}, r.target_id AS statement_id, r.source_id AS execution_id "
-        "FROM public.ucm_relations r WHERE r.snapshot_id=$1 "
-        "AND r.relation_kind='EXECUTES_STATEMENT' AND r.target_id=ANY($2)",
-        snapshot_id,
-        list({row["statement_id"] for row in page}),
-    )
-    link_relations = await _relations(conn, snapshot_id, links)
-    access_rows = await conn.fetch(
-        f"SELECT {_RELATION} FROM public.ucm_relations r "
-        "WHERE r.snapshot_id=$1 AND r.target_id=ANY($2) "
-        "AND r.source_id=ANY($3) ORDER BY r.entity_id",
-        snapshot_id,
-        [row["access_id"] for row in page],
-        list({row["statement_id"] for row in page}),
-    )
-    access_relations = await _relations(conn, snapshot_id, access_rows)
-    executions = {
-        execution["id"]: execution
-        for execution in await _executions(
-            conn,
-            snapshot_id,
-            "x.entity_id=ANY($2)",
-            list({link["execution_id"] for link in links}),
-        )
-    }
-    items = []
-    for row in page:
-        item = dict(row)
-        item["access_relations"] = [
-            relation
-            for link, relation in zip(access_rows, access_relations, strict=True)
-            if link["target_id"] == row["access_id"]
-        ]
-        # Пустой список — SQL найден в коде, но его выполнение не доказано.
-        item["executions"] = [
-            executions[link["execution_id"]]
-            | {"certainty": link["certainty"], "relation": relation}
-            for link, relation in zip(links, link_relations, strict=True)
-            if link["statement_id"] == row["statement_id"]
-        ]
-        item.update(
-            _sql_status([e["relation"] for e in item["executions"]], row["resolution"])
-        )
-        items.append(item)
-    return _page(snapshot_id, items, rows, limit)
 
 
 async def find_table_readers(
     conn: asyncpg.Connection,
     repository_key: str,
-    table: str,
+    table: str | None = None,
     *,
     column: str | None = None,
     schema: str | None = None,
     limit: int = 50,
+    mode: AccessMode = "SYNTACTIC_NAME",
+    database_key: str | None = None,
+    schema_version_key: str | None = None,
+    database_object_id: str | None = None,
 ) -> dict:
-    """Find SQL statements reading a table (or one of its columns) and who executes them."""
+    """Find syntactic reads or stored resolved physical object bindings; execution stays separate."""
     return await _accesses(
-        conn, repository_key, table, column, schema, ("READ",), limit
+        conn,
+        repository_key,
+        table,
+        column,
+        schema,
+        ("READ",),
+        limit,
+        mode,
+        database_key,
+        schema_version_key,
+        database_object_id,
     )
 
 
 async def find_table_writers(
     conn: asyncpg.Connection,
     repository_key: str,
-    table: str,
+    table: str | None = None,
     *,
     column: str | None = None,
     schema: str | None = None,
     limit: int = 50,
+    mode: AccessMode = "SYNTACTIC_NAME",
+    database_key: str | None = None,
+    schema_version_key: str | None = None,
+    database_object_id: str | None = None,
 ) -> dict:
-    """Find SQL statements writing a table (or one of its columns) and who executes them."""
-    return await _accesses(conn, repository_key, table, column, schema, _WRITES, limit)
+    """Find syntactic writes or stored resolved physical object bindings; execution stays separate."""
+    return await _accesses(
+        conn,
+        repository_key,
+        table,
+        column,
+        schema,
+        _WRITES,
+        limit,
+        mode,
+        database_key,
+        schema_version_key,
+        database_object_id,
+    )
 
 
 async def trace_dependency(

@@ -226,21 +226,37 @@ async def find_sql_executions(
 async def find_table_readers(
     ctx: Context,
     repository_key: RepositoryKey,
-    table: Annotated[str, Field(min_length=1)],
+    table: Annotated[str, Field(min_length=1)] | None = None,
     column: str | None = None,
     schema: str | None = None,
     limit: Limit = 50,
+    mode: search.AccessMode = "SYNTACTIC_NAME",
+    database_key: str | None = None,
+    schema_version_key: str | None = None,
+    database_object_id: EntityId | None = None,
 ) -> dict:
     """SQL-запросы, читающие таблицу (или её колонку), и методы, которые их выполняют.
 
     discovery_status=FOUND означает обнаружение SQL. execution_link_status отдельно
     показывает статическую связь с sink; NOT_ESTABLISHED — связь не доказана.
     target_resolution относится только к DB-цели. Evidence/certainty — в relation.
+    SYNTACTIC_NAME сопоставляет SQL-имена. RESOLVED_DATABASE_OBJECT требует
+    database_key/schema_version_key и table либо snapshot-local database_object_id.
+    Пустой `executions` значит, что SQL найден в коде, но его выполнение не доказано.
     """
     return await _query(
         ctx,
         lambda conn: search.find_table_readers(
-            conn, repository_key, table, column=column, schema=schema, limit=limit
+            conn,
+            repository_key,
+            table,
+            column=column,
+            schema=schema,
+            limit=limit,
+            mode=mode,
+            database_key=database_key,
+            schema_version_key=schema_version_key,
+            database_object_id=database_object_id,
         ),
         repository_key=repository_key,
     )
@@ -250,21 +266,37 @@ async def find_table_readers(
 async def find_table_writers(
     ctx: Context,
     repository_key: RepositoryKey,
-    table: Annotated[str, Field(min_length=1)],
+    table: Annotated[str, Field(min_length=1)] | None = None,
     column: str | None = None,
     schema: str | None = None,
     limit: Limit = 50,
+    mode: search.AccessMode = "SYNTACTIC_NAME",
+    database_key: str | None = None,
+    schema_version_key: str | None = None,
+    database_object_id: EntityId | None = None,
 ) -> dict:
     """SQL-запросы, изменяющие таблицу или колонку (INSERT, UPDATE, DELETE, MERGE, DDL).
 
     discovery_status=FOUND означает обнаружение SQL. execution_link_status отдельно
     показывает статическую связь с sink; NOT_ESTABLISHED — связь не доказана.
     target_resolution относится только к DB-цели. Evidence/certainty — в relation.
+    SYNTACTIC_NAME сопоставляет SQL-имена. RESOLVED_DATABASE_OBJECT требует
+    database_key/schema_version_key и table либо snapshot-local database_object_id.
+    Пустой `executions` значит, что SQL найден в коде, но его выполнение не доказано.
     """
     return await _query(
         ctx,
         lambda conn: search.find_table_writers(
-            conn, repository_key, table, column=column, schema=schema, limit=limit
+            conn,
+            repository_key,
+            table,
+            column=column,
+            schema=schema,
+            limit=limit,
+            mode=mode,
+            database_key=database_key,
+            schema_version_key=schema_version_key,
+            database_object_id=database_object_id,
         ),
         repository_key=repository_key,
     )

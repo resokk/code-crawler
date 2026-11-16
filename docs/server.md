@@ -73,3 +73,8 @@ SQL-инструменты возвращают отдельные `discovery_st
 и `target_resolution`; Evidence/certainty сохранённых связей доступны в relation.
 См. [контракт уверенности SQL](structural-search.md#контракт-уверенности-sql-a04)
 с примерами формулировок: обнаруженный SQL и статический sink не доказывают runtime execution.
+
+A03 extends `find_table_readers`/`find_table_writers` with explicit `mode` and
+`database_key`, `schema_version_key`, `database_object_id`. Default name search
+remains compatible; exact mode uses authorized published snapshot bindings only.
+[Selector, uncertainty and response contract](structural-search.md#database-qualified-sql-access-search-a03).

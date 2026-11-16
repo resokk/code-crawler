@@ -122,3 +122,10 @@ projection consistency. Published snapshot продолжает ссылатьс
 EntityManager assignments и ORM physical naming используют эти же immutable
 contexts в [jpa-orm.md](jpa-orm.md). Mapping names разрешаются в DB identity только
 под explicit IDENTITY policy; native SQL сохраняет свой SQL name-resolution path.
+
+
+A03 physical retrieval is available via structural reader/writer search with
+`mode="RESOLVED_DATABASE_OBJECT"`. It selects stored resolved bindings by explicit
+database/schema version or snapshot-local DATABASE_OBJECT ID; identifiers use
+actual stored spelling and ambiguous/unassigned accesses are explicitly excluded.
+[Search contract](structural-search.md#database-qualified-sql-access-search-a03).
