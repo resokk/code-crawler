@@ -357,7 +357,7 @@ async def _clone(
     # SourceFile всегда создаётся заново из текущих bytes, из baseline он не берётся.
     await conn.execute(
         "INSERT INTO pg_temp.ingest_reuse SELECT m.entity_id "
-        "FROM public.ingest_file_entities m JOIN public.ucm_entities e "
+        "FROM ingest_file_entities m JOIN ucm_entities e "
         "USING (snapshot_id, entity_id) WHERE m.snapshot_id=$1 AND m.path=ANY($2) "
         "AND e.entity_type<>'SOURCE_FILE'",
         base,
@@ -376,7 +376,7 @@ async def _clone(
             "SELECT c.relname AS name, string_agg(format('%I', a.attname), ',' "
             "ORDER BY a.attnum) AS columns FROM pg_attribute a "
             "JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace "
-            "WHERE n.nspname='public' AND c.relname=ANY($1) AND a.attnum>0 "
+            "WHERE n.nspname=current_schema() AND c.relname=ANY($1) AND a.attnum>0 "
             "AND NOT a.attisdropped AND a.attgenerated='' AND a.attname<>'snapshot_id' "
             "GROUP BY c.relname",
             list(owners),
@@ -384,18 +384,18 @@ async def _clone(
     }
     for table, owner in owners.items():
         await conn.execute(
-            f"INSERT INTO public.{table} (snapshot_id,{columns[table]}) "
+            f"INSERT INTO {table} (snapshot_id,{columns[table]}) "
             f"SELECT $2,{','.join('t.' + c for c in columns[table].split(','))} "
-            f"FROM public.{table} t JOIN pg_temp.ingest_reuse r ON r.entity_id=t.{owner} "
+            f"FROM {table} t JOIN pg_temp.ingest_reuse r ON r.entity_id=t.{owner} "
             "WHERE t.snapshot_id=$1",
             base,
             snapshot_id,
         )
         tick("Запись в БД: переиспользование", len(owners))
     await conn.execute(
-        "INSERT INTO public.ingest_file_dependencies "
+        "INSERT INTO ingest_file_dependencies "
         "(snapshot_id,dependent_path,dependency_path) "
-        "SELECT $2,dependent_path,dependency_path FROM public.ingest_file_dependencies "
+        "SELECT $2,dependent_path,dependency_path FROM ingest_file_dependencies "
         "WHERE snapshot_id=$1 AND dependent_path=ANY($3)",
         base,
         snapshot_id,
@@ -438,7 +438,7 @@ async def index_incremental(
     ):
         raise ValueError("analysis scopes must partition the language suffixes")
     if not await conn.fetchval(
-        "SELECT EXISTS(SELECT 1 FROM public.ucm_repositories WHERE id=$1)",
+        "SELECT EXISTS(SELECT 1 FROM ucm_repositories WHERE id=$1)",
         repository_id,
     ):
         raise ValueError("repository does not exist")
@@ -460,25 +460,25 @@ async def index_incremental(
         previous = {
             r["path"]: _FileState(r["content_sha256"], r["language"])
             for r in await conn.fetch(
-                "SELECT path,content_sha256,language FROM public.ucm_source_files "
+                "SELECT path,content_sha256,language FROM ucm_source_files "
                 "WHERE snapshot_id=$1",
                 base_id,
             )
         }
         profile = await conn.fetchrow(
-            "SELECT * FROM public.ingest_snapshot_profiles WHERE snapshot_id=$1",
+            "SELECT * FROM ingest_snapshot_profiles WHERE snapshot_id=$1",
             base_id,
         )
         if profile:
             if await conn.fetchval(
-                "SELECT (SELECT count(*) FROM public.ucm_entities WHERE snapshot_id=$1) "
-                "<> (SELECT count(*) FROM public.ingest_file_entities WHERE snapshot_id=$1)",
+                "SELECT (SELECT count(*) FROM ucm_entities WHERE snapshot_id=$1) "
+                "<> (SELECT count(*) FROM ingest_file_entities WHERE snapshot_id=$1)",
                 base_id,
             ):
                 raise ValueError("baseline ownership manifest is incomplete")
             if await conn.fetchval(
-                "SELECT EXISTS(SELECT 1 FROM public.ucm_source_files f "
-                "LEFT JOIN public.ingest_file_entities m ON m.snapshot_id=f.snapshot_id "
+                "SELECT EXISTS(SELECT 1 FROM ucm_source_files f "
+                "LEFT JOIN ingest_file_entities m ON m.snapshot_id=f.snapshot_id "
                 "AND m.entity_id=f.entity_id WHERE f.snapshot_id=$1 "
                 "AND m.path IS DISTINCT FROM f.path)",
                 base_id,
@@ -497,7 +497,7 @@ async def index_incremental(
             dependencies = {
                 (r["dependent_path"], r["dependency_path"])
                 for r in await conn.fetch(
-                    "SELECT dependent_path,dependency_path FROM public.ingest_file_dependencies WHERE snapshot_id=$1",
+                    "SELECT dependent_path,dependency_path FROM ingest_file_dependencies WHERE snapshot_id=$1",
                     base_id,
                 )
             }
@@ -545,7 +545,7 @@ async def index_incremental(
         stored = {
             r["adapter_key"]: r["fingerprint"]
             for r in await conn.fetch(
-                "SELECT adapter_key,fingerprint FROM public.ingest_snapshot_adapters WHERE snapshot_id=$1",
+                "SELECT adapter_key,fingerprint FROM ingest_snapshot_adapters WHERE snapshot_id=$1",
                 base_id,
             )
         }
@@ -618,7 +618,6 @@ async def index_incremental(
             explicit |= slice_explicit
             await conn.copy_records_to_table(
                 "ingest_file_entities",
-                schema_name="public",
                 columns=("snapshot_id", "path", "entity_id"),
                 records=owned,
             )
@@ -626,7 +625,6 @@ async def index_incremental(
             tick("Сборка снимка", -(-len(selected) // _SLICE))
         await conn.copy_records_to_table(
             "ingest_file_entities",
-            schema_name="public",
             columns=("snapshot_id", "path", "entity_id"),
             records=owned,
         )
@@ -634,10 +632,10 @@ async def index_incremental(
             await _clone(conn, base_id, snap, list(plan.reused))
         # Структурные зависимости: файл ссылается на сущность, принадлежащую другому файлу.
         await conn.execute(
-            "INSERT INTO public.ingest_file_dependencies "
+            "INSERT INTO ingest_file_dependencies "
             "(snapshot_id,dependent_path,dependency_path) "
             "SELECT $1, r.path, m.path FROM pg_temp.ingest_refs r "
-            "JOIN public.ingest_file_entities m ON m.snapshot_id=$1 "
+            "JOIN ingest_file_entities m ON m.snapshot_id=$1 "
             "AND m.entity_id=r.target_id WHERE m.path<>r.path "
             "UNION SELECT $1, a, b FROM unnest($2::text[], $3::text[]) AS x(a, b) "
             "ON CONFLICT DO NOTHING",
@@ -651,13 +649,13 @@ async def index_incremental(
         await archive_sources(conn, snap, captured.sources, origin="CAPTURED_WORKTREE")
         tick("Запись в БД: манифесты и фиксация")
         await conn.execute(
-            "INSERT INTO public.ingest_snapshot_profiles(snapshot_id,analysis_version,profile_sha256) VALUES ($1,$2,$3)",
+            "INSERT INTO ingest_snapshot_profiles(snapshot_id,analysis_version,profile_sha256) VALUES ($1,$2,$3)",
             snap,
             analysis_version,
             profile_hash,
         )
         await conn.executemany(
-            "INSERT INTO public.ingest_snapshot_adapters(snapshot_id,adapter_key,analysis_version,fingerprint) VALUES ($1,$2,$3,$4)",
+            "INSERT INTO ingest_snapshot_adapters(snapshot_id,adapter_key,analysis_version,fingerprint) VALUES ($1,$2,$3,$4)",
             [(snap, s.key, s.analysis_version, s.fingerprint) for s in scopes],
         )
         await _check(conn, {*stages, *_SUBTYPES.values(), *_AUXILIARY})

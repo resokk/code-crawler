@@ -176,11 +176,11 @@ async def import_schema(conn: asyncpg.Connection, document: SchemaImport) -> str
     fingerprint, records = await asyncio.to_thread(_prepare_import, document)
     async with conn.transaction():
         await conn.execute(
-            "INSERT INTO public.ucm_database_catalogs(database_key) VALUES($1) ON CONFLICT DO NOTHING",
+            "INSERT INTO ucm_database_catalogs(database_key) VALUES($1) ON CONFLICT DO NOTHING",
             document.database_key,
         )
         await conn.execute(
-            "INSERT INTO public.ucm_database_schema_versions(database_key,version_key,dialect,catalog_name,table_case,column_case,coverage,fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING",
+            "INSERT INTO ucm_database_schema_versions(database_key,version_key,dialect,catalog_name,table_case,column_case,coverage,fingerprint) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING",
             document.database_key,
             document.version_key,
             document.dialect,
@@ -191,7 +191,7 @@ async def import_schema(conn: asyncpg.Connection, document: SchemaImport) -> str
             fingerprint,
         )
         current = await conn.fetchrow(
-            "SELECT state,fingerprint FROM public.ucm_database_schema_versions WHERE database_key=$1 AND version_key=$2 FOR UPDATE",
+            "SELECT state,fingerprint FROM ucm_database_schema_versions WHERE database_key=$1 AND version_key=$2 FOR UPDATE",
             document.database_key,
             document.version_key,
         )
@@ -200,7 +200,7 @@ async def import_schema(conn: asyncpg.Connection, document: SchemaImport) -> str
         if current["state"] == "READY":
             return fingerprint
         if await conn.fetchval(
-            "SELECT EXISTS(SELECT 1 FROM public.ucm_database_schema_objects WHERE database_key=$1 AND version_key=$2)",
+            "SELECT EXISTS(SELECT 1 FROM ucm_database_schema_objects WHERE database_key=$1 AND version_key=$2)",
             document.database_key,
             document.version_key,
         ):
@@ -208,7 +208,6 @@ async def import_schema(conn: asyncpg.Connection, document: SchemaImport) -> str
         if records:
             await conn.copy_records_to_table(
                 "ucm_database_schema_objects",
-                schema_name="public",
                 columns=(
                     "object_key",
                     "database_key",
@@ -227,7 +226,7 @@ async def import_schema(conn: asyncpg.Connection, document: SchemaImport) -> str
             )
         await conn.execute("SET CONSTRAINTS ALL IMMEDIATE")
         await conn.execute(
-            "UPDATE public.ucm_database_schema_versions SET state='READY' WHERE database_key=$1 AND version_key=$2",
+            "UPDATE ucm_database_schema_versions SET state='READY' WHERE database_key=$1 AND version_key=$2",
             document.database_key,
             document.version_key,
         )
@@ -239,14 +238,14 @@ async def load_schema(
 ) -> SchemaImport:
     """Read a complete immutable version without selecting an implicit latest version."""
     version = await conn.fetchrow(
-        "SELECT * FROM public.ucm_database_schema_versions WHERE database_key=$1 AND version_key=$2 AND state='READY'",
+        "SELECT * FROM ucm_database_schema_versions WHERE database_key=$1 AND version_key=$2 AND state='READY'",
         database_key,
         version_key,
     )
     if version is None:
         raise ValueError("unknown/unready database schema version")
     objects = await conn.fetch(
-        "SELECT * FROM public.ucm_database_schema_objects WHERE database_key=$1 AND version_key=$2 ORDER BY schema_name,table_name,ordinal",
+        "SELECT * FROM ucm_database_schema_objects WHERE database_key=$1 AND version_key=$2 ORDER BY schema_name,table_name,ordinal",
         database_key,
         version_key,
     )

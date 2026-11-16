@@ -42,7 +42,7 @@ async def fixture(conn, factory):
 async def contents(conn):
     return {
         table: await conn.fetchval(
-            f"SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]')::text FROM public.{table} t"
+            f"SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]')::text FROM {table} t"
         )
         for table in (
             *jobs._SNAPSHOT_TABLES,
@@ -143,7 +143,7 @@ def test_gc_preflight_rejects_schema_drift_without_mutation(
                 )
             elif drift == "foreign_fk":
                 await conn.execute(
-                    "CREATE TABLE public.custom_snapshots(snapshot_id uuid REFERENCES ucm_snapshots(id) ON DELETE CASCADE, payload text)"
+                    "CREATE TABLE custom_snapshots(snapshot_id uuid REFERENCES ucm_snapshots(id) ON DELETE CASCADE, payload text)"
                 )
                 await conn.execute(
                     "INSERT INTO custom_snapshots VALUES($1,'keep this')",
@@ -151,7 +151,7 @@ def test_gc_preflight_rejects_schema_drift_without_mutation(
                 )
             else:
                 await conn.execute(
-                    "CREATE TABLE public.custom_entities() INHERITS(public.ucm_entities)"
+                    "CREATE TABLE custom_entities() INHERITS(ucm_entities)"
                 )
             with pytest.raises(jobs.GCError, match=diagnostic) as failure:
                 await jobs.collect_garbage(
@@ -197,14 +197,14 @@ def test_gc_rolls_back_mid_delete_failure_and_redacts_diagnostics(
                 job,
                 repo,
             )
-            await conn.execute("""CREATE FUNCTION public.fail_gc() RETURNS trigger LANGUAGE plpgsql AS $$
+            await conn.execute("""CREATE FUNCTION fail_gc() RETURNS trigger LANGUAGE plpgsql AS $$
                 BEGIN
                     IF EXISTS(SELECT 1 FROM ucm_entities WHERE snapshot_id=OLD.snapshot_id) THEN
                         RAISE EXCEPTION 'failure was not injected mid-delete';
                     END IF;
                     RAISE EXCEPTION 'PRIVATE_SOURCE_SENTINEL' USING ERRCODE='23503', DETAIL='PRIVATE_SOURCE_SENTINEL';
                 END $$;
-                CREATE TRIGGER fail_gc BEFORE DELETE ON public.ucm_source_files FOR EACH ROW EXECUTE FUNCTION public.fail_gc();""")
+                CREATE TRIGGER fail_gc BEFORE DELETE ON ucm_source_files FOR EACH ROW EXECUTE FUNCTION fail_gc();""")
             before = await contents(conn)
             with pytest.raises(jobs.GCError) as failure:
                 await jobs.collect_garbage(
@@ -227,7 +227,7 @@ def test_gc_rolls_back_mid_delete_failure_and_redacts_diagnostics(
             assert code != 0 and '"errors"' in output and "23503" in output
             assert "PRIVATE_SOURCE_SENTINEL" not in output
             assert await contents(conn) == before
-            await conn.execute("DROP TRIGGER fail_gc ON public.ucm_source_files")
+            await conn.execute("DROP TRIGGER fail_gc ON ucm_source_files")
             report = await jobs.collect_garbage(
                 conn, building_older_than_hours=0, keep_retired=0
             )

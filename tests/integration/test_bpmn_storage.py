@@ -160,7 +160,7 @@ def test_bpmn_publication_roundtrip_reuse_edit_delete_isolation_and_rollback(
             )
             # Failed producer leaves the published pointer and facts intact.
             before = await conn.fetchval(
-                "SELECT snapshot_id FROM public.ucm_repository_publications WHERE repository_id=$1",
+                "SELECT snapshot_id FROM ucm_repository_publications WHERE repository_id=$1",
                 repo,
             )
             (tmp_path / "process.bpmn").write_text(XML)
@@ -177,7 +177,7 @@ def test_bpmn_publication_roundtrip_reuse_edit_delete_isolation_and_rollback(
                     await index_sources(conn, repo, tmp_path, registry)
             assert (
                 await conn.fetchval(
-                    "SELECT snapshot_id FROM public.ucm_repository_publications WHERE repository_id=$1",
+                    "SELECT snapshot_id FROM ucm_repository_publications WHERE repository_id=$1",
                     repo,
                 )
                 == before

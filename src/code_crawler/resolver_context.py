@@ -91,8 +91,8 @@ async def _select(
         if not deployment_key or not deployment_key.strip():
             raise ValueError("deployment key is required")
         bindings = await conn.fetch(
-            "SELECT r.repository_key,b.selected_snapshot_id,b.service_key FROM public.resolver_deployment_bindings b "
-            "JOIN public.ucm_repositories r ON r.id=b.repository_id "
+            "SELECT r.repository_key,b.selected_snapshot_id,b.service_key FROM resolver_deployment_bindings b "
+            "JOIN ucm_repositories r ON r.id=b.repository_id "
             "WHERE b.deployment_key=$1 AND r.repository_key=ANY($2)",
             deployment_key,
             list(repository_keys),
@@ -110,9 +110,9 @@ async def _select(
             )
     rows = await conn.fetch(
         "SELECT r.repository_key,r.id AS repository_id,s.id AS snapshot_id,s.commit_hash,g.generation "
-        "FROM public.ucm_repositories r JOIN public.ucm_snapshots s ON s.repository_id=r.id "
-        "LEFT JOIN public.ucm_repository_publications p ON p.repository_id=r.id AND p.snapshot_id=s.id "
-        "LEFT JOIN public.search_discovery_generations g ON g.snapshot_id=s.id AND g.projector_version=$4 AND g.state='READY' "
+        "FROM ucm_repositories r JOIN ucm_snapshots s ON s.repository_id=r.id "
+        "LEFT JOIN ucm_repository_publications p ON p.repository_id=r.id AND p.snapshot_id=s.id "
+        "LEFT JOIN search_discovery_generations g ON g.snapshot_id=s.id AND g.projector_version=$4 AND g.state='READY' "
         "WHERE r.repository_key=ANY($1) AND s.state IN ('PUBLISHED','RETIRED') "
         "AND (($2 AND p.snapshot_id IS NOT NULL) OR (NOT $2 AND s.id=ANY($3::uuid[]))) "
         "ORDER BY r.repository_key",
@@ -226,14 +226,14 @@ async def save_context(
         await verify_context(conn, context, allowed_repositories=allowed_repositories)
         context_id = uuid5(NAMESPACE_URL, "resolver.context/1:" + context.fingerprint)
         inserted = await conn.fetchval(
-            "INSERT INTO public.resolver_contexts VALUES($1,$2,$3::jsonb) ON CONFLICT(id) DO NOTHING RETURNING id",
+            "INSERT INTO resolver_contexts VALUES($1,$2,$3::jsonb) ON CONFLICT(id) DO NOTHING RETURNING id",
             context_id,
             context.fingerprint,
             context.model_dump_json(),
         )
         if inserted:
             await conn.executemany(
-                "INSERT INTO public.resolver_context_selections VALUES($1,$2,$3)",
+                "INSERT INTO resolver_context_selections VALUES($1,$2,$3)",
                 [
                     (context_id, s.repository_id, s.snapshot_id)
                     for s in context.selections
@@ -241,7 +241,7 @@ async def save_context(
             )
         elif (
             await conn.fetchval(
-                "SELECT fingerprint FROM public.resolver_contexts WHERE id=$1",
+                "SELECT fingerprint FROM resolver_contexts WHERE id=$1",
                 context_id,
             )
             != context.fingerprint
@@ -257,7 +257,7 @@ async def load_context(
     if not allowed_repositories:
         raise PermissionError("repository access denied")
     row = await conn.fetchrow(
-        "SELECT manifest,fingerprint FROM public.resolver_contexts WHERE id=$1",
+        "SELECT manifest,fingerprint FROM resolver_contexts WHERE id=$1",
         context_id,
     )
     if row is None:
@@ -278,9 +278,7 @@ async def release_context(
     async with conn.transaction():
         await conn.execute("SELECT pg_advisory_xact_lock($1)", GC_LOCK)
         await load_context(conn, context_id, allowed_repositories=allowed_repositories)
-        await conn.execute(
-            "DELETE FROM public.resolver_contexts WHERE id=$1", context_id
-        )
+        await conn.execute("DELETE FROM resolver_contexts WHERE id=$1", context_id)
 
 
 async def register_deployment(
@@ -326,7 +324,7 @@ async def register_deployment(
             ).encode()
         ).hexdigest()
         existing = await conn.fetchval(
-            "SELECT fingerprint FROM public.resolver_deployments WHERE deployment_key=$1",
+            "SELECT fingerprint FROM resolver_deployments WHERE deployment_key=$1",
             deployment_key,
         )
         if existing:
@@ -334,12 +332,12 @@ async def register_deployment(
                 raise ValueError("deployment mapping is immutable")
             return
         await conn.execute(
-            "INSERT INTO public.resolver_deployments VALUES($1,$2)",
+            "INSERT INTO resolver_deployments VALUES($1,$2)",
             deployment_key,
             fingerprint,
         )
         await conn.executemany(
-            "INSERT INTO public.resolver_deployment_bindings VALUES($1,$2,$3,$4)",
+            "INSERT INTO resolver_deployment_bindings VALUES($1,$2,$3,$4)",
             [
                 (
                     deployment_key,
@@ -364,11 +362,11 @@ async def release_deployment(
     async with conn.transaction():
         await conn.execute("SELECT pg_advisory_xact_lock($1)", GC_LOCK)
         rows = await conn.fetch(
-            "SELECT DISTINCT r.repository_key FROM public.resolver_deployment_bindings b JOIN public.ucm_repositories r ON r.id=b.repository_id WHERE b.deployment_key=$1",
+            "SELECT DISTINCT r.repository_key FROM resolver_deployment_bindings b JOIN ucm_repositories r ON r.id=b.repository_id WHERE b.deployment_key=$1",
             deployment_key,
         )
         authorize(tuple(r["repository_key"] for r in rows), allowed_repositories)
         await conn.execute(
-            "DELETE FROM public.resolver_deployments WHERE deployment_key=$1",
+            "DELETE FROM resolver_deployments WHERE deployment_key=$1",
             deployment_key,
         )

@@ -49,9 +49,7 @@ def test_bulk_benchmark_validates_publishes_and_cleans_owned_database(
                 assert trial["sql_seconds"]["analyze"] > 0
                 assert trial["stage_peak_bytes"] > 0
                 assert trial["budget_passed"]
-            assert (
-                await conn.fetchval("SELECT to_regclass('public.ucm_entities')") is None
-            )
+            assert await conn.fetchval("SELECT to_regclass('ucm_entities')") is None
             assert before == await conn.fetchval(
                 "SELECT count(*) FROM pg_database WHERE datname LIKE 'crawler_bulk_%'"
             )

@@ -69,7 +69,7 @@ VALIDATING отвергаются. Соединение должно быть б
 `ValueError` и rollback всей новой сборки. Канонические факты, state и UCM
 publication pointer не изменяются.
 
-Таблицы в `public`:
+Таблицы:
 
 - `search_index_generations`: UUID поколения, repository/snapshot,
   `projection_version=search-documents-v2-security`, `policy_version`, document_count,

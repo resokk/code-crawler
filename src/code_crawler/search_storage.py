@@ -192,7 +192,7 @@ async def rebuild_search_documents(
     generation_id = uuid4()
     async with conn.transaction():
         snapshot = await conn.fetchrow(
-            "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1",
+            "SELECT repository_id,state FROM ucm_snapshots WHERE id=$1",
             snapshot_id,
         )
         if snapshot is None or snapshot["repository_id"] != repository_id:
@@ -209,7 +209,7 @@ async def rebuild_search_documents(
             report=security_report,
         )
         await conn.execute(
-            """INSERT INTO public.search_index_generations
+            """INSERT INTO search_index_generations
                (id,repository_id,snapshot_id,projection_version,policy_version,document_count,security_report)
                VALUES ($1,$2,$3,$4,$5,$6,$7)""",
             generation_id,
@@ -222,7 +222,6 @@ async def rebuild_search_documents(
         )
         await conn.copy_records_to_table(
             "search_documents",
-            schema_name="public",
             columns=(
                 "repository_id",
                 "snapshot_id",
@@ -239,16 +238,16 @@ async def rebuild_search_documents(
             ),
         )
         await conn.execute(
-            "UPDATE public.search_index_generations SET sealed=true WHERE id=$1",
+            "UPDATE search_index_generations SET sealed=true WHERE id=$1",
             generation_id,
         )
         # Serialize the final compare-and-swap, including the first publication.
         await conn.fetchval(
-            "SELECT id FROM public.ucm_repositories WHERE id=$1 FOR UPDATE",
+            "SELECT id FROM ucm_repositories WHERE id=$1 FOR UPDATE",
             repository_id,
         )
         current = await conn.fetchval(
-            """SELECT generation_id FROM public.search_index_publications
+            """SELECT generation_id FROM search_index_publications
                WHERE repository_id=$1 AND snapshot_id=$2""",
             repository_id,
             snapshot_id,
@@ -256,7 +255,7 @@ async def rebuild_search_documents(
         if current != expected_generation_id:
             raise ValueError("search generation pointer changed")
         await conn.execute(
-            """INSERT INTO public.search_index_publications
+            """INSERT INTO search_index_publications
                (repository_id,snapshot_id,generation_id) VALUES ($1,$2,$3)
                ON CONFLICT (repository_id,snapshot_id)
                DO UPDATE SET generation_id=EXCLUDED.generation_id""",
@@ -301,12 +300,12 @@ async def read_search_documents(
         """SELECT p.snapshot_id, g.id AS generation_id, g.projection_version,
                   g.policy_version, g.document_count, g.security_report, d.document_id, d.entity_id,
                   d.document_type, d.content, d.content_sha256, d.provenance
-           FROM public.ucm_repository_publications p
-           LEFT JOIN public.search_index_publications s
+           FROM ucm_repository_publications p
+           LEFT JOIN search_index_publications s
              ON s.repository_id=p.repository_id AND s.snapshot_id=p.snapshot_id
-           LEFT JOIN public.search_index_generations g ON g.id=s.generation_id
+           LEFT JOIN search_index_generations g ON g.id=s.generation_id
            LEFT JOIN LATERAL (
-               SELECT * FROM public.search_documents d
+               SELECT * FROM search_documents d
                WHERE d.generation_id=g.id AND d.document_id>$3
                ORDER BY d.document_id LIMIT $4
            ) d ON true
@@ -353,9 +352,9 @@ async def read_search_security_report(
     """Read current generation diagnostics even when skip policy yielded no documents."""
     _authorize(repository_id, allowed_repository_ids)
     row = await conn.fetchrow(
-        "SELECT g.security_report,g.projection_version FROM public.ucm_repository_publications p "
-        "JOIN public.search_index_publications s USING(repository_id,snapshot_id) "
-        "JOIN public.search_index_generations g ON g.id=s.generation_id WHERE p.repository_id=$1",
+        "SELECT g.security_report,g.projection_version FROM ucm_repository_publications p "
+        "JOIN search_index_publications s USING(repository_id,snapshot_id) "
+        "JOIN search_index_generations g ON g.id=s.generation_id WHERE p.repository_id=$1",
         repository_id,
     )
     if not row:

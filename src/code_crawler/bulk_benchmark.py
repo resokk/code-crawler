@@ -152,7 +152,7 @@ class TimedConnection:
         return getattr(self.conn, name)
 
     async def execute(self, sql: str, *args: object) -> str:
-        if sql.startswith("INSERT INTO public.ucm_"):
+        if sql.startswith("INSERT INTO ucm_"):
             phase = "insert_select"
             size = await self.conn.fetchval(
                 "SELECT COALESCE(sum(pg_total_relation_size(oid)),0)::bigint FROM pg_class "
@@ -163,7 +163,7 @@ class TimedConnection:
             phase = "constraints"
             if self.fk_plan is None:
                 self.fk_plan = await self._explain_fk()
-        elif sql.startswith("ANALYZE public."):
+        elif sql.startswith("ANALYZE ucm_"):
             phase = "analyze"
             if self.before_analyze_fk_plan is None:
                 self.before_analyze_fk_plan = await self._explain_fk()
@@ -178,13 +178,13 @@ class TimedConnection:
 
     async def _explain_fk(self) -> list[dict] | None:
         row = await self.conn.fetchrow(
-            "SELECT snapshot_id,entity_id,entity_type FROM public.ucm_entities WHERE entity_type='SYMBOL' LIMIT 1"
+            "SELECT snapshot_id,entity_id,entity_type FROM ucm_entities WHERE entity_type='SYMBOL' LIMIT 1"
         )
         if row is None:
             return None
         return json.loads(
             await self.conn.fetchval(
-                "EXPLAIN (FORMAT JSON) SELECT 1 FROM ONLY public.ucm_entities x "
+                "EXPLAIN (FORMAT JSON) SELECT 1 FROM ONLY ucm_entities x "
                 "WHERE snapshot_id=$1 AND entity_id=$2 AND entity_type=$3 FOR KEY SHARE OF x",
                 row["snapshot_id"],
                 row["entity_id"],

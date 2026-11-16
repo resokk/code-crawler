@@ -117,14 +117,14 @@ def test_gc_removes_abandoned_building_and_old_retired_only(
                 )
 
             await conn.execute(
-                f"CREATE TABLE public.{foreign_table} (snapshot_id {snapshot_type} PRIMARY KEY, payload text NOT NULL)"
+                f"CREATE TABLE {foreign_table} (snapshot_id {snapshot_type} PRIMARY KEY, payload text NOT NULL)"
             )
             protected = [
                 (str(snap) if snapshot_type == "text" else snap, f"payload:{i}")
                 for i, snap in enumerate([building, *published])
             ]
             await conn.executemany(
-                f"INSERT INTO public.{foreign_table} VALUES ($1,$2)", protected
+                f"INSERT INTO {foreign_table} VALUES ($1,$2)", protected
             )
 
             repository = await conn.fetchval("SELECT id FROM ucm_repositories")
@@ -146,8 +146,7 @@ def test_gc_removes_abandoned_building_and_old_retired_only(
             assert code == 0, output
             assert '"ignored_tables"' in output and f'"{foreign_table}"' in output
             assert {
-                tuple(row)
-                for row in await conn.fetch(f"SELECT * FROM public.{foreign_table}")
+                tuple(row) for row in await conn.fetch(f"SELECT * FROM {foreign_table}")
             } == set(protected)
             assert (
                 await conn.fetchval(
@@ -192,7 +191,7 @@ def test_gc_registry_covers_migrated_snapshot_tables(
                 row["table_name"]
                 for row in await conn.fetch(
                     "SELECT table_name FROM information_schema.columns "
-                    "WHERE table_schema='public' AND column_name='snapshot_id'"
+                    "WHERE table_schema=current_schema() AND column_name='snapshot_id'"
                 )
             }
             assert len(jobs._SNAPSHOT_TABLES) == len(set(jobs._SNAPSHOT_TABLES))

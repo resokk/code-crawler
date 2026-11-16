@@ -1,4 +1,4 @@
-CREATE TABLE public.resolver_cache_entries (
+CREATE TABLE resolver_cache_entries (
     cache_key text PRIMARY KEY CHECK(cache_key ~ '^[0-9a-f]{64}$'),
     source_repository_id uuid NOT NULL,
     snapshot_id uuid NOT NULL,
@@ -15,29 +15,29 @@ CREATE TABLE public.resolver_cache_entries (
     created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
     CHECK(expires_at > created_at AND expires_at <= created_at + interval '1 hour'),
     FOREIGN KEY(source_repository_id,snapshot_id)
-        REFERENCES public.ucm_snapshots(repository_id,id) ON DELETE CASCADE,
+        REFERENCES ucm_snapshots(repository_id,id) ON DELETE CASCADE,
     FOREIGN KEY(snapshot_id,reference_id)
-        REFERENCES public.ucm_external_references(snapshot_id,entity_id) ON DELETE CASCADE
+        REFERENCES ucm_external_references(snapshot_id,entity_id) ON DELETE CASCADE
 );
-CREATE INDEX resolver_cache_source_idx ON public.resolver_cache_entries(snapshot_id,reference_id);
-CREATE INDEX resolver_cache_expiry_idx ON public.resolver_cache_entries(expires_at);
-CREATE INDEX resolver_cache_age_idx ON public.resolver_cache_entries(created_at,cache_key);
-CREATE TABLE public.resolver_cache_dependencies (
-    cache_key text NOT NULL REFERENCES public.resolver_cache_entries(cache_key) ON DELETE CASCADE,
+CREATE INDEX resolver_cache_source_idx ON resolver_cache_entries(snapshot_id,reference_id);
+CREATE INDEX resolver_cache_expiry_idx ON resolver_cache_entries(expires_at);
+CREATE INDEX resolver_cache_age_idx ON resolver_cache_entries(created_at,cache_key);
+CREATE TABLE resolver_cache_dependencies (
+    cache_key text NOT NULL REFERENCES resolver_cache_entries(cache_key) ON DELETE CASCADE,
     repository_id uuid NOT NULL,
     snapshot_id uuid NOT NULL,
     generation uuid NOT NULL,
     FOREIGN KEY(snapshot_id,generation)
-        REFERENCES public.search_discovery_generations(snapshot_id,generation) ON DELETE CASCADE,
+        REFERENCES search_discovery_generations(snapshot_id,generation) ON DELETE CASCADE,
     PRIMARY KEY(cache_key,repository_id),
     FOREIGN KEY(repository_id,snapshot_id)
-        REFERENCES public.ucm_snapshots(repository_id,id) ON DELETE CASCADE
+        REFERENCES ucm_snapshots(repository_id,id) ON DELETE CASCADE
 );
-CREATE INDEX resolver_cache_dependency_snapshot_idx ON public.resolver_cache_dependencies(snapshot_id,generation);
-CREATE FUNCTION public.resolver_cache_dependency_deleted() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE INDEX resolver_cache_dependency_snapshot_idx ON resolver_cache_dependencies(snapshot_id,generation);
+CREATE FUNCTION resolver_cache_dependency_deleted() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-    DELETE FROM public.resolver_cache_entries WHERE cache_key=OLD.cache_key;
+    DELETE FROM resolver_cache_entries WHERE cache_key=OLD.cache_key;
     RETURN OLD;
 END $$;
-CREATE TRIGGER resolver_cache_dependency_cleanup AFTER DELETE ON public.resolver_cache_dependencies
-    FOR EACH ROW EXECUTE FUNCTION public.resolver_cache_dependency_deleted();
+CREATE TRIGGER resolver_cache_dependency_cleanup AFTER DELETE ON resolver_cache_dependencies
+    FOR EACH ROW EXECUTE FUNCTION resolver_cache_dependency_deleted();

@@ -303,7 +303,6 @@ async def migrate_index(
         await archive_sources(conn, snap, captured.sources, origin="CAPTURED_WORKTREE")
         await conn.copy_records_to_table(
             "ingest_legacy_nodes",
-            schema_name="public",
             columns=(
                 "snapshot_id",
                 "ordinal",
@@ -323,7 +322,6 @@ async def migrate_index(
         )
         await conn.copy_records_to_table(
             "ingest_legacy_edges",
-            schema_name="public",
             columns=("snapshot_id", "ordinal", "src", "dst", "kind", "attrs"),
             records=[
                 (snap, i, src, dst, kind, json.dumps(attrs, ensure_ascii=False))
@@ -332,7 +330,6 @@ async def migrate_index(
         )
         await conn.copy_records_to_table(
             "ingest_legacy_refs",
-            schema_name="public",
             columns=(
                 "snapshot_id",
                 "ordinal",

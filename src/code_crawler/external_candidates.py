@@ -203,7 +203,7 @@ async def _source_evidence(conn, reference, source):
     evidence = reference.evidence[:32]
     rows = await conn.fetch(
         "SELECT f.entity_id,f.path,f.content_sha256,(a.source_file_id IS NOT NULL) AS archived "
-        "FROM public.ucm_source_files f LEFT JOIN public.ucm_snapshot_sources a "
+        "FROM ucm_source_files f LEFT JOIN ucm_snapshot_sources a "
         "ON a.snapshot_id=f.snapshot_id AND a.source_file_id=f.entity_id AND a.content_sha256=f.content_sha256 "
         "WHERE f.snapshot_id=$1 AND f.entity_id=ANY($2)",
         source.snapshot_id,
@@ -227,7 +227,7 @@ async def _database_lookup(conn, selector, source, origin_file_id):
         return None, "database alias origin has no explicit source-file context"
     contexts = await conn.fetch(
         "SELECT DISTINCT c.database_key,c.version_key,v.catalog_name,c.schema_fingerprint,c.entity_id "
-        "FROM public.ucm_database_contexts c JOIN public.ucm_database_schema_versions v "
+        "FROM ucm_database_contexts c JOIN ucm_database_schema_versions v "
         "ON v.database_key=c.database_key AND v.version_key=c.version_key "
         "WHERE c.snapshot_id=$1 AND c.connection_key=$2 AND c.projection_file_id=$3 ORDER BY c.entity_id LIMIT 2",
         source.snapshot_id,
@@ -240,7 +240,7 @@ async def _database_lookup(conn, selector, source, origin_file_id):
     schema = selector.schema_name
     if schema is None:
         paths = await conn.fetch(
-            "SELECT schema_name FROM public.ucm_database_search_paths WHERE snapshot_id=$1 AND context_id=$2 ORDER BY position LIMIT 2",
+            "SELECT schema_name FROM ucm_database_search_paths WHERE snapshot_id=$1 AND context_id=$2 ORDER BY position LIMIT 2",
             source.snapshot_id,
             context["entity_id"],
         )
@@ -367,12 +367,12 @@ async def _resolve(conn, source_key, reference_id, context, grants, limit, cache
         rows = await conn.fetch(
             f"""
             SELECT e.*,r.repository_key,f.path,f.content_sha256,(a.source_file_id IS NOT NULL) AS archived
-            FROM public.search_discovery_entries e
+            FROM search_discovery_entries e
             JOIN jsonb_array_elements($5::jsonb) AS k(value) ON {key_match}
-            JOIN public.ucm_repositories r ON r.id=e.repository_id
-            JOIN public.search_discovery_generations g ON g.snapshot_id=e.snapshot_id AND g.generation=e.generation
-            LEFT JOIN public.ucm_source_files f ON f.snapshot_id=e.snapshot_id AND f.entity_id=e.source_file_id
-            LEFT JOIN public.ucm_snapshot_sources a ON a.snapshot_id=f.snapshot_id AND a.source_file_id=f.entity_id AND a.content_sha256=f.content_sha256
+            JOIN ucm_repositories r ON r.id=e.repository_id
+            JOIN search_discovery_generations g ON g.snapshot_id=e.snapshot_id AND g.generation=e.generation
+            LEFT JOIN ucm_source_files f ON f.snapshot_id=e.snapshot_id AND f.entity_id=e.source_file_id
+            LEFT JOIN ucm_snapshot_sources a ON a.snapshot_id=f.snapshot_id AND a.source_file_id=f.entity_id AND a.content_sha256=f.content_sha256
             WHERE (e.snapshot_id,e.generation) IN (SELECT * FROM unnest($1::uuid[],$2::uuid[]))
               AND e.kind=$3 AND g.projector_version=$4 AND g.state='READY'
             ORDER BY r.repository_key,e.snapshot_id,e.entity_id LIMIT $6

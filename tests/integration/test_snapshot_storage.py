@@ -42,7 +42,7 @@ def test_repository_identity_and_multiple_snapshots(database_url: str) -> None:
             b = await snapshots.create_snapshot(conn, first, metadata(True))
             assert a != b
             assert await snapshots.published_snapshot(conn, first) is None
-            rows = await conn.fetch("SELECT * FROM public.ucm_snapshots ORDER BY dirty")
+            rows = await conn.fetch("SELECT * FROM ucm_snapshots ORDER BY dirty")
             assert [row["state"] for row in rows] == ["BUILDING", "BUILDING"]
             assert [row["dirty"] for row in rows] == [False, True]
             assert all(
@@ -50,7 +50,7 @@ def test_repository_identity_and_multiple_snapshots(database_url: str) -> None:
             )
             assert (
                 await conn.fetchval(
-                    "SELECT count(*) FROM public.ucm_repositories WHERE display_name='app'"
+                    "SELECT count(*) FROM ucm_repositories WHERE display_name='app'"
                 )
                 == 2
             )
@@ -72,7 +72,7 @@ def test_snapshot_lifecycle_metadata_and_pointer_ownership(database_url: str) ->
             old = await snapshots.create_snapshot(conn, repo, metadata())
             with pytest.raises(asyncpg.CheckViolationError):
                 await conn.execute(
-                    "UPDATE public.ucm_snapshots SET state='READY' WHERE id=$1", old
+                    "UPDATE ucm_snapshots SET state='READY' WHERE id=$1", old
                 )
             await validate_snapshot(conn, old)
             await publish_snapshot(conn, repo, old, expected_snapshot_id=None)
@@ -86,25 +86,23 @@ def test_snapshot_lifecycle_metadata_and_pointer_ownership(database_url: str) ->
             ):
                 with pytest.raises(asyncpg.CheckViolationError):
                     await conn.execute(
-                        f"UPDATE public.ucm_snapshots SET {assignment} WHERE id=$1", old
+                        f"UPDATE ucm_snapshots SET {assignment} WHERE id=$1", old
                     )
             with pytest.raises(asyncpg.CheckViolationError):
                 await conn.execute(
-                    "UPDATE public.ucm_snapshots SET state='BUILDING' WHERE id=$1", old
+                    "UPDATE ucm_snapshots SET state='BUILDING' WHERE id=$1", old
                 )
             with pytest.raises(asyncpg.ForeignKeyViolationError):
                 await conn.execute(
-                    "INSERT INTO public.ucm_repository_publications(repository_id,snapshot_id) VALUES ($1,$2)",
+                    "INSERT INTO ucm_repository_publications(repository_id,snapshot_id) VALUES ($1,$2)",
                     other,
                     old,
                 )
             with pytest.raises(asyncpg.ForeignKeyViolationError):
-                await conn.execute("DELETE FROM public.ucm_snapshots WHERE id=$1", old)
+                await conn.execute("DELETE FROM ucm_snapshots WHERE id=$1", old)
             assert (await snapshots.published_snapshot(conn, repo))["id"] == old
             assert (
-                await conn.fetchval(
-                    "SELECT state FROM public.ucm_snapshots WHERE id=$1", new
-                )
+                await conn.fetchval("SELECT state FROM ucm_snapshots WHERE id=$1", new)
                 == "BUILDING"
             )
             async with conn.transaction():
@@ -113,11 +111,11 @@ def test_snapshot_lifecycle_metadata_and_pointer_ownership(database_url: str) ->
                     repo,
                 )
                 await conn.execute(
-                    "UPDATE public.ucm_snapshots SET state='RETIRED' WHERE id=$1", old
+                    "UPDATE ucm_snapshots SET state='RETIRED' WHERE id=$1", old
                 )
             with pytest.raises(asyncpg.CheckViolationError):
                 await conn.execute(
-                    "UPDATE public.ucm_snapshots SET state='PUBLISHED' WHERE id=$1", old
+                    "UPDATE ucm_snapshots SET state='PUBLISHED' WHERE id=$1", old
                 )
         finally:
             await conn.close()
@@ -164,10 +162,7 @@ def test_concurrent_registration_returns_same_uuid(database_url: str) -> None:
                 asyncio.gather(register(first), register(second)), timeout=10
             )
             assert ids[0] == ids[1]
-            assert (
-                await first.fetchval("SELECT count(*) FROM public.ucm_repositories")
-                == 1
-            )
+            assert await first.fetchval("SELECT count(*) FROM ucm_repositories") == 1
         finally:
             await first.close()
             await second.close()

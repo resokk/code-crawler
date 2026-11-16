@@ -338,16 +338,16 @@ async def list_adapters() -> None:
 async def _snapshot_report(conn, snapshot_id: UUID) -> None:
     row = await conn.fetchrow(
         "SELECT s.id AS snapshot_id, s.repository_id, s.state AS status, s.commit_hash, s.source_fingerprint, s.dirty, "
-        "(SELECT count(*) FROM public.ucm_entities e WHERE e.snapshot_id=s.id) AS entity_count, "
-        "p.snapshot_id AS published_snapshot_id FROM public.ucm_snapshots s "
-        "LEFT JOIN public.ucm_repository_publications p ON p.repository_id=s.repository_id "
+        "(SELECT count(*) FROM ucm_entities e WHERE e.snapshot_id=s.id) AS entity_count, "
+        "p.snapshot_id AS published_snapshot_id FROM ucm_snapshots s "
+        "LEFT JOIN ucm_repository_publications p ON p.repository_id=s.repository_id "
         "WHERE s.id=$1",
         snapshot_id,
     )
     if row is None:
         raise ValueError("snapshot does not exist")
     diagnostics = await conn.fetch(
-        "SELECT severity,count(*) AS count FROM public.ucm_source_diagnostics "
+        "SELECT severity,count(*) AS count FROM ucm_source_diagnostics "
         "WHERE snapshot_id=$1 GROUP BY severity ORDER BY severity",
         snapshot_id,
     )
@@ -361,7 +361,7 @@ async def _publish_cli_snapshot(
     conn, snapshot_id: UUID, expected_current: UUID | None
 ) -> None:
     row = await conn.fetchrow(
-        "SELECT repository_id,state FROM public.ucm_snapshots WHERE id=$1",
+        "SELECT repository_id,state FROM ucm_snapshots WHERE id=$1",
         snapshot_id,
     )
     if row is None:
@@ -401,8 +401,8 @@ async def jobs_list() -> None:
     try:
         rows = await conn.fetch(
             "SELECT j.id, r.repository_key, j.state, j.stage, j.attempt, j.snapshot_id, "
-            "j.failure, j.updated_at FROM public.ingest_jobs j "
-            "JOIN public.ucm_repositories r ON r.id=j.repository_id "
+            "j.failure, j.updated_at FROM ingest_jobs j "
+            "JOIN ucm_repositories r ON r.id=j.repository_id "
             "ORDER BY j.updated_at DESC LIMIT 50"
         )
     finally:
@@ -595,7 +595,7 @@ async def discovery_refresh(repository_key: str) -> None:
     conn = await db.connect()
     try:
         repository_id = await conn.fetchval(
-            "SELECT id FROM public.ucm_repositories WHERE repository_key=$1",
+            "SELECT id FROM ucm_repositories WHERE repository_key=$1",
             repository_key,
         )
         if repository_id is None:

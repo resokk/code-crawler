@@ -87,7 +87,7 @@ async def begin(
     # Блокировка сессионная: упавший процесс теряет её сам, и задание можно повторить.
     await conn.fetchval(_LOCK, _JOB_LOCK, str(job_id))
     await conn.execute(
-        "INSERT INTO public.ingest_jobs(id,repository_id,parameters) VALUES ($1,$2,$3)",
+        "INSERT INTO ingest_jobs(id,repository_id,parameters) VALUES ($1,$2,$3)",
         job_id,
         repository_id,
         json.dumps(parameters),
@@ -100,7 +100,7 @@ async def claim(conn: asyncpg.Connection, job_id: UUID) -> dict:
     if not await conn.fetchval(_LOCK, _JOB_LOCK, str(job_id)):
         raise ValueError("ingest job is running in another process")
     parameters = await conn.fetchval(
-        "UPDATE public.ingest_jobs SET state='RUNNING', stage='INDEX', snapshot_id=NULL, "
+        "UPDATE ingest_jobs SET state='RUNNING', stage='INDEX', snapshot_id=NULL, "
         "attempt=attempt+1, failure=NULL, updated_at=now() "
         "WHERE id=$1 AND state<>'SUCCEEDED' RETURNING parameters",
         job_id,
@@ -115,7 +115,7 @@ async def advance(
     conn: asyncpg.Connection, job_id: UUID, stage: str, snapshot_id: UUID
 ) -> None:
     await conn.execute(
-        "UPDATE public.ingest_jobs SET stage=$2, snapshot_id=$3, updated_at=now() WHERE id=$1",
+        "UPDATE ingest_jobs SET stage=$2, snapshot_id=$3, updated_at=now() WHERE id=$1",
         job_id,
         stage,
         snapshot_id,
@@ -138,7 +138,7 @@ async def finish(
                 for issue in error.issues
             ]
     await conn.execute(
-        "UPDATE public.ingest_jobs SET state=$2, failure=$3, updated_at=now() WHERE id=$1",
+        "UPDATE ingest_jobs SET state=$2, failure=$3, updated_at=now() WHERE id=$1",
         job_id,
         "FAILED" if error is not None else "SUCCEEDED",
         json.dumps(failure) if failure else None,
@@ -151,7 +151,7 @@ async def reap(conn: asyncpg.Connection) -> list[UUID]:
     reaped = []
     async with conn.transaction():
         for row in await conn.fetch(
-            "SELECT j.id FROM public.ingest_jobs j WHERE j.state='RUNNING' "
+            "SELECT j.id FROM ingest_jobs j WHERE j.state='RUNNING' "
             "AND NOT EXISTS(SELECT 1 FROM pg_locks l WHERE l.locktype='advisory' "
             "AND l.pid=pg_backend_pid() AND l.classid=$1::oid "
             "AND l.objid=hashtext(j.id::text)::oid AND l.objsubid=2 AND l.granted)",
@@ -163,7 +163,7 @@ async def reap(conn: asyncpg.Connection) -> list[UUID]:
                 str(row["id"]),
             ):
                 updated = await conn.fetchval(
-                    "UPDATE public.ingest_jobs SET state='FAILED',failure=$2,updated_at=now() "
+                    "UPDATE ingest_jobs SET state='FAILED',failure=$2,updated_at=now() "
                     "WHERE id=$1 AND state='RUNNING' RETURNING id",
                     row["id"],
                     json.dumps(
@@ -220,7 +220,7 @@ async def _preflight(conn: asyncpg.Connection) -> list[str]:
             "SELECT c.relname AS name, a.atttypid='uuid'::regtype AS uuid_column "
             "FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid "
             "JOIN pg_namespace n ON n.oid=c.relnamespace "
-            "WHERE n.nspname='public' AND c.relkind IN ('r','p','f') "
+            "WHERE n.nspname=current_schema() AND c.relkind IN ('r','p','f') "
             "AND a.attname='snapshot_id' AND a.attnum>0 AND NOT a.attisdropped"
         )
     }
@@ -232,15 +232,15 @@ async def _preflight(conn: asyncpg.Connection) -> list[str]:
     managed = [*_SNAPSHOT_TABLES, "ucm_snapshots"]
     await conn.execute(
         "LOCK TABLE "
-        + ",".join(f"public.{name}" for name in managed)
+        + ",".join(f"{name}" for name in managed)
         + " IN ROW EXCLUSIVE MODE"
     )
     if await conn.fetchval(
         "SELECT EXISTS(SELECT 1 FROM pg_inherits i "
         "JOIN pg_class p ON p.oid=i.inhparent JOIN pg_namespace pn ON pn.oid=p.relnamespace "
         "JOIN pg_class c ON c.oid=i.inhrelid JOIN pg_namespace cn ON cn.oid=c.relnamespace "
-        "WHERE (pn.nspname='public' AND p.relname=ANY($1)) "
-        "OR (cn.nspname='public' AND c.relname=ANY($1)))",
+        "WHERE (pn.nspname=current_schema() AND p.relname=ANY($1)) "
+        "OR (cn.nspname=current_schema() AND c.relname=ANY($1)))",
         managed,
     ):
         raise ValueError(
@@ -249,17 +249,18 @@ async def _preflight(conn: asyncpg.Connection) -> list[str]:
     order = {name: i for i, name in enumerate(managed)}
     for fk in await conn.fetch(
         "SELECT k.conname AS name, n.nspname AS child_schema, c.relname AS child, "
+        "n.nspname=current_schema() AS child_local, "
         "p.relname AS parent, k.condeferrable AS deferred, k.confdeltype::text AS action, "
         "ARRAY(SELECT a.attname FROM unnest(k.conkey) AS col(num) "
         "JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=col.num) AS columns "
         "FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid "
         "JOIN pg_namespace n ON n.oid=c.relnamespace "
         "JOIN pg_class p ON p.oid=k.confrelid JOIN pg_namespace pn ON pn.oid=p.relnamespace "
-        "WHERE k.contype='f' AND pn.nspname='public' AND p.relname=ANY($1)",
+        "WHERE k.contype='f' AND pn.nspname=current_schema() AND p.relname=ANY($1)",
         managed,
     ):
         child, parent = fk["child"], fk["parent"]
-        if fk["child_schema"] != "public" or child not in order:
+        if not fk["child_local"] or child not in order:
             job_link = (
                 child == "ingest_jobs"
                 and fk["action"] == "n"
@@ -276,7 +277,7 @@ async def _preflight(conn: asyncpg.Connection) -> list[str]:
                 and set(fk["columns"]) == {"repository_id", "snapshot_id"}
             )
             if (
-                fk["child_schema"] == "public"
+                fk["child_local"]
                 and parent == "ucm_snapshots"
                 and (job_link or pointer or resolver_pin)
             ):
@@ -302,18 +303,16 @@ async def _delete_snapshots(
 ) -> dict[str, int]:
     counts = {
         table: await conn.fetchval(
-            f"SELECT count(*) FROM public.{table} WHERE snapshot_id=ANY($1)", ids
+            f"SELECT count(*) FROM {table} WHERE snapshot_id=ANY($1)", ids
         )
         for table in _SNAPSHOT_TABLES
     }
     for table in _SNAPSHOT_TABLES:
         status = await conn.execute(
-            f"DELETE FROM public.{table} WHERE snapshot_id=ANY($1)", ids
+            f"DELETE FROM {table} WHERE snapshot_id=ANY($1)", ids
         )
 
-    status = await conn.execute(
-        "DELETE FROM public.ucm_snapshots WHERE id=ANY($1)", ids
-    )
+    status = await conn.execute("DELETE FROM ucm_snapshots WHERE id=ANY($1)", ids)
     counts["ucm_snapshots"] = int(status.removeprefix("DELETE "))
     if counts["ucm_snapshots"] != len(ids):
         raise ValueError("not every selected snapshot was deleted")
@@ -367,7 +366,7 @@ async def collect_garbage(
             report["reaped_jobs"] = await reap(conn)
             stage = "select"
             candidates = await conn.fetch(
-                "SELECT DISTINCT repository_id FROM public.ucm_snapshots "
+                "SELECT DISTINCT repository_id FROM ucm_snapshots "
                 "WHERE (state='BUILDING' AND $1::double precision IS NOT NULL "
                 "AND created_at<=now()-make_interval(secs=>$1*3600)) "
                 "OR (state='RETIRED' AND $2::integer IS NOT NULL)",
@@ -378,7 +377,7 @@ async def collect_garbage(
             repos = [
                 r["id"]
                 for r in await conn.fetch(
-                    "SELECT id FROM public.ucm_repositories WHERE id=ANY($1) ORDER BY id FOR UPDATE SKIP LOCKED",
+                    "SELECT id FROM ucm_repositories WHERE id=ANY($1) ORDER BY id FOR UPDATE SKIP LOCKED",
                     list(potential),
                 )
             ]
@@ -386,7 +385,7 @@ async def collect_garbage(
             building = [
                 r["id"]
                 for r in await conn.fetch(
-                    "SELECT s.id FROM public.ucm_snapshots s WHERE s.repository_id=ANY($1) "
+                    "SELECT s.id FROM ucm_snapshots s WHERE s.repository_id=ANY($1) "
                     "AND s.state='BUILDING' AND $2::double precision IS NOT NULL "
                     "AND s.created_at<=now()-make_interval(secs=>$2*3600)",
                     repos,
@@ -398,7 +397,7 @@ async def collect_garbage(
                     r["id"]
                     for r in await conn.fetch(
                         "SELECT id FROM (SELECT id,row_number() OVER (PARTITION BY repository_id "
-                        "ORDER BY created_at DESC,id) AS position FROM public.ucm_snapshots "
+                        "ORDER BY created_at DESC,id) AS position FROM ucm_snapshots "
                         "WHERE state='RETIRED' AND repository_id=ANY($1)) ranked WHERE position>$2",
                         repos,
                         keep_retired,
@@ -409,13 +408,13 @@ async def collect_garbage(
             )
             await conn.execute("SELECT pg_advisory_xact_lock($1)", 4_217_003)
             locked = await conn.fetch(
-                "SELECT s.id,s.state FROM public.ucm_snapshots s "
+                "SELECT s.id,s.state FROM ucm_snapshots s "
                 "WHERE ((s.id=ANY($1) AND s.state='BUILDING') OR (s.id=ANY($2) AND s.state='RETIRED')) "
-                "AND NOT EXISTS(SELECT 1 FROM public.ucm_repository_publications p WHERE p.snapshot_id=s.id) "
-                "AND NOT EXISTS(SELECT 1 FROM public.ingest_jobs j WHERE j.state='RUNNING' "
+                "AND NOT EXISTS(SELECT 1 FROM ucm_repository_publications p WHERE p.snapshot_id=s.id) "
+                "AND NOT EXISTS(SELECT 1 FROM ingest_jobs j WHERE j.state='RUNNING' "
                 "AND (j.snapshot_id=s.id OR (s.state='BUILDING' AND j.repository_id=s.repository_id))) "
-                "AND NOT EXISTS(SELECT 1 FROM public.resolver_context_selections pin WHERE pin.selected_snapshot_id=s.id) "
-                "AND NOT EXISTS(SELECT 1 FROM public.resolver_deployment_bindings pin WHERE pin.selected_snapshot_id=s.id) "
+                "AND NOT EXISTS(SELECT 1 FROM resolver_context_selections pin WHERE pin.selected_snapshot_id=s.id) "
+                "AND NOT EXISTS(SELECT 1 FROM resolver_deployment_bindings pin WHERE pin.selected_snapshot_id=s.id) "
                 "ORDER BY s.id FOR UPDATE OF s SKIP LOCKED",
                 building,
                 retired,

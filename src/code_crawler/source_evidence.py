@@ -57,11 +57,11 @@ async def archive_sources(
     blobs, links = await asyncio.to_thread(records)
     async with conn.transaction():
         await conn.executemany(
-            "INSERT INTO public.ucm_source_blobs(repository_id,content_sha256,content) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",
+            "INSERT INTO ucm_source_blobs(repository_id,content_sha256,content) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING",
             blobs,
         )
         await conn.executemany(
-            "INSERT INTO public.ucm_snapshot_sources(snapshot_id,source_file_id,repository_id,content_sha256,origin) VALUES ($1,$2,$3,$4,$5)",
+            "INSERT INTO ucm_snapshot_sources(snapshot_id,source_file_id,repository_id,content_sha256,origin) VALUES ($1,$2,$3,$4,$5)",
             links,
         )
 
@@ -69,11 +69,11 @@ async def archive_sources(
 async def evidence_status(conn: asyncpg.Connection, snapshot_id: UUID) -> dict:
     """Report archive completeness without implying historical bytes were retained."""
     row = await conn.fetchrow(
-        "SELECT (SELECT count(*) FROM public.ucm_source_files f WHERE f.snapshot_id=s.id) AS source_files, "
-        "(SELECT count(*) FROM public.ucm_snapshot_sources a JOIN public.ucm_source_files f "
+        "SELECT (SELECT count(*) FROM ucm_source_files f WHERE f.snapshot_id=s.id) AS source_files, "
+        "(SELECT count(*) FROM ucm_snapshot_sources a JOIN ucm_source_files f "
         "ON (f.snapshot_id,f.entity_id,f.content_sha256)=(a.snapshot_id,a.source_file_id,a.content_sha256) WHERE a.snapshot_id=s.id) AS archived_files, "
-        "EXISTS(SELECT 1 FROM public.ucm_source_evidence_legacy_snapshots l WHERE l.snapshot_id=s.id) AS legacy "
-        "FROM public.ucm_snapshots s WHERE s.id=$1",
+        "EXISTS(SELECT 1 FROM ucm_source_evidence_legacy_snapshots l WHERE l.snapshot_id=s.id) AS legacy "
+        "FROM ucm_snapshots s WHERE s.id=$1",
         snapshot_id,
     )
     if row is None:
@@ -135,10 +135,10 @@ async def read_source_file(
     """Read verified bytes from a published historical snapshot, never mutable filesystem state."""
     row = await conn.fetchrow(
         "SELECT s.repository_id,s.id AS snapshot_id,s.commit_hash,s.source_fingerprint,s.dirty,s.state, "
-        "f.entity_id,f.path,f.content_sha256,a.origin,b.content FROM public.ucm_snapshots s "
-        "JOIN public.ucm_source_files f ON f.snapshot_id=s.id "
-        "LEFT JOIN public.ucm_snapshot_sources a ON a.snapshot_id=f.snapshot_id AND a.source_file_id=f.entity_id AND a.content_sha256=f.content_sha256 "
-        "LEFT JOIN public.ucm_source_blobs b ON (b.repository_id,b.content_sha256)=(a.repository_id,a.content_sha256) "
+        "f.entity_id,f.path,f.content_sha256,a.origin,b.content FROM ucm_snapshots s "
+        "JOIN ucm_source_files f ON f.snapshot_id=s.id "
+        "LEFT JOIN ucm_snapshot_sources a ON a.snapshot_id=f.snapshot_id AND a.source_file_id=f.entity_id AND a.content_sha256=f.content_sha256 "
+        "LEFT JOIN ucm_source_blobs b ON (b.repository_id,b.content_sha256)=(a.repository_id,a.content_sha256) "
         "WHERE s.repository_id=$1 AND s.id=$2 AND f.entity_id=$3",
         repository_id,
         snapshot_id,
