@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from pathlib import Path
@@ -71,6 +72,32 @@ def operation(title: str) -> Iterator[Progress]:
             console.print(f"[red]✗[/] {escape(title)}: {escape(str(exc))}")
             raise SystemExit(1) from exc
     console.print(f"[green]✓[/] {escape(title)}")
+
+
+class StageClock:
+    """Wall time per indexing stage, derived from the progress ticks alone."""
+
+    def __init__(self) -> None:
+        self.spent: dict[str, float] = {}
+        self._last = time.monotonic()
+        self._open: str | None = None
+
+    def tick(self, stage: str | None, total: int | None = None) -> None:
+        now = time.monotonic()
+        # A counted tick closes the item it reports; an uncounted one opens a stage
+        # that runs until the next tick. Time owned by neither is "прочее".
+        owner = self._open or (stage if total is not None else None) or "прочее"
+        self.spent[owner] = self.spent.get(owner, 0.0) + now - self._last
+        self._last = now
+        self._open = stage if total is None else None
+
+    def report(self) -> list[str]:
+        self.tick(None)
+        whole = sum(self.spent.values()) or 1.0
+        return [
+            f"  {seconds:8.1f} с {seconds / whole:4.0%}  {stage}"
+            for stage, seconds in sorted(self.spent.items(), key=lambda item: -item[1])
+        ]
 
 
 async def db_status() -> None:
@@ -487,8 +514,10 @@ async def index_registered(
     }
     with operation("Индексация source adapters") as progress:
         tasks: dict[str, TaskID] = {}
+        clock = StageClock()
 
         def advance(stage: str, total: int | None) -> None:
+            clock.tick(stage, total)
             if stage not in tasks:
                 # Несчётный этап заканчивается с началом следующего — иначе его часы идут дальше.
                 for task in progress.tasks[1:]:
@@ -568,6 +597,7 @@ async def index_registered(
             await _snapshot_report(conn, result.snapshot_id)
         finally:
             await conn.close()
+            console.print("Время по этапам:", *clock.report(), sep="\n")
 
 
 def _canonical_options(parser: argparse.ArgumentParser, *, defaults: bool) -> None:
