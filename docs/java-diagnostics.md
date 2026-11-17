@@ -26,3 +26,7 @@ IO/extraction. Compatibility projection сохраняет file attrs вмест
 Проверка стабильности filesystem для UCM capture остаётся прежней; стандартный
 legacy build проверяет stat до/после единственного read и сохраняет fingerprint
 принятых bytes. При изменении файл пропускается с явным Graph.failed.
+
+Node text decoding uses a bounded worker-local, synchronous file scope; parse
+results, diagnostics and UTF-8 rules are unchanged. Lifecycle, saturation and
+measured overhead/benefit: [java-source-text-cache.md](java-source-text-cache.md).

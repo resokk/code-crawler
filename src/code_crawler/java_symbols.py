@@ -544,6 +544,7 @@ class _Extractor:
         return entities
 
 
+@java._cached_text
 def extract(
     source: SourceInput, *, namespaced_types: frozenset[str] = frozenset()
 ) -> JavaSymbolsResult:

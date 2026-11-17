@@ -9,6 +9,7 @@ from uuid import UUID
 
 import asyncpg
 
+from code_crawler import java
 from code_crawler.database_resolution import (
     ConnectionAssignment,
     ConnectionContext,
@@ -199,6 +200,7 @@ class JavaOrmAnalyzer(JavaDatabaseAnalyzer):
             else None
         )
 
+    @java._cached_text
     def analysis(self, file: _File) -> FileAnalysis:
         base = self._base(file)
         facts = {e.id: e for e in base.entities}

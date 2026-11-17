@@ -673,6 +673,7 @@ class JavaCallAnalyzer:
         self.memo[key] = result
         return result
 
+    @java._cached_text
     def analysis(self, file: _File) -> FileAnalysis:
         replacements = {}
         added = []

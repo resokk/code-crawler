@@ -2,8 +2,13 @@
 
 import hashlib
 import re
+import sys
 import textwrap
+import threading
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
+from functools import wraps
 from typing import Literal
 
 import tree_sitter_java
@@ -11,6 +16,46 @@ from tree_sitter import Language, Node, Parser, Tree
 
 from code_crawler.sql import UNKNOWN, looks_like_sql
 from code_crawler.ucm import Position
+
+_TEXT_STATE = threading.local()
+_TEXT_MAX_ENTRIES = 8192
+_TEXT_MAX_BYTES = 1024 * 1024
+_TEXT_MISS = object()
+
+
+@dataclass
+class _TextCache:
+    texts: dict[Node, str] = field(default_factory=dict)
+    hits: int = 0
+    misses: int = 0
+    admitted: int = 0
+    bytes: int = 0
+    peak_bytes: int = 0
+
+
+@contextmanager
+def _text_scope() -> Iterator[_TextCache]:
+    previous = getattr(_TEXT_STATE, "cache", None)
+    cache = _TextCache()
+    _TEXT_STATE.cache = cache
+    try:
+        yield cache
+    finally:
+        cache.texts.clear()
+        cache.bytes = 0
+        _TEXT_STATE.cache = previous
+
+
+def _cached_text[**P, R](run: Callable[P, R]) -> Callable[P, R]:
+    @wraps(run)
+    def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
+        if getattr(_TEXT_STATE, "cache", None) is not None:
+            return run(*args, **kwargs)
+        with _text_scope():
+            return run(*args, **kwargs)
+
+    return wrapped
+
 
 _LANGUAGE = Language(tree_sitter_java.language())
 
@@ -174,6 +219,7 @@ def _position(source: bytes, offset: int) -> Position:
     )
 
 
+@_cached_text
 def analyze(source: bytes) -> ParseResult:
     """Analyze exact UTF-8 bytes, retaining AST diagnostics and declaration spans."""
     if not isinstance(source, bytes):
@@ -243,7 +289,24 @@ def analyze(source: bytes) -> ParseResult:
 
 
 def _text(node: Node | None) -> str:
-    return node.text.decode("utf-8", errors="replace") if node is not None else ""
+    if node is None:
+        return ""
+    cache = getattr(_TEXT_STATE, "cache", None)
+    if cache is None:
+        return node.text.decode("utf-8", errors="replace")
+    value = cache.texts.get(node, _TEXT_MISS)
+    if value is not _TEXT_MISS:
+        cache.hits += 1
+        return value
+    cache.misses += 1
+    value = node.text.decode("utf-8", errors="replace")
+    size = sys.getsizeof(value)
+    if len(cache.texts) < _TEXT_MAX_ENTRIES and cache.bytes + size <= _TEXT_MAX_BYTES:
+        cache.texts[node] = value
+        cache.admitted += 1
+        cache.bytes += size
+        cache.peak_bytes = max(cache.peak_bytes, cache.bytes)
+    return value
 
 
 def _line(node: Node) -> int:

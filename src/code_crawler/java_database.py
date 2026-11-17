@@ -9,6 +9,7 @@ from uuid import UUID
 
 import asyncpg
 
+from code_crawler import java
 from code_crawler.database_resolution import (
     ConnectionAssignment,
     ConnectionContext,
@@ -104,6 +105,7 @@ class JavaDatabaseAnalyzer(JavaLineageAnalyzer):
             ),
         )
 
+    @java._cached_text
     def analysis(self, file: _File) -> FileAnalysis:
         base = super().analysis(file)
         entities = list(base.entities)

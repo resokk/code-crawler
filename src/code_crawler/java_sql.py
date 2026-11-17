@@ -468,6 +468,7 @@ class JavaSqlAnalyzer(JavaCallAnalyzer):
             ),
         )
 
+    @java._cached_text
     def analysis(self, file: _File) -> FileAnalysis:
         base = super().analysis(file)
         entities = list(base.entities)
