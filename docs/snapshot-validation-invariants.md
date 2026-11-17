@@ -56,8 +56,10 @@ Readiness держит порцию из 2000 entities и LRU максимум 2
 один hop, порциями не более `_SLICE`; транзитивное раскрытие графа больше не
 собирает всю компоненту. Paths/producers/reports/parent graph/SQL facts не
 накапливаются в Python. Временные SQL parent/link projections содержат только
-идентификаторы/статусы и удаляются с транзакцией. Их disk space пропорционален
-графу; PostgreSQL memory/spill определяется work_mem, maintenance_work_mem и
+идентификаторы/статусы и удаляются с транзакцией. Их disk space зависит от
+числа links/scopes; MVCC versions при scope pointer updates могут увеличить
+временное хранение вплоть до O(N log N) до конца transaction. PostgreSQL
+memory/spill определяется work_mem, maintenance_work_mem и
 temp_buffers. Это не абсолютная квота всего RSS сервера или размера одной entity.
 Нефиксированный nested payload одного construction/Relation по-прежнему должен
 поместиться в память как одна модель.

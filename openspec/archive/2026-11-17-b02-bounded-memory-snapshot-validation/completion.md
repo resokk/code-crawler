@@ -27,9 +27,10 @@ per-entity reader contracts and public ingest/publication signatures are preserv
 Complete rule inventory, compatibility and limits:
 [snapshot-validation-invariants.md](../../../docs/snapshot-validation-invariants.md).
 No permanent schema migration or new dependency is required. Temporary graph/link
-storage is proportional to the graph in PostgreSQL; model-count bounds are not a
-byte quota for one giant entity. The scan's MVCC lifetime is unchanged in scope;
-short-transaction work remains B03.
+storage and work files depend on graph size/depth; pointer updates can amplify
+MVCC storage until transaction end. Model-count bounds are not a byte quota for
+one giant entity. Scan deliberately holds a pinned MVCC view for the validation
+phase; shortening its lifetime remains B03.
 
 SQL-dense acceptance on PG15.20/Linux, 2-CPU quota/8 GiB, dedicated tmpfs, no concurrent
 load: 24002 → 96002 entities (18000 → 72000 SQL models), production cache/slice limits.
