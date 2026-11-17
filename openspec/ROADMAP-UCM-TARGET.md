@@ -81,3 +81,29 @@ Current capabilities: canonical UCM with immutable snapshots, Java/Groovy/PLPlus
 - Archive completed specs rather than deleting them. Never merge a speculative reimplementation of already working components merely to satisfy this roadmap.
 
 See [Agent execution guide](AGENT-EXECUTION.md) for the one-change-at-a-time workflow.
+
+## Indexing speed program — B09–B19 (proposed on 2026-11-18)
+
+**Baseline:** main `1616781acb871bd50a5e67a1184b4371b3322a4f`. Existing B01–B04, Java SQL COW, source text cache, path budgets and parallel Java preparation are implemented; do not duplicate them. End-to-end B01 figures are from an older SHA and require new measurement. Existing B05/C12 and B06 retain their independent scope.
+
+### First measure, then accelerate
+- **B09** `indexing-critical-path-profiler` (P0): stage-level CPU/IO/RSS/copy/IPC breakdown; define current SHA baseline and top bottlenecks.
+- **B10** `java-worker-catalog-reuse` (P1): avoid N full catalog rebuilds on spawn; keep 1 worker safe; measure memory/IPC.
+- **B11** `java-cost-aware-worker-scheduling` (P1): split imbalanced Java work by cost; adapt process use under startup/CPU/RSS constraints.
+- **B12** `java-ast-analysis-reuse` (P1 conditional): remove confirmed duplicate Java parse/traversals, not hypothetical work.
+- **B13** `sqlglot-dialect-parse-cache` (P1 conditional): bounded exact-text/dialect parse memo, no shared mutable AST or cross-repo secrets.
+- **B14** `java-sql-orm-shared-flow` (P2): reuse read-only method facts, preserve separate SQL and ORM certainty/path budgets.
+- **B15** `ucm-normalization-serialization-hotpath` (P1): reduce rechecks/rows/serialization copies only with strict parity.
+- **B16** `pg15-adaptive-copy-transfer` (P1): optimize repeated COPY/INSERT/TRUNCATE/ANALYZE with bounded batches; retain FK and rollback.
+- **B17** `pg15-readiness-latency-tuning` (P1): lower full readiness time without losing B02 bounded-memory guarantees.
+- **B18** `unchanged-published-snapshot-fastpath` (P1/P2): opt-in reuse of exactly unchanged published snapshot, strict commit/profile/provenance/CAS conditions.
+- **B19** `indexing-speed-regression-gates` (P1): deterministic algorithmic PR guards and repeatable dedicated PG15 performance comparisons.
+
+### Dependencies and execution lanes
+1. B09 first for current bottlenecks and fixed, versioned fixtures; B19 then establishes repeatable gates.
+2. Java lane: B09 → B10 and B11 (parallel), B12 → B13/B14 only where evidence shows redundant work.
+3. Storage lane: B09 → B15, B16 and B17 (parallel); B05 bounded resource budget remains separate and must integrate with B16.
+4. Operational fast path: B18 independently after profiling and existing B03, preserving exact source/analysis identities.
+5. For all: exact semantic digest, SourceRange/Evidence/Coverage/Resolution, snapshot/ACL, PG15 rollback and reproducible before/after measurements. Do not claim a speed-up from one synthetic run or disable semantics to win.
+
+See [Speed plan](../docs/indexing-speed-plan-v1.md) for measured figures and acceptance sequence.
