@@ -69,6 +69,9 @@ def test_cancellation_joins_redaction_worker_before_returning():
             task.cancel()
             await asyncio.sleep(0.01)
             assert not task.done()
+            task.cancel()
+            await asyncio.sleep(0.01)
+            assert not task.done()
             release.set()
             with pytest.raises(asyncio.CancelledError):
                 await task

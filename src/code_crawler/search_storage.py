@@ -245,7 +245,13 @@ async def _page_records(
     except asyncio.CancelledError:
         cancelled.set()
         # Do not release the lease/transaction while caller policy is still running.
-        await asyncio.gather(worker, return_exceptions=True)
+        completion = asyncio.gather(worker, return_exceptions=True)
+        while not completion.done():
+            try:
+                await asyncio.shield(completion)
+            except asyncio.CancelledError:
+                # Repeated cancellation must not detach a still-running policy.
+                continue
         raise
 
 

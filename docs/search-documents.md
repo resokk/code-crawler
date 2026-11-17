@@ -195,7 +195,8 @@ staging is never reader-visible and disappears at commit/rollback/cancellation.
 No migration or new durable table is needed. Generation diagnostics merge page
 counts/categories and retain the same first 256 skipped entity IDs in the same
 order with the same truncation flag. A cancelled CPU worker stops between documents
-and is joined before releasing the snapshot lease or transaction.
+and is joined before releasing the snapshot lease or transaction. Repeated
+cancellation during that join cannot detach the still-running policy thread.
 
 Authorization still precedes every source query and policy call. The writer pins
 the selected immutable snapshot before reading facts, so concurrent GC skips it.
