@@ -15,7 +15,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 
 ## Stream B — performance/reliability (measure first)
 - B01 pg15-end-to-end-performance-baseline: [completed](archive/2026-11-16-b01-pg15-end-to-end-performance-baseline/completion.md), 400/1000-file results and documented >1M-target disk limit; PG15 CI 1325 passed
-- B02 bounded-memory-snapshot-validation: streamed semantic readiness
+- B02 [done] bounded-memory-snapshot-validation: SQL/streamed semantic readiness; [acceptance](archive/2026-11-17-b02-bounded-memory-snapshot-validation/completion.md)
 - B03 short-transaction-indexing: move CPU analysis outside long DB writes
 - B04 bulk-load-fk-optimization: evidence-backed PG15 transfer/FK tuning
 - B05 incremental-streaming-pipeline: bounded in-flight analysis+clone+staging
@@ -59,7 +59,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 
 ## Critical path
 1. **Immediate safety**: A01 completed; A02 open as [PR #8](https://github.com/resokk/code-crawler/pull/8) and MUST precede network MCP exposure; A05 admin-bypass policy and A06 redaction remain open.
-2. **Performance**: >1M snapshot indexing now succeeds (405.4s index + 213.2s validation, 1012MiB); B06 GC (~123s/141k) is urgent, B02 SQL validation remains partially memory-bound, B03/B05 follow; B07/B08 for regression/load.
+2. **Performance**: >1M snapshot indexing now succeeds (405.4s index + 213.2s validation, 1012MiB); B06 GC (~123s/141k) is urgent, B02 SQL validation is bounded by slices/LRU with SQL global checks, B03/B05 follow; B07/B08 for regression/load.
 3. **Search**: C01–C06 completed; C10/C11 fill missing typed discovery coverage. C07 (after A06) → C08 → C09 (after A02). C12 removes full UCM materialization from document generation.
 4. **Adapters**: D01 → D02; D03 → D04; D05 → D06; D08 → D09; D07/D10/D11/D12 independent after registry readiness. Avoid cross-repo links at ingestion.
 5. **Operations**: E01–E04 after corresponding data/ACL boundaries, and E02 before destructive large-scale GC.

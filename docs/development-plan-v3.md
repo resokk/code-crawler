@@ -9,7 +9,7 @@
 | Группа | Уже в main | Что ещё открыто |
 | --- | --- | --- |
 | A Security/Correctness | A01 safe GC | A02 открыт PR #8; A03 DB-qualified SQL search [done]; A04 certainty [done]; A05 strict no-bypass; A06 redaction |
-| B Scale/Operations | Sliced indexing, server-side cloning, PG15 1.06M, sliced validation, B04 FK/staging tuning, B01 controlled baseline with recorded limits | B02 SQL invariants; B03 short transactions; B05 true bounded pipeline; B06 GC; B07/08 mixed/100 repos |
+| B Scale/Operations | Sliced indexing, server-side cloning, PG15 1.06M, sliced validation, B04 FK/staging tuning, B01 controlled baseline with recorded limits, B02 bounded readiness | B03 short transactions; B05 true bounded pipeline; B06 GC; B07/08 mixed/100 repos |
 | C Search/Graph | C01–C06 complete | C07 embeddings/model selection, C08 hybrid retrieval, C09 MCP global; C10 Kafka and C11 BPMN worker discovery integration; C12 memory-bounded document rebuild |
 | D Adapters | D01/D02 BPMN; D05/D06 OpenAPI; D07 Kafka; D10 Kotlin; D11 JS/TS; D12 VBScript | D03/D04 reference JSON + loaders; D08/D09 GraphQL schema + Java; increase partial coverage based on tests |
 | E Prod | Some OpenSpec archive operations | E01 metrics, E02 retention, E03 restore; E04 verify archive policy |
@@ -35,8 +35,8 @@ Decide who may read original Evidence vs redacted search/embedding documents. Im
 ### B06 first: GC performance (P1 high)
 Use 141k PG15 baseline: ~123 s GC vs ~25 s batch-copy. Diagnose FK triggers and missing supporting indexes under actual workload, compare index cost on writes with bounded deletion plan. Verify pinned snapshots, concurrent readers, no unmanaged tables, no orphan sources. Measure GC at 1M; do not extrapolate from one smaller benchmark as an SLA.
 
-### B02: bounded validation (P1)
-Already partially implemented: 141k validation ~170 MiB, 17.8s instead of 688 MiB, 4.8s. Remove all-SQL-facts collection from `check_semantics` using SQL/streaming invariants; prove equivalence with original UcmBatch for all invalid SQL/ORM/reference fixtures. Track peak RAM and seconds on SQL-dense workload.
+### B02: bounded validation [done]
+B02 is complete: strict paged models + bounded LRU, SQL global invariants, server-side scope checks, pinned validation and safe cancellation/receipt protocol. SQL-dense 4x growth keeps Python heap at 42.95 → 40.38 MiB with production cache defaults. [Invariant inventory and limits](snapshot-validation-invariants.md); [acceptance and PG15 CI](../openspec/archive/2026-11-17-b02-bounded-memory-snapshot-validation/completion.md).
 
 ### B03 and B05: short transactions and bounded throughput (P1)
 Separate CPU parsing from PostgreSQL write transaction; keep capture immutability verification, CAS and rollback. Bound inflight budget by entities/bytes, not only 64 files. Reuse server-side cloning, temp staging and source archival. Include cancellation and concurrent publication tests.

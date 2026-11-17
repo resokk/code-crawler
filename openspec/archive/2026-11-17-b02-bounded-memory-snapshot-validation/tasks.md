@@ -15,7 +15,7 @@
 - [x] 10. Добавить миграцию только при новых данных; проверить PG15 FK, rollback, source evidence.
 - [x] 11. Сравнить поведение published reader до/после, не поднимать уровень Certainty без Evidence.
 - [x] 12. Обновить тематические docs/, Coverage и ограничения.
-- [ ] 13. Запустить ruff, pytest --require-postgres и benchmark/CI, сохранить воспроизводимые результаты.
+- [x] 13. Запустить ruff, pytest --require-postgres и benchmark/CI, сохранить воспроизводимые результаты.
 
 ## Реализация и evidence
 
@@ -43,5 +43,8 @@
   Зафиксированные критерии <1.5 growth и <128 MiB выполнены. Без tracer на 96002:
   22.318 s baseline / 12.707 s B02. Protocol/хеши/ограничения — в docs и JSON artifact.
 - Full mandatory local PG15 suite: 1354 passed (499.64s), ruff/format passed.
-  Main затем дополнен CLI profiler; его CLI/incremental tests и mandatory CI
-  проверяются отдельно. Измеренные core module hashes не изменились.
+  Main затем дополнен CLI profiler: 17 CLI/profiling/incremental tests passed (7.75s).
+  Mandatory PostgreSQL 15 CI на a3739fbb592a1ff40410c3f65e8be615a8cf3053:
+  1358 passed (189.72s), success; migrations и working-tree check прошли.
+  https://github.com/resokk/code-crawler/actions/runs/44017690441
+  Измеренные core module hashes не изменились; acceptance подтверждён.
