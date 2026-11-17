@@ -7,4 +7,4 @@
 - [x] Verify failures, abrupt death, cancellation and publication preservation.
 - [x] Measure 1/2/4 workers, runtime, total process memory and fact digests.
 - [x] Document commands, sequential fallback and replication/normalization limits.
-- [ ] Run Ruff, unit/integration and required PostgreSQL 15 CI; archive evidence.
+- [x] Run Ruff, unit/integration and required PostgreSQL 15 CI; archive evidence.
