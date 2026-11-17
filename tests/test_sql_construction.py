@@ -323,3 +323,20 @@ def test_this_does_not_resolve_an_enclosing_class_field() -> None:
     )
     assert "select id from __unknown__" in texts(batch, "A.B.m")
     assert "select id from outer" in texts(batch, "A.B.m")
+
+
+def test_flow_clone_isolates_state_and_keeps_shared_variables() -> None:
+    from code_crawler import java
+
+    flow = java_sql._SqlFlow({}, None)
+    shared = java._Variable(java._Value("select id from t"), 0, False, 1)
+    flow.variables = {"q": shared, "alias": shared}
+    flow.frames = [{"q": shared}]
+
+    copy = flow.clone()
+    copy.variables["q"].value.partial = True
+    copy.variables["q"].dirty = True
+
+    assert shared.value.partial is False and shared.dirty is False
+    assert copy.variables["q"] is copy.variables["alias"] is copy.frames[0]["q"]
+    assert copy.variables["q"] is not shared
