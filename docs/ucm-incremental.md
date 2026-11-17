@@ -104,18 +104,38 @@ blob hashes, а Evidence восстанавливается без checkout. К�
 - baseline читается запросами (файлы, manifests, зависимости), а не загружается
   целиком;
 - выбранные файлы анализируются срезами по 64: `analyze` вызывается по разу на
-  срез, а не один раз на все файлы; каждый срез проверяется и сразу уходит в
-  staging;
+  срез, а не один раз на все файлы; каждый срез проверяется и записывается в приватный безымянный disk spool
+  вне write transaction; staging получает готовые порции после анализа;
 - факты переиспользуемых файлов копируются из baseline внутри БД (`INSERT ...
   SELECT` по manifest), вместе с их ownership и зависимостями;
 - структурные зависимости между файлами вычисляются в БД: ссылки каждого файла
   соединяются с manifest владельцев.
 
-Создание snapshot, загрузка, manifests и проверка неизменности исходников идут
-одной транзакцией. Сбой анализа или записи и изменение исходников больше не
-оставляют пустой BUILDING snapshot — не остаётся ничего. Транзакция открыта всё
-время анализа; на сервере с `idle_in_transaction_session_timeout` его нужно
-учитывать.
+B03 отделяет анализ и нормализацию от write transaction. Данные одной порции
+нормализуются в COPY rows и сохраняются в приватный `TemporaryFile` (0600,
+без имени на Linux); rows не накапливаются в RAM на весь snapshot. Spool содержит
+чувствительные canonical facts, не поисковую redacted-проекцию. Он не принимает
+внешние пути/данные и используется только текущим процессом. Завершение, ошибка,
+отмена и падение процесса закрывают descriptor; постоянного spool/resume нет.
+
+Baseline удерживается shared session advisory lease, без MVCC-транзакции или
+repository row lock. Он может стать RETIRED при конкурентной публикации, но GC
+не удалит его до завершения clone. Возвращаемый base_snapshot_id остаётся тем же;
+обычная публикация по CAS отклонит устаревший результат.
+
+Исходники проверяются перед записью и повторно после archive/manifests/FK checks
+перед commit. Создание BUILDING snapshot, staging, cloning и архив остаются одной
+атомарной транзакцией: ошибка/отмена не оставляют частично записанных facts.
+CPU-анализ в ней не выполняется. COPY/clone, архивные checksum, проверка worktree
+и FK/commit могут оставаться дорогими; B03 не обещает фиксированный timeout для
+записи или строгий общий RSS. Captured bytes и catalogs по-прежнему в памяти;
+порция ограничена 64 файлами, не числом facts/байтов (это B05).
+
+IncrementalResult дополнительно сообщает preparation_seconds (нормализация,
+анализ и spool после planning), write_transaction_seconds (включая commit),
+spool_bytes. Capture/catalog preparation и чтение baseline в эти времена не входят.
+После crash существующий jobs retry начинает заново; server rollback и закрытие
+session снимают leases/temp tables, именованных spool-сирот не остаётся.
 
 Что изменилось в проверках. До записи по-прежнему проверяются: каждая сущность и
 каждый FileAnalysis строгим JSON, repository_id, «каждый запрошенный файл ровно
@@ -129,3 +149,57 @@ blob hashes, а Evidence восстанавливается без checkout. К�
 653 МБ до изменений, 278 МБ первый запуск, 190 МБ повторный с переиспользованием
 306 файлов из 400. Оставшийся рост даёт каталог Java (символы и синтаксические
 деревья всех файлов).
+
+### B03 reproducible transaction measurement
+
+Opt-in benchmark creates/drops only `crawler_transaction_<uuid>` databases and
+uses the same generated Java/SQL fixture as query benchmarks (199 groups = 400
+files). Requires PostgreSQL 15/CREATEDB; does not index an existing repository:
+
+```sh
+TEST_DATABASE_URL=postgresql://... uv run python -m code_crawler.transaction_benchmark \
+  --groups 199 --output /tmp/b03-candidate.json
+```
+
+Run in a fresh process for RSS comparison. The report includes code commit/file
+hashes, harness and fixture digests, host/settings, sampled max backend transaction
+age, calls observed inside a transaction, spool bytes and preparation/write phases.
+`index_seconds` excludes capture/catalog preparation (reported separately),
+validation/publication. Peak RSS is through indexing, including the catalog;
+validation time is separate. Canonical digest removes snapshot UUIDs and compares
+all subtype/auxiliary facts plus file manifests/dependencies. One paired local run
+is evidence of transaction separation, not a statistical throughput/RAM SLA.
+
+#### Recorded B03 comparison
+
+[Raw PG15 report](benchmarks/b03-transactions-pg15.json): baseline `6eaa984`,
+candidate `0844725`, 400 Java files / 140717 entities, identical fixture/harness and
+normalized canonical digest; both snapshots validated. One sequential run each,
+Linux / Python 3.12.14 / PostgreSQL 15.20, CPU/settings/limits in the report.
+
+| Metric | Before | B03 |
+| --- | ---: | ---: |
+| Index seconds (excluding capture/catalog/validation) | 72.05 | 70.46 |
+| Maximum sampled backend transaction age, seconds | 72.03 | 25.11 |
+| Analyzer calls inside transaction / all calls | 7 / 7 | 0 / 7 |
+| Peak client RSS through indexing, MiB | 405.74 | 428.97 |
+| New preparation / write seconds | n/a | 45.31 / 25.11 |
+| Spool bytes | n/a | 64191473 |
+
+Transaction age dropped about 65%; total indexing time was similar. Peak RSS grew
+about 5.7%, so this is **not** a memory reduction claim. Catalog/capture memory,
+large single-file analyses and PostgreSQL buffers/trigger queues remain separate
+B02/B05 concerns. One ordered local pair is not a latency SLA; cache/load bias and
+sampling resolution remain limitations. No production sources/databases used.
+
+To reproduce the baseline with exactly the same harness:
+
+```sh
+git worktree add --detach /tmp/crawler-b03-parent 6eaa984
+cp src/code_crawler/transaction_benchmark.py /tmp/b03-measure.py
+PYTHONPATH=/tmp/crawler-b03-parent/src TEST_DATABASE_URL=postgresql://... \
+  uv run --locked python /tmp/b03-measure.py --groups 199 --output /tmp/b03-before.json
+TEST_DATABASE_URL=postgresql://... uv run --locked python -m code_crawler.transaction_benchmark \
+  --groups 199 --output /tmp/b03-after.json
+git worktree remove /tmp/crawler-b03-parent
+```

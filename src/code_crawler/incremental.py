@@ -5,15 +5,18 @@ import errno
 import hashlib
 import json
 import os
+import pickle
 import re
 import stat
+import tempfile
+import time
 from collections import defaultdict, deque
-from collections.abc import Awaitable, Callable, Mapping
-from contextlib import ExitStack
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
+from contextlib import ExitStack, asynccontextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
-from typing import NamedTuple
+from typing import BinaryIO, NamedTuple
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -98,6 +101,9 @@ class IncrementalResult:
     snapshot_id: UUID
     base_snapshot_id: UUID | None
     plan: IncrementalPlan
+    preparation_seconds: float = 0.0
+    write_transaction_seconds: float = 0.0
+    spool_bytes: int = 0
 
 
 @dataclass(frozen=True)
@@ -403,6 +409,81 @@ async def _clone(
     )
 
 
+@asynccontextmanager
+async def _analysis_spool() -> AsyncIterator[BinaryIO]:
+    opening = asyncio.create_task(asyncio.to_thread(tempfile.TemporaryFile, mode="w+b"))
+    try:
+        stream = await asyncio.shield(opening)
+    except asyncio.CancelledError:
+        with suppress(Exception):
+            stream = await opening
+            await asyncio.to_thread(stream.close)
+        raise
+    try:
+        yield stream
+    finally:
+        await asyncio.to_thread(stream.close)
+
+
+def _spool_files(
+    stream: BinaryIO, snap: UUID, repo: UUID, sources: tuple[SourceInput, ...]
+) -> None:
+    rows = _rows(snap, repo, tuple(s.file for s in sources))
+    pickle.dump(
+        (rows, [(snap, s.file.path, s.file.id) for s in sources], (), ()),
+        stream,
+        protocol=pickle.HIGHEST_PROTOCOL,
+    )
+
+
+def _spool_facts(
+    stream: BinaryIO,
+    snap: UUID,
+    repo: UUID,
+    sources: tuple[SourceInput, ...],
+    analyses: tuple[FileAnalysis, ...],
+) -> None:
+    rows, owned, references, explicit = _inspect(snap, repo, sources, analyses)
+    # Pickle is internal transport for validated primitive COPY rows only. This
+    # anonymous descriptor is never opened from a caller-supplied path or bytes.
+    pickle.dump(
+        (
+            rows,
+            [(snap, path, entity_id) for path, entity_id in owned],
+            references,
+            tuple(sorted(explicit)),
+        ),
+        stream,
+        protocol=pickle.HIGHEST_PROTOCOL,
+    )
+
+
+async def _prepare_spool(
+    stream: BinaryIO,
+    snap: UUID,
+    repo: UUID,
+    sources: tuple[SourceInput, ...],
+    selected: tuple[SourceInput, ...],
+    analyze: Callable,
+) -> tuple[int, int]:
+    count = 0
+    for start in range(0, len(sources), _SLICE):
+        await asyncio.to_thread(
+            _spool_files, stream, snap, repo, sources[start : start + _SLICE]
+        )
+        count += 1
+    for start in range(0, len(selected), _SLICE):
+        part = selected[start : start + _SLICE]
+        analyses = await analyze(part)
+        await asyncio.to_thread(_spool_facts, stream, snap, repo, part, analyses)
+        tick("Сборка снимка: проверка и строки", -(-len(selected) // _SLICE))
+        count += 1
+        tick("Сборка снимка: анализ", -(-len(selected) // _SLICE))
+    size = await asyncio.to_thread(stream.tell)
+    await asyncio.to_thread(stream.seek, 0)
+    return count, size
+
+
 async def index_incremental(
     conn: asyncpg.Connection,
     repository_id: UUID,
@@ -448,8 +529,33 @@ async def index_incremental(
         raise ValueError("root must be the Git repository root")
     if captured is None:
         captured = await _capture(root, repository_id, languages)
+    async with snapshots.pinned_baseline(conn, repository_id) as published:
+        return await _index_baseline(
+            conn,
+            repository_id,
+            root,
+            analyze,
+            languages,
+            analysis_version,
+            captured,
+            scopes,
+            published,
+        )
+
+
+async def _index_baseline(
+    conn: asyncpg.Connection,
+    repository_id: UUID,
+    root: Path,
+    analyze: Callable,
+    languages: dict[str, str],
+    analysis_version: str,
+    captured: _Worktree,
+    scopes: tuple[AnalysisScope, ...],
+    published: asyncpg.Record | None,
+) -> IncrementalResult:
+    owner = {suffix: scope for scope in scopes for suffix in scope.suffixes}
     profile_hash = _hash([analysis_version, sorted(languages.items())])
-    published = await snapshots.published_snapshot(conn, repository_id)
     base_id = published["id"] if published else None
     previous: dict[str, _FileState] = {}
     dependencies: set[tuple[str, str]] = set()
@@ -575,89 +681,89 @@ async def index_incremental(
     )
     selected_paths = set(plan.reanalyze)
     selected = tuple(s for s in captured.sources if s.file.path in selected_paths)
-    files = tuple(s.file for s in captured.sources)
-    explicit: set[tuple[str, str]] = set()
-    # Одна транзакция от создания snapshot до manifests: сбой анализа, записи или
-    # изменение исходников не оставляют ни snapshot, ни фактов.
-    async with conn.transaction():
-        snap = await snapshots.create_snapshot(
-            conn,
-            repository_id,
-            snapshots.SnapshotInput(
-                commit_hash=captured.commit,
-                branch=captured.branch,
-                source_fingerprint=captured.fingerprint,
-                dirty=captured.dirty,
-            ),
+    snap = uuid4()
+    async with _analysis_spool() as stream:
+        prepare_started = time.perf_counter()
+        frames, spool_bytes = await _prepare_spool(
+            stream, snap, repository_id, captured.sources, selected, analyze
         )
-        await _lock_empty(conn, snap, repository_id)
-        await conn.execute(
-            "CREATE TEMP TABLE ingest_refs (path text, target_id text) ON COMMIT DROP"
-        )
-        prefix = "ingest_" + uuid4().hex
-        stages: dict[str, tuple[str, str]] = {}
-        await _stage(
-            conn,
-            prefix,
-            stages,
-            await asyncio.to_thread(_rows, snap, repository_id, files),
-        )
-        await _transfer(conn, stages)
-        owned = [(snap, file.path, file.id) for file in files]
-        for start in range(0, len(selected), _SLICE):
-            part = selected[start : start + _SLICE]
-            rows, slice_owned, references, slice_explicit = await asyncio.to_thread(
-                _inspect, snap, repository_id, part, await analyze(part)
-            )
-            tick("Сборка снимка: проверка и строки", -(-len(selected) // _SLICE))
-            await _stage(conn, prefix, stages, rows)
-            await _transfer(conn, {table: stages[table] for table in rows})
-            owned += [(snap, path, entity_id) for path, entity_id in slice_owned]
-            await conn.copy_records_to_table(
-                "ingest_refs", schema_name="pg_temp", records=references
-            )
-            explicit |= slice_explicit
-            await conn.copy_records_to_table(
-                "ingest_file_entities",
-                columns=("snapshot_id", "path", "entity_id"),
-                records=owned,
-            )
-            owned = []
-            tick("Сборка снимка", -(-len(selected) // _SLICE))
-        await conn.copy_records_to_table(
-            "ingest_file_entities",
-            columns=("snapshot_id", "path", "entity_id"),
-            records=owned,
-        )
-        if base_id and plan.reused and not plan.full_rebuild:
-            await _clone(conn, base_id, snap, list(plan.reused))
-        # Структурные зависимости: файл ссылается на сущность, принадлежащую другому файлу.
-        await conn.execute(
-            "INSERT INTO ingest_file_dependencies "
-            "(snapshot_id,dependent_path,dependency_path) "
-            "SELECT $1, r.path, m.path FROM pg_temp.ingest_refs r "
-            "JOIN ingest_file_entities m ON m.snapshot_id=$1 "
-            "AND m.entity_id=r.target_id WHERE m.path<>r.path "
-            "UNION SELECT $1, a, b FROM unnest($2::text[], $3::text[]) AS x(a, b) "
-            "ON CONFLICT DO NOTHING",
-            snap,
-            [a for a, _ in explicit],
-            [b for _, b in explicit],
-        )
+        preparation_seconds = time.perf_counter() - prepare_started
         if not await _verify(root, repository_id, languages, captured):
             raise ValueError("worktree changed during analysis")
-        tick("Запись в БД: архив исходников")
-        await archive_sources(conn, snap, captured.sources, origin="CAPTURED_WORKTREE")
-        tick("Запись в БД: манифесты и фиксация")
-        await conn.execute(
-            "INSERT INTO ingest_snapshot_profiles(snapshot_id,analysis_version,profile_sha256) VALUES ($1,$2,$3)",
-            snap,
-            analysis_version,
-            profile_hash,
+        write_started = time.perf_counter()
+        async with conn.transaction():
+            await snapshots.create_snapshot(
+                conn,
+                repository_id,
+                snapshots.SnapshotInput(
+                    commit_hash=captured.commit,
+                    branch=captured.branch,
+                    source_fingerprint=captured.fingerprint,
+                    dirty=captured.dirty,
+                ),
+                snapshot_id=snap,
+            )
+            await _lock_empty(conn, snap, repository_id)
+            await conn.execute(
+                "CREATE TEMP TABLE ingest_refs (path text, target_id text) ON COMMIT DROP"
+            )
+            await conn.execute(
+                "CREATE TEMP TABLE ingest_explicit (dependent_path text, dependency_path text) ON COMMIT DROP"
+            )
+            prefix = "ingest_" + uuid4().hex
+            stages: dict[str, tuple[str, str]] = {}
+            for _ in range(frames):
+                rows, owned, references, explicit = await asyncio.to_thread(
+                    pickle.load, stream
+                )
+                await _stage(conn, prefix, stages, rows)
+                await _transfer(conn, {table: stages[table] for table in rows})
+                if references:
+                    await conn.copy_records_to_table(
+                        "ingest_refs", schema_name="pg_temp", records=references
+                    )
+                if explicit:
+                    await conn.copy_records_to_table(
+                        "ingest_explicit", schema_name="pg_temp", records=explicit
+                    )
+                await conn.copy_records_to_table(
+                    "ingest_file_entities",
+                    columns=("snapshot_id", "path", "entity_id"),
+                    records=owned,
+                )
+                tick("Запись в БД: готовые порции", frames)
+            if base_id and plan.reused and not plan.full_rebuild:
+                await _clone(conn, base_id, snap, list(plan.reused))
+            # Структурные зависимости: файл ссылается на сущность, принадлежащую другому файлу.
+            await conn.execute(
+                "INSERT INTO ingest_file_dependencies "
+                "(snapshot_id,dependent_path,dependency_path) "
+                "SELECT $1, r.path, m.path FROM pg_temp.ingest_refs r "
+                "JOIN ingest_file_entities m ON m.snapshot_id=$1 "
+                "AND m.entity_id=r.target_id WHERE m.path<>r.path "
+                "UNION SELECT $1, dependent_path, dependency_path FROM pg_temp.ingest_explicit "
+                "ON CONFLICT DO NOTHING",
+                snap,
+            )
+            tick("Запись в БД: архив исходников")
+            await archive_sources(
+                conn, snap, captured.sources, origin="CAPTURED_WORKTREE"
+            )
+            tick("Запись в БД: манифесты и фиксация")
+            await conn.execute(
+                "INSERT INTO ingest_snapshot_profiles(snapshot_id,analysis_version,profile_sha256) VALUES ($1,$2,$3)",
+                snap,
+                analysis_version,
+                profile_hash,
+            )
+            await conn.executemany(
+                "INSERT INTO ingest_snapshot_adapters(snapshot_id,adapter_key,analysis_version,fingerprint) VALUES ($1,$2,$3,$4)",
+                [(snap, s.key, s.analysis_version, s.fingerprint) for s in scopes],
+            )
+            await _check(conn, {*stages, *_SUBTYPES.values(), *_AUXILIARY})
+            if not await _verify(root, repository_id, languages, captured):
+                raise ValueError("worktree changed during indexing")
+        write_seconds = time.perf_counter() - write_started
+        return IncrementalResult(
+            snap, base_id, plan, preparation_seconds, write_seconds, spool_bytes
         )
-        await conn.executemany(
-            "INSERT INTO ingest_snapshot_adapters(snapshot_id,adapter_key,analysis_version,fingerprint) VALUES ($1,$2,$3,$4)",
-            [(snap, s.key, s.analysis_version, s.fingerprint) for s in scopes],
-        )
-        await _check(conn, {*stages, *_SUBTYPES.values(), *_AUXILIARY})
-    return IncrementalResult(snap, base_id, plan)

@@ -1,0 +1,88 @@
+{
+  "baseline": {
+    "implementation_commit": "6eaa9841d9a1b4352ac8714c758d3b684afb8bf3",
+    "implementation_dirty": false,
+    "implementation_files": {
+      "incremental.py": "54a13ad7d85de352573732638b94da049a983467f98cdf2498557416e12dd8d7",
+      "snapshots.py": "de945e2a92015bd8371ff0ed3d3d5a3da7781712218d76cf3704eb7300e7b50e"
+    },
+    "harness_sha256": "b668507b0ebcce7f262371e40ec41b2d7bbfd979d6cdcd08ac80e1172aeb4762",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "python": "3.12.14",
+    "cpu_count": 3,
+    "postgres_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "settings": {
+      "fsync": "on",
+      "max_connections": "100",
+      "shared_buffers": "16384",
+      "synchronous_commit": "on",
+      "work_mem": "4096"
+    },
+    "groups": 199,
+    "memory_bytes": 10452459520,
+    "cgroup_memory_max": "8589934592",
+    "cpu_model": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "files": 400,
+    "fixture_sha256": "6a2dd9b292093364749f6d31da0a15f8cef56e49bc5358e35e4dde48908d02f8",
+    "capture_catalog_seconds": 3.9466130700020585,
+    "index_seconds": 72.04941144099575,
+    "peak_rss_kib": 415480,
+    "max_sampled_transaction_seconds": 72.030963,
+    "analysis_calls": 7,
+    "analysis_calls_in_transaction": 7,
+    "preparation_seconds": null,
+    "write_transaction_seconds": null,
+    "spool_bytes": null,
+    "entity_count": 140717,
+    "canonical_digest": "a639fff1b02c2068a9a83185ebcbe26d5675d5f8a9a9a00c5129fcad5a71ec04",
+    "validation_seconds": 39.62523790600244,
+    "validated": true
+  },
+  "candidate": {
+    "implementation_commit": "0844725266b8f95d603b52a5d4f39cd75a5f1397",
+    "implementation_dirty": false,
+    "implementation_files": {
+      "incremental.py": "2f0a7caf3c2443100543ae856f8663e10c471c42e42a23559b206b98bbaf5f47",
+      "snapshots.py": "59ddf35784b4dcf338ba82b87aaf8a6f377c89003b7a799d61e3cd325f282be6"
+    },
+    "harness_sha256": "b668507b0ebcce7f262371e40ec41b2d7bbfd979d6cdcd08ac80e1172aeb4762",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "python": "3.12.14",
+    "cpu_count": 3,
+    "postgres_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "settings": {
+      "fsync": "on",
+      "max_connections": "100",
+      "shared_buffers": "16384",
+      "synchronous_commit": "on",
+      "work_mem": "4096"
+    },
+    "groups": 199,
+    "memory_bytes": 10452459520,
+    "cgroup_memory_max": "8589934592",
+    "cpu_model": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "files": 400,
+    "fixture_sha256": "6a2dd9b292093364749f6d31da0a15f8cef56e49bc5358e35e4dde48908d02f8",
+    "capture_catalog_seconds": 3.262865699012764,
+    "index_seconds": 70.46430013197823,
+    "peak_rss_kib": 439268,
+    "max_sampled_transaction_seconds": 25.106238,
+    "analysis_calls": 7,
+    "analysis_calls_in_transaction": 0,
+    "preparation_seconds": 45.31001317201299,
+    "write_transaction_seconds": 25.11141548701562,
+    "spool_bytes": 64191473,
+    "entity_count": 140717,
+    "canonical_digest": "a639fff1b02c2068a9a83185ebcbe26d5675d5f8a9a9a00c5129fcad5a71ec04",
+    "validation_seconds": 40.45820239500608,
+    "validated": true
+  },
+  "comparison": {
+    "same_fixture": true,
+    "same_normalized_facts": true,
+    "same_harness": true,
+    "transaction_age_reduction_percent": 65.14521401025833,
+    "rss_change_percent": 5.725426013285828,
+    "samples_per_variant": 1
+  }
+}

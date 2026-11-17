@@ -1,5 +1,8 @@
 """Repository identity, immutable snapshot metadata and publication pointer reads."""
 
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -43,14 +46,18 @@ async def register_repository(
 
 
 async def create_snapshot(
-    conn: asyncpg.Connection, repository_id: UUID, metadata: SnapshotInput
+    conn: asyncpg.Connection,
+    repository_id: UUID,
+    metadata: SnapshotInput,
+    *,
+    snapshot_id: UUID | None = None,
 ) -> UUID:
     """Create a fresh BUILDING snapshot without changing publication visibility."""
     return await conn.fetchval(
         "INSERT INTO ucm_snapshots "
         "(id, repository_id, commit_hash, branch, source_fingerprint, dirty) "
         "VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-        uuid4(),
+        snapshot_id if snapshot_id is not None else uuid4(),
         repository_id,
         metadata.commit_hash,
         metadata.branch,
@@ -84,3 +91,51 @@ async def pin_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> None:
         _SNAPSHOT_LOCK,
         str(snapshot_id),
     )
+
+
+@asynccontextmanager
+async def pinned_baseline(
+    conn: asyncpg.Connection, repository_id: UUID
+) -> AsyncIterator[asyncpg.Record | None]:
+    """Keep one immutable baseline available without a long-running transaction."""
+    if conn.is_in_transaction():
+        raise ValueError("baseline lease requires a free connection")
+    for _ in range(3):
+        baseline = await published_snapshot(conn, repository_id)
+        if baseline is None:
+            yield None
+            return
+        key = str(baseline["id"])
+        acquired = False
+        acquiring = asyncio.create_task(
+            conn.fetchval(
+                "SELECT pg_try_advisory_lock_shared($1, hashtext($2::text))",
+                _SNAPSHOT_LOCK,
+                key,
+            )
+        )
+        try:
+            try:
+                acquired = await asyncio.shield(acquiring)
+            except asyncio.CancelledError:
+                # Resolve the quick try-lock before releasing exactly our lock count.
+                acquired = await acquiring
+                raise
+            if not acquired:
+                continue
+            if not await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM ucm_snapshots WHERE id=$1 AND repository_id=$2 AND state IN ('PUBLISHED','RETIRED'))",
+                baseline["id"],
+                repository_id,
+            ):
+                continue
+            yield baseline
+            return
+        finally:
+            if acquired and not conn.is_closed():
+                await conn.fetchval(
+                    "SELECT pg_advisory_unlock_shared($1, hashtext($2::text))",
+                    _SNAPSHOT_LOCK,
+                    key,
+                )
+    raise ValueError("baseline changed while acquiring its lease; retry indexing")
