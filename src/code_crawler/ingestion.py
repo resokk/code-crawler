@@ -64,17 +64,36 @@ def tick(stage: str, total: int | None = None) -> None:
         callback(stage, total)
 
 
+def _callable_owner(catalog: Mapping[str, Entity], scope_id: str | None) -> str | None:
+    """Walk ancestors in constant space; cyclic graphs cannot assert ownership."""
+    scope = catalog.get(scope_id)
+    fast = scope
+    while isinstance(scope, Scope):
+        owner = catalog.get(scope.owner_symbol_id)
+        if isinstance(owner, Symbol) and owner.symbol_kind in ("METHOD", "CONSTRUCTOR"):
+            return owner.id
+        scope = catalog.get(scope.parent_scope_id)
+        for _ in range(2):
+            fast = (
+                catalog.get(fast.parent_scope_id) if isinstance(fast, Scope) else None
+            )
+        if isinstance(scope, Scope) and isinstance(fast, Scope) and scope.id == fast.id:
+            return None
+    return None
+
+
 def check_entities(
     repository_id: UUID,
     entities: Iterable[Entity],
     catalog: Mapping[str, Entity],
-    paths: set[str],
-    producers: set[str],
+    paths: set[str] | None,
+    producers: set[str] | None,
 ) -> None:
     """Check each entity against the entities it refers to.
 
     `paths` and `producers` carry uniqueness state between calls, so a snapshot
-    can be checked slice by slice.
+    can be checked slice by slice. Passing None delegates these two global
+    uniqueness checks to the storage validator.
     """
 
     def require(entity_id: str | None, kind: type) -> None:
@@ -93,9 +112,10 @@ def check_entities(
         if entity.source_range is not None:
             require(entity.source_range.source_file_id, SourceFile)
         if isinstance(entity, SourceFile):
-            if entity.path in paths:
-                raise ValueError("duplicate source file path")
-            paths.add(entity.path)
+            if paths is not None:
+                if entity.path in paths:
+                    raise ValueError("duplicate source file path")
+                paths.add(entity.path)
         elif isinstance(entity, SourceAnalysis):
             require(entity.source_file_id, SourceFile)
         elif isinstance(entity, Symbol):
@@ -116,10 +136,11 @@ def check_entities(
             type_ref(entity.callee)
             for value_id in (*entity.input_value_ids, *entity.output_value_ids):
                 require(value_id, Value)
-            for value_id in entity.output_value_ids:
-                if value_id in producers:
-                    raise ValueError("value has multiple producers")
-                producers.add(value_id)
+            if producers is not None:
+                for value_id in entity.output_value_ids:
+                    if value_id in producers:
+                        raise ValueError("value has multiple producers")
+                    producers.add(value_id)
         elif isinstance(entity, Value):
             type_ref(entity.type_ref)
         elif isinstance(entity, OrmMapping):
@@ -171,19 +192,7 @@ def check_entities(
                 or operation.callee.name != entity.api
             ):
                 raise ValueError("ORM invocation must use its callable/CALL API")
-            scope = catalog.get(operation.scope_id)
-            seen = set()
-            owner = None
-            while isinstance(scope, Scope) and scope.id not in seen:
-                seen.add(scope.id)
-                symbol = catalog.get(scope.owner_symbol_id)
-                if isinstance(symbol, Symbol) and symbol.symbol_kind in (
-                    "METHOD",
-                    "CONSTRUCTOR",
-                ):
-                    owner = symbol.id
-                    break
-                scope = catalog.get(scope.parent_scope_id)
+            owner = _callable_owner(catalog, operation.scope_id)
             if owner != entity.owner_symbol_id:
                 raise ValueError("ORM CALL scope must belong to its invocation owner")
         elif isinstance(entity, (DatabaseContext, DatabaseObject)):
@@ -269,19 +278,7 @@ def check_entities(
                 raise ValueError("SQL execution requires CALL operation")
             if operation.callee is None or operation.callee.name != entity.api:
                 raise ValueError("SQL execution API must match CALL callee")
-            scope = catalog.get(operation.scope_id)
-            visited: set[str] = set()
-            callable_owner = None
-            while isinstance(scope, Scope) and scope.id not in visited:
-                visited.add(scope.id)
-                symbol = catalog.get(scope.owner_symbol_id)
-                if isinstance(symbol, Symbol) and symbol.symbol_kind in (
-                    "METHOD",
-                    "CONSTRUCTOR",
-                ):
-                    callable_owner = symbol.id
-                    break
-                scope = catalog.get(scope.parent_scope_id)
+            callable_owner = _callable_owner(catalog, operation.scope_id)
             if callable_owner != entity.owner_symbol_id:
                 raise ValueError("SQL execution CALL must be in its owner scope")
             if (
@@ -358,6 +355,14 @@ def check_semantics(entities: Sequence[Entity], catalog: Mapping[str, Entity]) -
             isinstance(a, DataAccess) and a.statement_id == entity.id for a in entities
         ):
             raise ValueError("partial SQL construction cannot assert accesses")
+    usage_sources = [
+        e.source.id
+        for e in entities
+        if isinstance(e, Relation)
+        and e.relation_kind == RelationKind.USES_SQL_CONSTRUCTION
+    ]
+    if len(set(usage_sources)) != len(usage_sources):
+        raise ValueError("SQL execution must have one construction descriptor")
     usages = {
         e.source.id: e
         for e in entities

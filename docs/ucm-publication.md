@@ -65,37 +65,31 @@ SourceRange, EntityRef, Resolution, Coverage) разделяются через 
 
 ### Проверка порциями
 
-Change `streaming-ucm-ingestion`. `validate_snapshot` больше не восстанавливает
-snapshot целиком. Правила `UcmBatch` вынесены в функции `ingestion.check_entities`,
-`check_unique_reports`, `check_semantics` и `check_scope_cycles`; `UcmBatch`
-вызывает их же, поэтому решения совпадают.
+B02 завершает streaming-readiness: глобальные SQL/graph инварианты проверяются
+PostgreSQL без восстановления всех SQL-моделей. Полный реестр правил, parity и
+границы памяти: [snapshot-validation-invariants.md](snapshot-validation-invariants.md).
 
-- Сущности читаются порциями по 2 000 в порядке `entity_id`; каждая проходит
-  строгий JSON и `check_entities`.
-- Сущности, на которые порция ссылается, дочитываются одним запросом и лежат в
-  кэше не больше 20 000 моделей (при переполнении кэш очищается). Цепочки
-  «операция → значения» и «scope → родители → владелец» дочитываются сразу.
-- Уникальность путей файлов и единственность producer у Value проверяются
-  множествами строк, которые живут всю проверку: это идентификаторы, не модели.
-- Строка вспомогательной таблицы без владельца нужного вида не попадает ни в одну
-  порцию; итоговая сверка числа прочитанных строк с числом строк snapshot отвергает
-  её как `unconsumed canonical rows`.
-- Отчёты SourceAnalysis и циклы scopes проверяются по парам идентификаторов.
-- Межсущностные SQL-правила (`check_semantics`) получают все SQL-факты snapshot:
-  constructions, statements, accesses, placeholders, bindings, database accesses и
-  связи USES_SQL_CONSTRUCTION, EXECUTES_STATEMENT, BINDS_PARAMETER,
-  USES_DATABASE_CONTEXT.
+- Строгая hydration порциями по 2000 entities; LRU cache максимум 20000 моделей.
+- Один hop references prefetch, также порциями; более глубокие ссылки читаются
+  lazy. Цепочки scope/operation не раскрываются целиком заранее.
+- Уникальность paths/producers/reports и SQL keys проверяется SQL, не Python sets.
+- Scope cycles: temporary parent map с pointer doubling, без Python dict всех scopes.
+- SQL text slices, partial isolation, execution origin, binding/placeholder и
+  context membership проверяются SQL EXISTS с теми же условиями, что UcmBatch.
+- Локальные SQL/ORM/endpoint/Evidence правила вызывают общий `check_entities` и
+  model validators; `_ordered` и итоговый consumed count отвергают лишние строки.
 
-Ограничение: память растёт с числом SQL-фактов и с числом файлов и значений
-(строки), но не с числом сущностей. Чтобы убрать и это, SQL-правила нужно
-переписать на запросы — change `b02-bounded-memory-snapshot-validation`.
+Scan выполняется в REPEATABLE READ под shared snapshot lease. Temporary projections
+не меняют canonical storage и удаляются при commit/rollback/cancellation. Перед
+освобождением transaction/connection завершается worker thread, способный дочитывать
+references. Финальный короткий transaction повторно проверяет state и атомарно
+создаёт receipt + READY; чужая публикация не перезаписывается.
 
-Замер на PostgreSQL 15.20, snapshot из 141 424 сущностей (macOS arm64):
+Модельный payload одной entity и PostgreSQL temporary disk не ограничены числом
+моделей LRU. B02 ограничивает Python state относительно числа независимых facts;
+не обещает абсолютного byte limit для произвольного nested payload. `load_snapshot_batch`
+по-прежнему явно материализует весь batch для потребителей, которые его запросили.
 
-| | Время, с | Пик RSS процесса, МиБ |
-| --- | ---: | ---: |
-| восстановление целиком (`load_snapshot_batch`) | 4,8 | 688 |
-| проверка порциями | 17,8 | 170 |
-
-Проверка стала медленнее: ссылки каждой порции читаются из базы, а не из словаря
-в памяти.
+Исторический замер streaming-версии на PG15/macOS arm64 (141424 entities): 17.8 с,
+170 MiB RSS вместо 4.8 с / 688 MiB whole-batch restore. Он предшествует B02 SQL
+invariants и не является сравнением скорости на текущей машине.

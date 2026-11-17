@@ -1,0 +1,151 @@
+{
+  "baseline_commit": "2951af8",
+  "environment": {
+    "cpu_quota": "2 CPUs",
+    "memory_limit_bytes": 8589934592,
+    "pgdata": "5 GiB tmpfs",
+    "concurrent_benchmarks_or_tests": false
+  },
+  "fixture": "N independent construction/candidate/statement/access units + one SourceFile and owner; Unicode SQL and quoted identifiers; source parsing excluded",
+  "acceptance": {
+    "facts_growth_factor": 4,
+    "max_heap_growth_factor": 1.5,
+    "max_python_heap_bytes": 134217728,
+    "observed_heap_growth_factor": 0.9400412495676109,
+    "passed": true,
+    "sql_entities_growth_factor": 4,
+    "entities_growth_factor": 3.9997500208315975
+  },
+  "observations": {
+    "baseline-6k": {
+      "units": 6000,
+      "entities": 24002,
+      "sql_entities": 18000,
+      "validation_seconds": 18.83995467799832,
+      "peak_python_bytes": 66858968,
+      "process_peak_rss_kib": 212068.0,
+      "slice_size": 2000,
+      "cache_size": 20000,
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "work_mem": "4MB",
+        "shared_buffers": "128MB",
+        "lc_collate": "en_US.utf8"
+      },
+      "implementation_sha256": {
+        "publication.py": "ab5b67050b59704631352da3d67711337f5c47c41cede5dee59d25c3a13d0e0a",
+        "ingestion.py": "de69d6f8c2f5fedabb1eb084922543f69c7a679b011e048f8282a998f7f4f05f"
+      }
+    },
+    "baseline-24k": {
+      "units": 24000,
+      "entities": 96002,
+      "sql_entities": 72000,
+      "validation_seconds": 88.50844531899202,
+      "peak_python_bytes": 232346056,
+      "process_peak_rss_kib": 658920.0,
+      "slice_size": 2000,
+      "cache_size": 20000,
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "work_mem": "4MB",
+        "shared_buffers": "128MB",
+        "lc_collate": "en_US.utf8"
+      },
+      "implementation_sha256": {
+        "publication.py": "ab5b67050b59704631352da3d67711337f5c47c41cede5dee59d25c3a13d0e0a",
+        "ingestion.py": "de69d6f8c2f5fedabb1eb084922543f69c7a679b011e048f8282a998f7f4f05f"
+      }
+    },
+    "final-6k": {
+      "units": 6000,
+      "entities": 24002,
+      "sql_entities": 18000,
+      "validation_seconds": 11.996804998983862,
+      "peak_python_bytes": 45037563,
+      "process_peak_rss_kib": 126240.0,
+      "slice_size": 2000,
+      "cache_size": 20000,
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "work_mem": "4MB",
+        "shared_buffers": "128MB",
+        "lc_collate": "en_US.utf8"
+      },
+      "implementation_sha256": {
+        "publication.py": "a5dc4cf13c68a00d7bb6451dce24fabebac66a4012891dc951be27883adce939",
+        "ingestion.py": "15ed0e5b61dc0756c20836af5c0ccadbb3cf51caf5bff78b3163e57a54697da0",
+        "snapshot_validation.py": "517ce1a60b2ceb64b8eb9bafe0ea82dfa5df9f6de02c821f8dfe5844cbfb5ba4"
+      }
+    },
+    "final-24k": {
+      "units": 24000,
+      "entities": 96002,
+      "sql_entities": 72000,
+      "validation_seconds": 55.27617780698347,
+      "peak_python_bytes": 42337167,
+      "process_peak_rss_kib": 130596.0,
+      "slice_size": 2000,
+      "cache_size": 20000,
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "work_mem": "4MB",
+        "shared_buffers": "128MB",
+        "lc_collate": "en_US.utf8"
+      },
+      "implementation_sha256": {
+        "publication.py": "a5dc4cf13c68a00d7bb6451dce24fabebac66a4012891dc951be27883adce939",
+        "ingestion.py": "15ed0e5b61dc0756c20836af5c0ccadbb3cf51caf5bff78b3163e57a54697da0",
+        "snapshot_validation.py": "517ce1a60b2ceb64b8eb9bafe0ea82dfa5df9f6de02c821f8dfe5844cbfb5ba4"
+      }
+    },
+    "baseline-24k-no-trace": {
+      "units": 24000,
+      "entities": 96002,
+      "sql_entities": 72000,
+      "validation_seconds": 22.317592658975627,
+      "peak_python_bytes": null,
+      "process_peak_rss_kib": 328780.0,
+      "slice_size": 2000,
+      "cache_size": 20000,
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "work_mem": "4MB",
+        "shared_buffers": "128MB",
+        "lc_collate": "en_US.utf8"
+      },
+      "implementation_sha256": {
+        "publication.py": "ab5b67050b59704631352da3d67711337f5c47c41cede5dee59d25c3a13d0e0a",
+        "ingestion.py": "de69d6f8c2f5fedabb1eb084922543f69c7a679b011e048f8282a998f7f4f05f"
+      }
+    },
+    "final-24k-no-trace": {
+      "units": 24000,
+      "entities": 96002,
+      "sql_entities": 72000,
+      "validation_seconds": 12.707042755006114,
+      "peak_python_bytes": null,
+      "process_peak_rss_kib": 94300.0,
+      "slice_size": 2000,
+      "cache_size": 20000,
+      "server_version": "PostgreSQL 15.20 (Debian 15.20-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+      "settings": {
+        "work_mem": "4MB",
+        "shared_buffers": "128MB",
+        "lc_collate": "en_US.utf8"
+      },
+      "implementation_sha256": {
+        "publication.py": "a5dc4cf13c68a00d7bb6451dce24fabebac66a4012891dc951be27883adce939",
+        "ingestion.py": "15ed0e5b61dc0756c20836af5c0ccadbb3cf51caf5bff78b3163e57a54697da0",
+        "snapshot_validation.py": "517ce1a60b2ceb64b8eb9bafe0ea82dfa5df9f6de02c821f8dfe5844cbfb5ba4"
+      }
+    }
+  },
+  "notes": [
+    "Each observation is a fresh process and owned disposable database; all facts pass readiness and produce READY/receipt.",
+    "Tracemalloc measures validation only; process RSS includes prior ingestion and tracing overhead.",
+    "No-trace wall-time/RSS samples are separate runs, not latency confidence intervals.",
+    "Baseline SQL-dense memory regression fails: 9320231 < 3006458 * 1.5 is false, at fixed slice64/cache128.",
+    "Intermediate failed prefetch implementation was corrected before final observations; those diagnostic timings are excluded."
+  ]
+}

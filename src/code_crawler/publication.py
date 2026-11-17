@@ -2,8 +2,9 @@
 
 import asyncio
 import json
-from collections import Counter, defaultdict
+from collections import Counter, OrderedDict, defaultdict
 from collections.abc import Callable, Iterator, Mapping
+from threading import Event
 from uuid import UUID
 
 import asyncpg
@@ -13,11 +14,14 @@ from code_crawler.discovery import build_generation
 from code_crawler.ingestion import (
     UcmBatch,
     check_entities,
-    check_scope_cycles,
-    check_semantics,
-    check_unique_reports,
     tick,
 )
+from code_crawler.snapshot_validation import (
+    check_global_invariants,
+    check_scope_graph,
+    check_sql_semantics,
+)
+from code_crawler.snapshots import pin_snapshot
 from code_crawler.source_evidence import require_source_archive
 from code_crawler.ucm import Entity, shared_values
 
@@ -396,15 +400,6 @@ def _restore(repository_id: UUID, tables: dict[str, list[dict]]) -> UcmBatch:
 # ссылаются: вместе ограничивают число моделей в памяти независимо от snapshot.
 _SLICE = 2_000
 _CACHE = 20_000
-# Правила check_semantics связывают только эти факты между собой.
-_SQL_KINDS = (
-    "SQL_CONSTRUCTION",
-    "SQL_STATEMENT",
-    "DATA_ACCESS",
-    "SQL_PLACEHOLDER",
-    "SQL_BINDING",
-    "DATABASE_ACCESS",
-)
 # Виды сущностей, которым принадлежат строки вспомогательных таблиц. Строка у
 # владельца другого вида не читается и отвергается итоговой сверкой количества.
 _OWNERS = {
@@ -424,30 +419,52 @@ _OWNERS = {
     "ucm_evidence": ("RELATION", "EXTERNAL_REFERENCE"),
     "ucm_coverage_reasons": ("RELATION", "EXTERNAL_REFERENCE"),
 }
-_CHAINED = ("ucm_operations", "ucm_operation_values", "ucm_scopes")
-_SQL_RELATIONS = (
-    "USES_SQL_CONSTRUCTION",
-    "EXECUTES_STATEMENT",
-    "BINDS_PARAMETER",
-    "USES_DATABASE_CONTEXT",
-)
+
+
+class _ValidationCancelled(Exception):
+    """Cooperative stop for a worker that can schedule connection reads."""
+
+
+async def _check_worker(check: Callable[[], None], stop: Event) -> None:
+    worker = asyncio.create_task(asyncio.to_thread(check))
+    try:
+        await asyncio.shield(worker)
+    except asyncio.CancelledError:
+        stop.set()
+        # to_thread cancellation cannot stop Python code. Drain its pending DB
+        # reads before the transaction/lease or pooled connection can be released.
+        drained = asyncio.gather(worker, return_exceptions=True)
+        while not drained.done():
+            try:
+                await asyncio.shield(drained)
+            except asyncio.CancelledError:
+                continue
+        raise
 
 
 class _Catalog(Mapping):
     """Entities by ID; one that is not held yet is read from the snapshot."""
 
     def __init__(
-        self, entities: dict[str, Entity], load: Callable[[list[str]], None]
+        self,
+        entities: OrderedDict[str, Entity],
+        load: Callable[[list[str]], None],
+        stop: Event,
     ) -> None:
         self.entities = entities
         self.load = load
+        self.stop = stop
 
     def __getitem__(self, key: str | None) -> Entity:
+        if self.stop.is_set():
+            raise _ValidationCancelled()
         if key is None:
             raise KeyError(key)
         if key not in self.entities:
             self.load([key])
-        return self.entities[key]
+        result = self.entities[key]
+        self.entities.move_to_end(key)
+        return result
 
     def __iter__(self) -> Iterator[str]:
         return iter(self.entities)
@@ -503,40 +520,50 @@ def _referenced(tables: dict[str, list[dict]]) -> set[str]:
 async def _validate_stream(
     conn: asyncpg.Connection, snapshot_id: UUID, repository_id: UUID
 ) -> int:
-    """Apply the UcmBatch rules slice by slice; return the entity count.
-
-    Holds one slice, a bounded cache of the entities it refers to and, for the
-    cross-entity SQL rules, the SQL facts of the snapshot — never all models.
-    """
+    """Validate slices with an LRU catalog; global invariants stay in PostgreSQL."""
+    await check_global_invariants(conn, snapshot_id)
+    await check_scope_graph(conn, snapshot_id)
     loop = asyncio.get_running_loop()
-    known: dict[str, Entity] = {}
+    known: OrderedDict[str, Entity] = OrderedDict()
+    stop = Event()
+
+    def remember(entities: tuple[Entity, ...]) -> None:
+        for entity in entities:
+            known[entity.id] = entity
+            known.move_to_end(entity.id)
+            while len(known) > max(1, _CACHE):
+                known.popitem(last=False)
 
     def load(ids: list[str]) -> None:
-        # Вызывается из рабочего потока: соединение принадлежит циклу событий.
-        while ids:
+        # Only one hop is prefetched. Recursive graph expansion can consume an
+        # entire snapshot even when the top-level slice is small.
+        for start in range(0, len(ids), _SLICE):
+            if stop.is_set():
+                raise _ValidationCancelled()
             tables = asyncio.run_coroutine_threadsafe(
-                _fetch(conn, snapshot_id, ids), loop
+                _fetch(conn, snapshot_id, ids[start : start + _SLICE]), loop
             ).result()
-            # Правила идут от операции к её значениям и вверх по scopes до
-            # владельца: читаем эти цепочки сразу, а не по одной сущности.
-            chained = _referenced({table: tables[table] for table in _CHAINED})
-            known.update((entity.id, entity) for entity in _parse(tables))
-            ids = sorted(chained - known.keys())
+            if stop.is_set():
+                raise _ValidationCancelled()
+            remember(_parse(tables))
 
-    catalog = _Catalog(known, load)
-    paths: set[str] = set()
-    producers: set[str] = set()
+    catalog = _Catalog(known, load, stop)
     consumed: Counter[str] = Counter()
 
     def check(tables: dict[str, list[dict]]) -> None:
-        if len(known) > _CACHE:
-            known.clear()
-        wanted = _referenced(tables)
+        references = _referenced(tables)
         entities = _parse(tables)
-        known.update((entity.id, entity) for entity in entities)
-        if wanted := sorted(wanted - known.keys()):
-            load(wanted)
-        check_entities(repository_id, entities, catalog, paths, producers)
+        remember(entities)
+        missing = []
+        for key in sorted(references):
+            if key in known:
+                # Keep this slice's cache hits hot before prefetch can evict them.
+                known.move_to_end(key)
+            else:
+                missing.append(key)
+        if missing:
+            load(missing)
+        check_entities(repository_id, entities, catalog, None, None)
 
     total = await conn.fetchval(
         "SELECT count(*) FROM ucm_entities WHERE snapshot_id=$1", snapshot_id
@@ -555,7 +582,7 @@ async def _validate_stream(
         last = ids[-1]
         tables = await _fetch(conn, snapshot_id, ids)
         consumed.update({table: len(rows) for table, rows in tables.items()})
-        await asyncio.to_thread(check, tables)
+        await _check_worker(lambda tables=tables: check(tables), stop)
         tick("Проверка снимка", -(-total // _SLICE))
     # Строка без владельца ни в одну порцию не попала: старое чтение целиком
     # отвергало её как unconsumed.
@@ -564,35 +591,8 @@ async def _validate_stream(
             f"SELECT count(*) FROM {table} WHERE snapshot_id=$1", snapshot_id
         ):
             raise ValueError("unconsumed canonical rows")
-    check_unique_reports(
-        row["source_file_id"]
-        for row in await conn.fetch(
-            "SELECT source_file_id FROM ucm_source_analyses WHERE snapshot_id=$1",
-            snapshot_id,
-        )
-    )
-    parents = await conn.fetch(
-        "SELECT entity_id,parent_scope_id FROM ucm_scopes WHERE snapshot_id=$1",
-        snapshot_id,
-    )
-    await asyncio.to_thread(check_scope_cycles, dict(map(tuple, parents)))
-    facts = await conn.fetch(
-        "SELECT entity_id FROM ucm_entities WHERE snapshot_id=$1 "
-        "AND entity_type=ANY($2) UNION ALL SELECT entity_id FROM ucm_relations "
-        "WHERE snapshot_id=$1 AND relation_kind=ANY($3)",
-        snapshot_id,
-        list(_SQL_KINDS),
-        list(_SQL_RELATIONS),
-    )
-    tables = await _fetch(conn, snapshot_id, [row["entity_id"] for row in facts])
-
-    def semantics() -> None:
-        known.clear()
-        entities = _parse(tables)
-        known.update((entity.id, entity) for entity in entities)
-        check_semantics(entities, catalog)
-
-    await asyncio.to_thread(semantics)
+    known.clear()
+    await check_sql_semantics(conn, snapshot_id)
     return consumed["ucm_entities"]
 
 
@@ -646,13 +646,21 @@ async def validate_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> int:
             "UPDATE ucm_snapshots SET state='VALIDATING' WHERE id=$1",
             snapshot_id,
         )
-    count = await _validate_stream(conn, snapshot_id, snapshot["repository_id"])
+    async with conn.transaction(isolation="repeatable_read"):
+        await pin_snapshot(conn, snapshot_id)
+        count = await _validate_stream(conn, snapshot_id, snapshot["repository_id"])
     async with conn.transaction():
         state = await conn.fetchval(
             "SELECT state FROM ucm_snapshots WHERE id=$1 FOR UPDATE", snapshot_id
         )
         if state == "READY":
-            return count
+            receipt = await conn.fetchval(
+                "SELECT entity_count FROM ucm_snapshot_validations WHERE snapshot_id=$1",
+                snapshot_id,
+            )
+            if receipt is None:
+                raise ValueError("READY snapshot has no validation receipt")
+            return receipt
         if state != "VALIDATING":
             raise ValueError("snapshot state changed during validation")
         await conn.execute(
