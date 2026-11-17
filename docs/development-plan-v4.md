@@ -31,7 +31,7 @@ A02, A03, A04, A06, B01, B02, B03, B04, C10, C11, E01, Java SQL flow COW, Java s
 | --- | --- | --- | --- |
 | 1 | **B06** large-snapshot-gc-performance | FK-trigger/index планы, GC duration, WAL, locks, dead tuples, 100k/1M; безопасная очистка без чужих таблиц и pinned snapshots | Новые PG15 замеры существенно лучше 120s timeout на сравнимом fixture; целевой SLO утвердить после baseline |
 | 2 | **E02** snapshot-retention-policy | CURRENT/RETIRED/PINNED/FAILED, shared content blobs, derived generations, dry-run, retention pins | Нельзя удалить shared blob/pinned snapshot; orphan blobs очищаются только после доказанного отсутствия ссылок |
-| 3 | **C12 [done]** streaming-search-document-rebuild | Bounded context pages, staged COPY and atomic generation; public contracts unchanged | [Acceptance](../openspec/archive/2026-11-17-c12-streaming-search-document-rebuild/completion.md): full parity at 1,000,011 facts, 94.8 MiB RSS; PG15 CI 1489 passed |
+| 3 | **C12 [done]** streaming-search-document-rebuild | Bounded context pages, staged COPY and atomic generation; public contracts unchanged | [Acceptance](../openspec/archive/2026-11-17-c12-streaming-search-document-rebuild/completion.md): full parity at 1,000,011 facts, 94.8 MiB RSS; PG15 CI 1510 passed |
 | 4 | **B05** incremental-streaming-pipeline | Лимит bytes/entities/temporary storage в spool/staging, no-change clone, memory/disk/cancellation tests | Предсказуемые resource budgets, корректный source fingerprint и неизменный published pointer при сбое |
 | 5 | **B07/B08** mixed-language and 100+ repositories | Реальные mixed-fixtures, concurrent queries/index/publish/GC, зафиксированные latency/memory/IO | Независимые публикации, отсутствие репозиторных утечек; нагрузочные данные на PG15 |
 

@@ -60,3 +60,17 @@ Verification:
   on acceptance SHA above: **1489 passed in 330.65s**, clean migrations and
   working-tree checks passed. The initial implementation run was automatically
   superseded by that descendant main push, not a test failure.
+
+## Final cancellation hardening
+
+Follow-up implementation: `d1df25d144344019e021e7891a14be29ecb91ceb`.
+A regression that issues a second cancel while policy is blocked reproduced early
+cleanup exit before the fix. The completion future is now shielded through repeated
+cancellation, and the caller exits only after the policy thread has completed.
+This changes only cancellation cleanup, not the normal projection/benchmark path.
+
+Final full local PG15 suite: **1510 passed in 357.08s**, lint/format passed
+(462 files). [Final required PostgreSQL 15 CI](https://github.com/resokk/code-crawler/actions/runs/44183118657)
+on the follow-up SHA: **1510 passed in 307.61s**, clean migrations and working-tree
+checks passed. The complete-record parity and memory observations above remain
+at their explicitly recorded measurement SHA.

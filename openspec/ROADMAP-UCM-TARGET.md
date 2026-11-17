@@ -41,7 +41,7 @@ Current capabilities: canonical UCM with immutable snapshots, Java/Groovy/PLPlus
 - C09 mcp-multirepository-intelligence: global search/trace/impact tools
 - C10 kafka-topic-discovery: complete; discovery/3 NewTopic declarations only, exact contextual C04 candidates; [receipt](archive/2026-11-17-c10-kafka-topic-discovery/completion.md)
 - C11 bpmn-worker-discovery: complete; typed standalone D02 worker registrations and candidate-only C04 discovery; [receipt](archive/2026-11-17-c11-bpmn-worker-discovery/completion.md)
-- C12 streaming-search-document-rebuild: [completed](archive/2026-11-17-c12-streaming-search-document-rebuild/completion.md), full-record parity above 1M facts, 95 MiB streaming RSS; PG15 CI 1489 passed
+- C12 streaming-search-document-rebuild: [completed](archive/2026-11-17-c12-streaming-search-document-rebuild/completion.md), full-record parity above 1M facts, 95 MiB streaming RSS; PG15 CI 1510 passed
 
 ## Stream D — source adapters (can run parallel with C after stable core)
 - D01 bpmn-schema-adapter: BPMN 2.0 processes, elements, flows and variables — [completed](archive/2026-11-15-d01-bpmn-schema-adapter/completion.md), PG15 CI 882 passed

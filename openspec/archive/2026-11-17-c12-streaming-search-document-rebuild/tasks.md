@@ -41,3 +41,14 @@ All acceptance scenarios verified; measurements and mandatory PG15 CI are record
   https://github.com/resokk/code-crawler/actions/runs/44176694371.
 - No migrations added/edited. Raw source Evidence, certainty and canonical pointers
   are preserved. Owned benchmark DB cleanup and container shutdown verified.
+
+## Final repeated-cancellation regression
+
+- Verified failure before fix: a second cancel detached policy cleanup too early.
+- `d1df25d144344019e021e7891a14be29ecb91ceb` shields the completion future against
+  repeated cancellation and joins policy before returning.
+- Full local required PG15 suite: **1510 passed in 357.08s**, Ruff checks passed.
+- Final required PG15 CI: **1510 passed in 307.61s**, clean migrations/tree passed:
+  https://github.com/resokk/code-crawler/actions/runs/44183118657.
+- Only cancellation cleanup changed after the recorded scale experiment; normal
+  projection and document formatting remain the measured implementation.
