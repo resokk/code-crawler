@@ -22,7 +22,7 @@ from uuid import UUID, uuid4
 import asyncpg
 from pydantic import model_validator
 
-from code_crawler import repos, snapshots
+from code_crawler import observability, repos, snapshots
 from code_crawler.ingestion import (
     _check,
     _lock_empty,
@@ -458,6 +458,7 @@ def _spool_facts(
     )
 
 
+@observability.timed("prepare")
 async def _prepare_spool(
     stream: BinaryIO,
     snap: UUID,
@@ -474,7 +475,8 @@ async def _prepare_spool(
         count += 1
     for start in range(0, len(selected), _SLICE):
         part = selected[start : start + _SLICE]
-        analyses = await analyze(part)
+        with observability.span("analyze"):
+            analyses = await analyze(part)
         await asyncio.to_thread(_spool_facts, stream, snap, repo, part, analyses)
         tick("Сборка снимка: проверка и строки", -(-len(selected) // _SLICE))
         count += 1

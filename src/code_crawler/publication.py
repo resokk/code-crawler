@@ -10,6 +10,7 @@ from uuid import UUID
 import asyncpg
 from pydantic import TypeAdapter
 
+from code_crawler import observability
 from code_crawler.discovery import build_generation
 from code_crawler.ingestion import (
     UcmBatch,
@@ -621,6 +622,7 @@ async def load_snapshot_batch(conn: asyncpg.Connection, snapshot_id: UUID) -> Uc
     return await asyncio.to_thread(_restore, snapshot["repository_id"], tables)
 
 
+@observability.timed("validate")
 async def validate_snapshot(conn: asyncpg.Connection, snapshot_id: UUID) -> int:
     """Freeze and validate all stored facts, then record readiness; return entity count."""
     _require_free_connection(conn)
@@ -734,6 +736,7 @@ async def _publish(
             await build_generation(conn, snapshot_id)
 
 
+@observability.timed("publish")
 async def publish_snapshot(
     conn: asyncpg.Connection,
     repository_id: UUID,

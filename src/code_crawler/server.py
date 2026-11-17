@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import nullcontext
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -15,7 +16,7 @@ from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.lifespan import lifespan
 from pydantic import BeforeValidator, Field
 
-from code_crawler import search
+from code_crawler import observability, search
 from code_crawler.access import (
     Permission,
     PolicyVerifier,
@@ -91,10 +92,17 @@ async def _query(
         policy.authorize(principal, permission, targets)
     except PermissionError:
         raise ToolError("access denied") from None
-    async with ctx.lifespan_context["pool"].acquire() as conn:
+    async with (
+        ctx.lifespan_context["pool"].acquire() as conn,
+        observability.recording(conn, (), repository_keys=targets)
+        if permission != "monitor"
+        else nullcontext(),
+    ):
         try:
             async with conn.transaction(isolation="repeatable_read", readonly=True):
-                result = await run(conn)
+                with observability.span("search"):
+                    result = await run(conn)
+                observability.response(result)
                 safe, report = await asyncio.to_thread(SecretPolicy().clean, result)
                 if report["findings"]:
                     safe = {**safe, "data_security": report}
@@ -107,6 +115,24 @@ async def _query(
             asyncpg.InterfaceError,
         ):
             raise ToolError("query failed") from None
+
+
+@mcp.tool
+async def get_monitoring(
+    ctx: Context,
+    repository_key: RepositoryKey,
+    days: Annotated[int, Field(ge=1, le=30)] = 7,
+    job_id: UUID | None = None,
+) -> dict:
+    """Read redacted operational latency/error counters and published coverage; requires monitor grant."""
+    return await _query(
+        ctx,
+        lambda conn: observability.report(
+            conn, repository_key, days=days, job_id=job_id
+        ),
+        repository_key,
+        permission="monitor",
+    )
 
 
 @mcp.tool

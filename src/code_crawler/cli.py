@@ -21,6 +21,7 @@ from code_crawler import (
     ingestion,
     jobs,
     legacy,
+    observability,
     profiling,
     publication,
     repos,
@@ -470,11 +471,13 @@ async def snapshot_gc(
     with operation("Очистка UCM snapshots"):
         conn = await db.connect()
         try:
-            result = await jobs.collect_garbage(
-                conn,
-                building_older_than_hours=building_older_than,
-                keep_retired=keep_retired,
-            )
+            async with observability.recording(conn, (None,)):
+                result = await jobs.collect_garbage(
+                    conn,
+                    building_older_than_hours=building_older_than,
+                    keep_retired=keep_retired,
+                )
+                observability.rows("gc", sum(result["deleted_rows"].values()))
         except jobs.GCError as error:
             console.print_json(json.dumps(error.report, default=str))
             raise
@@ -579,22 +582,29 @@ async def index_registered(
             if job_id is None:
                 job_id = await jobs.begin(conn, repository, parameters)
             console.print(f"Ingest job: {job_id}")
-            try:
-                result = await index_sources(conn, repository, path, registry)
-                console.print(f"BUILDING snapshot: {result.snapshot_id}")
-                await jobs.advance(
-                    conn, job_id, "PUBLISH" if publish else "INDEX", result.snapshot_id
-                )
-                if publish:
-                    await _publish_cli_snapshot(
-                        conn, result.snapshot_id, result.base_snapshot_id
+            attempt = await conn.fetchval(
+                "SELECT attempt FROM ingest_jobs WHERE id=$1", job_id
+            )
+            async with observability.recording(conn, (repository,), job_id, attempt):
+                try:
+                    result = await index_sources(conn, repository, path, registry)
+                    console.print(f"BUILDING snapshot: {result.snapshot_id}")
+                    await jobs.advance(
+                        conn,
+                        job_id,
+                        "PUBLISH" if publish else "INDEX",
+                        result.snapshot_id,
                     )
-            except Exception as error:
-                # Сбой записи статуса не должен скрыть исходную ошибку; reap пометит позже.
-                with suppress(Exception):
-                    await jobs.finish(conn, job_id, error)
-                raise
-            await jobs.finish(conn, job_id)
+                    if publish:
+                        await _publish_cli_snapshot(
+                            conn, result.snapshot_id, result.base_snapshot_id
+                        )
+                except Exception as error:
+                    # Сбой записи статуса не должен скрыть исходную ошибку; reap пометит позже.
+                    with suppress(Exception):
+                        await jobs.finish(conn, job_id, error)
+                    raise
+                await jobs.finish(conn, job_id)
             await _snapshot_report(conn, result.snapshot_id)
         finally:
             await conn.close()

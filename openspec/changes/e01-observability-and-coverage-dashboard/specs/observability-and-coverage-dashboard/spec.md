@@ -2,42 +2,69 @@
 
 ## ADDED Requirements
 
-### Requirement: Instrument analyze/prepare/stage/transfer/FK/validate/publish and GC durations plus RSS, rows, retries and errors per repo/job.
-The system MUST satisfy this requirement with auditable results and clear failure behavior.
+### Requirement: Bounded durable operational observations
+The system MUST aggregate fixed stage timing, calls/errors, numeric row and cache
+counts and process peak RSS independently of canonical facts. CLI indexing MUST
+attach repository, job and attempt. GC totals MUST remain admin-scoped.
 
-#### Scenario: Index job finishes with partial SQL coverage
-- GIVEN Index job finishes with partial SQL coverage
-- WHEN reading monitoring metrics
-- THEN partial coverage and its reasons are visible
+#### Scenario: Parallel repositories
+- GIVEN two repositories index concurrently
+- WHEN their observations are flushed and read
+- THEN timings and errors are isolated by repository and job attempt
+- AND no source, query or exception strings are stored
 
-### Requirement: Expose per-adapter parsed files, diagnostics, unsupported constructs and Coverage ratios without treating unknown as failure.
-The system MUST satisfy this requirement with auditable results and clear failure behavior.
+#### Scenario: Failed observation write
+- GIVEN a published snapshot and an observation insertion failure
+- WHEN telemetry is flushed
+- THEN its transaction rolls back independently
+- AND the canonical publication and source evidence remain available
+- AND the original operation exception is not replaced
 
-#### Scenario: Two repositories index in parallel
-- GIVEN Two repositories index in parallel
-- WHEN viewing metrics
-- THEN each job/repository has independent stage latency and error count
+### Requirement: Protected operational query dashboard
+The system MUST require explicit monitor permission and repository membership
+before database access. Reports MUST restrict time windows to 1..30 days, support
+job filtering and return numeric stage aggregates including P50/P95.
 
-### Requirement: Measure MCP search P50/P95, DB query timing, candidate counts, truncation and resolver cache hit/miss.
-The system MUST satisfy this requirement with auditable results and clear failure behavior.
+#### Scenario: Read permission alone
+- GIVEN an authenticated principal with read but no monitor grant
+- WHEN it requests monitoring
+- THEN access is denied before DB access without disclosing diagnostics
 
-#### Scenario: MCP queries exceed response limit
-- GIVEN MCP queries exceed response limit
-- WHEN viewing dashboards
-- THEN truncated counts are visible without source content
+#### Scenario: Foreign or anonymous client
+- GIVEN an anonymous client or a monitor principal outside repository membership
+- WHEN it requests privileged diagnostics
+- THEN it receives a redacted denial without repository/source information
 
-### Requirement: Design redacted operational dashboard/query API scoped by role/workspace and repository; avoid exposing source bodies.
-The system MUST satisfy this requirement with auditable results and clear failure behavior.
+### Requirement: Published typed coverage
+Coverage MUST read one pinned published snapshot. COMPLETE, PARTIAL, UNSUPPORTED
+and unknown MUST remain distinct. Ratios MUST use an explicit denominator.
+Diagnostics and reasons MUST be reduced to severity and fixed categories.
 
-#### Scenario: Anonymous monitoring client
-- GIVEN Anonymous monitoring client
-- WHEN requesting privileged diagnostics
-- THEN source paths/secrets are not exposed
+#### Scenario: Partial SQL analysis
+- GIVEN a published index with partial SQL capabilities
+- WHEN monitoring is read
+- THEN partial counts and categorical reasons are visible
+- AND raw paths, source bodies and diagnostic messages are absent
 
-### Requirement: Auditable and reproducible actions
-All destructive or publication-related operations MUST be observable, safe under failure, and prevent modification of unrelated repositories.
+#### Scenario: No publication
+- GIVEN a repository with no publication
+- WHEN monitoring is read
+- THEN coverage reports NO_PUBLICATION instead of a successful zero-error score
 
-#### Scenario: Unrelated repository is active
-- GIVEN another repository has a published or pinned snapshot
-- WHEN this feature operates on one selected repository
-- THEN the other repository remains readable and unaffected
+### Requirement: Search and cache observations
+MCP MUST count returned items/candidates, explicit truncation and resolver HIT/MISS
+and collect DB query time without storing query arguments. Stage totals MUST be
+aggregated per request before persistence, not retained as unbounded worker state.
+
+#### Scenario: Truncated search
+- GIVEN a response exceeds its declared result limit
+- WHEN operational metrics are read
+- THEN a truncation count and returned-row count are visible without source data
+
+### Requirement: Preserve immutable canonical state
+Monitoring MUST NOT alter canonical facts, publication pointers or evidence.
+
+#### Scenario: Unrelated repository remains readable
+- GIVEN another repository has a published snapshot
+- WHEN metrics fail for one selected repository
+- THEN the other publication and its facts remain unchanged

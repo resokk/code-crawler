@@ -23,6 +23,7 @@ TOOLS = {
     "find_table_writers": {"table": "users"},
     "trace_dependency": {"entity_id": ID},
     "get_evidence": {"relation_id": ID},
+    "get_monitoring": {},
 }
 
 

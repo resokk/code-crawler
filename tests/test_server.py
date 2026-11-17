@@ -62,6 +62,7 @@ def test_server_exposes_structural_tools(pool: FakePool) -> None:
         "trace_dependency",
         "trace_cross_repository",
         "get_evidence",
+        "get_monitoring",
     }
     assert all(tool.description for tool in tools.values())
     assert all(
@@ -260,3 +261,48 @@ def test_database_qualified_access_tool_contract_and_acl(pool: FakePool, monkeyp
     assert calls[1][2]["schema_version_key"] == "v1" and calls[1][2]["limit"] == 7
     assert calls[2][2]["mode"] == "SYNTACTIC_NAME"
     assert pool.transactions == [(True, "repeatable_read")] * 6
+
+
+@pytest.mark.parametrize(
+    "grant,repository,allowed",
+    [(False, "app", False), (True, "foreign", False), (True, "app", True)],
+)
+def test_monitoring_requires_separate_permission_and_repository_membership(
+    pool,
+    monkeypatch,
+    grant,
+    repository,
+    allowed,
+):
+    import json
+    import os
+
+    from code_crawler import observability
+
+    policy = json.loads(os.environ["MCP_ACCESS_POLICY"])
+    if grant:
+        policy["principals"][0]["permissions"].append("monitor")
+    monkeypatch.setenv("MCP_ACCESS_POLICY", json.dumps(policy))
+    called = []
+
+    async def report(conn, key, **kwargs):
+        called.append((key, kwargs))
+        return {"metrics": [], "coverage": {"status": "NO_PUBLICATION"}}
+
+    monkeypatch.setattr(observability, "report", report)
+
+    async def run():
+        async with Client(mcp) as client:
+            if allowed:
+                result = await client.call_tool(
+                    "get_monitoring", {"repository_key": repository}
+                )
+                assert result.data["coverage"]["status"] == "NO_PUBLICATION"
+            else:
+                with pytest.raises(ToolError, match="access denied"):
+                    await client.call_tool(
+                        "get_monitoring", {"repository_key": repository}
+                    )
+
+    asyncio.run(run())
+    assert len(called) == int(allowed)

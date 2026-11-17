@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import asyncpg
 
-from code_crawler import db, snapshots
+from code_crawler import db, observability, snapshots
 
 # Первый ключ пары advisory-блокировки; второй — hashtext(id задания).
 _JOB_LOCK = 4_217_002
@@ -319,6 +319,7 @@ async def _delete_snapshots(
     return counts
 
 
+@observability.timed("gc")
 async def collect_garbage(
     conn: asyncpg.Connection,
     *,
