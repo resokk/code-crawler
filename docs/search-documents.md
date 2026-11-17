@@ -131,8 +131,8 @@ MCP-аргумента. Это внутренний API для доверенн�
 HTTP authentication или RLS; A02 проверяет identity и права MCP до SQL. MCP остаётся read-only и пока не
 экспортирует этот API. Пересборку вызывает управляющий процесс, не MCP.
 
-Ограничения: loader и project пока материализуют полный snapshot; B02 ещё не
-закрыт, bounded-memory/миллион сущностей не заявлены. Поколения не создаются
+C12 storage rebuild читает bounded neighborhoods; чистый `project(entities)` и
+явный `load_snapshot_batch` сохраняют прежний batch-контракт и материализуют вход. Поколения не создаются
 автоматически при canonical indexing; явная пересборка нужна для каждого нового
 snapshot. Политика retention поколений и embeddings не входят в C01.
 
@@ -165,3 +165,65 @@ never rewritten. Rebuild with the new version to make derivatives readable.
 `data_security.embedding_input(content)` rechecks C01 content before producing
 future model input. No model/vector pipeline is added. Detector limits, false
 positives, unrecognized secret forms and retention are documented in the A06 guide.
+
+## C12: bounded storage rebuild
+
+Public signatures, `PROJECTION_VERSION`, document IDs, JSON content hashes,
+provenance and A06/caller redaction are unchanged. Storage rebuild no longer calls
+`load_snapshot_batch`: keyset pages select at most 128 document-producing entities,
+then hydrate only their direct relations (including candidate provenance), SQL
+accesses, execution owners, call labels and source files. Every hydration SQL page
+also contains at most 128 entity IDs. Parameter/local symbols and other fact kinds
+are not roots, but remain available when needed as context. No graph inference or
+certainty promotion occurs.
+
+Formatting workspace is bounded to 8,192 canonical context entities. A root page
+that exceeds it is split recursively in ID order; an oversized single document
+fails the entire rebuild. Related facts are never truncated. One encoded record
+and one COPY chunk are limited to 4 MiB UTF-8; exceeding this fails closed. These
+are storage-rebuild capacity bounds, not changes to canonical UCM validity. As in
+B02, a single canonical entity/nested payload is not given an absolute byte bound
+before hydration; the limits prevent accumulation proportional to independent
+facts, not arbitrary payload amplification inside one fact. `project` remains an
+unrestricted pure batch formatter for compatibility.
+
+Rows are staged in a session-owned temporary table in bounded COPY chunks. This
+preserves the existing immutable generation metadata contract: final document count
+and aggregate security report are known before inserting the unsealed generation.
+INSERT SELECT, count-checked sealing and CAS publication use the same transaction;
+staging is never reader-visible and disappears at commit/rollback/cancellation.
+No migration or new durable table is needed. Generation diagnostics merge page
+counts/categories and retain the same first 256 skipped entity IDs in the same
+order with the same truncation flag. A cancelled CPU worker stops between documents
+and is joined before releasing the snapshot lease or transaction.
+
+Authorization still precedes every source query and policy call. The writer pins
+the selected immutable snapshot before reading facts, so concurrent GC skips it.
+READY and RETIRED sources remain valid for explicit offline builds. At the final
+short repository lock, both the expected search-generation pointer and the original
+canonical publication pointer must still match. A concurrent canonical publication
+therefore rolls back the build instead of publishing stale work. This additional
+CAS precondition can raise ValueError even when the per-snapshot search pointer
+has not changed; retry explicitly against the intended version.
+
+Regression coverage compares complete records and security reports against the
+batch formatter with tiny pages, all six document kinds, skipped-ID truncation,
+full/incremental reuse, candidate provenance, source-policy failures, partial COPY
+errors, cancellation, lease/GC and concurrent publication. The opt-in
+`python -m code_crawler.search_projection_benchmark` uses owned disposable PG15 DBs
+and fresh batch/stream worker processes; no model or network service is called.
+Default fixtures contain 141,431 and 1,000,011 canonical facts (10 facts/unit plus
+one archived file), including an evidenced INFERRED call ring and non-document
+candidate facts. Both modes hash all six persisted record fields in document-ID
+order, including full contents and provenance. RSS is per-process high-water mark;
+stream timing includes staging, persistence and atomic swap, while batch timing
+includes full hydration and formatting but not persistence. They are memory/parity
+evidence, not an isolated speed comparison or a production SLO.
+
+```sh
+BENCHMARK_DATABASE_URL=postgresql://.../postgres \
+  uv run python -m code_crawler.search_projection_benchmark \
+  --output /tmp/search-projection-pg15.json
+```
+
+Controlled scale results will be recorded after the verified implementation commit.

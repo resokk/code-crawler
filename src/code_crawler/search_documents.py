@@ -2,7 +2,7 @@
 
 import hashlib
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Iterator
+from collections.abc import Collection, Iterable, Iterator
 from typing import Literal
 
 from pydantic import Field
@@ -105,7 +105,9 @@ def project(
         )
 
 
-def _project_raw(entities: Iterable[Entity]) -> Iterator[SearchDocument]:
+def _project_raw(
+    entities: Iterable[Entity], *, entity_ids: Collection[str] | None = None
+) -> Iterator[SearchDocument]:
     """Yield deterministic documents for symbols, SQL, ORM, DB objects and calls.
 
     Parameters and local variables get no document of their own. Every relation
@@ -144,7 +146,10 @@ def _project_raw(entities: Iterable[Entity]) -> Iterator[SearchDocument]:
                 if target:
                     calls_in[target.id].append(entity)
 
-    for entity in sorted(catalog.values(), key=lambda e: e.id):
+    selected = (
+        catalog.values() if entity_ids is None else (catalog[key] for key in entity_ids)
+    )
+    for entity in sorted(selected, key=lambda e: e.id):
         if isinstance(entity, Symbol) and entity.symbol_kind not in (
             "PARAMETER",
             "LOCAL_VARIABLE",

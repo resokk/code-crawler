@@ -60,8 +60,8 @@ SourceRange, EntityRef, Resolution, Coverage) разделяются через 
 | без общего JSON | 936 тыс. | +845 МБ | 922 МБ |
 | с общими значениями и порционной индексацией | 336 тыс. | +573 МБ | 639 МБ |
 
-`load_snapshot_batch` остаётся для потребителей, которым нужен весь batch (поисковые
-проекции, benchmark), и по-прежнему держит все модели: около 4,6 КБ на сущность.
+`load_snapshot_batch` остаётся для потребителей, которым нужен весь batch (явные batch-
+проекции и benchmark), и по-прежнему держит все модели: около 4,6 КБ на сущность.
 
 ### Проверка порциями
 
@@ -93,3 +93,7 @@ references. Финальный короткий transaction повторно п�
 Исторический замер streaming-версии на PG15/macOS arm64 (141424 entities): 17.8 с,
 170 MiB RSS вместо 4.8 с / 688 MiB whole-batch restore. Он предшествует B02 SQL
 invariants и не является сравнением скорости на текущей машине.
+
+C12 search storage rebuild instead hydrates bounded root/context pages under a
+snapshot lease; it does not call the whole-batch loader. See
+[search-documents.md](search-documents.md#c12-bounded-storage-rebuild).
