@@ -1,6 +1,6 @@
 # Tasks
 
-Implementation and targeted PostgreSQL 15 checks are complete. Full-suite CI and archival receipts remain open.
+All acceptance checks are complete; see completion.md for the implementation SHA and required PostgreSQL 15 CI evidence.
 
 - [x] 1. Review source files, current tests and existing OpenSpec completion receipts; record exact existing behavior.
 - [x] 2. Define identity, provenance, coverage and version fields for the feature; document backward compatibility.
@@ -16,5 +16,5 @@ Implementation and targeted PostgreSQL 15 checks are complete. Full-suite CI and
 - [x] 12. Test Given/When/Then: Isolation and versioning
 - [x] 13. Add negative tests for snapshots/versions, missing grants, malformed data, ambiguity, cancellation and rollback.
 - [x] 14. Add PostgreSQL 15 integration fixtures, including reuse/rollback and read API consistency.
-- [ ] 15. Run full required PG15 CI and benchmark when relevant; record SHA and evidence in completion.md.
-- [ ] 16. Update docs, close tasks only after verified acceptance and then archive the OpenSpec change.
+- [x] 15. Run full required PG15 CI and benchmark when relevant; record SHA and evidence in completion.md.
+- [x] 16. Update docs, close tasks only after verified acceptance and then archive the OpenSpec change.

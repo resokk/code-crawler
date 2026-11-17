@@ -4,7 +4,7 @@
 
 ## Завершено с предыдущего ревью
 
-A02, A03, A04, A06, B01, B02, B03, B04, E01, Java SQL flow COW, Java source-text cache, configurable SQL-path budget; canonical UCM, C01–C06, D01/D02, D05/D06, D07, D10/D11/D12 уже были. Подтвержден CI на текущем SHA и архивы completion. B02 больше не имеет прежнего all-SQL Python hydration, B03 не держит CPU parsing внутри write transaction. Никакой новый change не должен повторно реализовывать эти действия.
+A02, A03, A04, A06, B01, B02, B03, B04, C10, C11, E01, Java SQL flow COW, Java source-text cache, configurable SQL-path budget; canonical UCM, C01–C06, D01/D02, D05/D06, D07, D10/D11/D12 уже были. Подтвержден CI на текущем SHA и архивы completion. B02 больше не имеет прежнего all-SQL Python hydration, B03 не держит CPU parsing внутри write transaction. Никакой новый change не должен повторно реализовывать эти действия.
 
 ## Волна 0. Сохранность существующих развёртываний (P1 — первой)
 
@@ -39,13 +39,13 @@ B06 и A07 можно выполнять параллельно. E02 долже�
 
 ## Волна 2. Завершение query-time discovery и MCP (P1/P2)
 
-- **C10** Kafka topic discovery — реализовано, ожидает полный PG15 CI: **declarations only**, cluster/namespace identity, C04 candidate uncertainty, version-context compatibility.
-- **C11** BPMN worker discovery — реализовано, ожидает полный PG15 CI: definite handler declaration vs external worker reference; ambiguous/partial без выдуманного runtime linkage.
+- **C10** Kafka topic discovery — завершено ([receipt](../openspec/archive/2026-11-17-c10-kafka-topic-discovery/completion.md)): **declarations only**, cluster/namespace identity, C04 candidate uncertainty, version-context compatibility.
+- **C11** BPMN worker discovery — завершено ([receipt](../openspec/archive/2026-11-17-c11-bpmn-worker-discovery/completion.md)): definite handler declaration vs external worker reference; ambiguous/partial без выдуманного runtime linkage.
 - **C07** Embedding pipeline — выбрать модель для RU/EN code+SQL+schema, pgvector 0.8.0, model/preprocessing registry, redacted C01 input, content-hash cache, generation lifecycle. Ресурсы inference измерить на целевом железе.
 - **C08** Hybrid retrieval — exact/FTS/trigram/vector + bounded graph expansion, explainable ranking, тестовый RU/EN retrieval dataset.
 - **C09** Multi-repo MCP — global search, explainable resolution, bounded backward impact; строго ACL A02 и контекст C03. Никаких глобальных canonical relations.
 
-Приоритет C10/C11 зависит от того, нужны ли Kafka/BPMN сценарии для ближайшего пользовательского поиска. C12 завершён; C07 можно начинать на bounded persisted documents, а C08 по-прежнему требует безопасной политики A06.
+C10/C11 завершены: query-time поиск поддержанных declarations проверен PG15 CI (1510 tests). C12 завершён; C07 можно начинать на bounded persisted documents, а C08 по-прежнему требует безопасной политики A06.
 
 ## Волна 3. Бизнес-источники и эксплуатация (P2)
 
