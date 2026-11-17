@@ -41,7 +41,7 @@ Current capabilities: canonical UCM with immutable snapshots, Java/Groovy/PLPlus
 - C09 mcp-multirepository-intelligence: global search/trace/impact tools
 - C10 kafka-topic-discovery: exact discovery from D07 declaration producers only; new follow-up
 - C11 bpmn-worker-discovery: candidate-only worker definitions from D02; new follow-up
-- C12 streaming-search-document-rebuild: bounded C01 projections; new follow-up
+- C12 streaming-search-document-rebuild: [completed](archive/2026-11-17-c12-streaming-search-document-rebuild/completion.md), full-record parity above 1M facts, 95 MiB streaming RSS; PG15 CI 1489 passed
 
 ## Stream D — source adapters (can run parallel with C after stable core)
 - D01 bpmn-schema-adapter: BPMN 2.0 processes, elements, flows and variables — [completed](archive/2026-11-15-d01-bpmn-schema-adapter/completion.md), PG15 CI 882 passed
@@ -66,7 +66,7 @@ Current capabilities: canonical UCM with immutable snapshots, Java/Groovy/PLPlus
 ## Critical path (revised 2026-11-17)
 
 1. Migration and governance: **A07 first** for upgrading existing databases; **A05** required rules verification.
-2. Storage operations: **B06** GC measured above 120s on 141k; coordinate with **E02** retention/source blob lifecycle. B05 bounded spool/staging, C12 bounded search projection; B07/B08 after.
+2. Storage operations: **B06** GC measured above 120s on 141k; coordinate with **E02** retention/source blob lifecycle. B05 bounded spool/staging, C12 bounded search projection [completed]; B07/B08 after.
 3. Search: C01–C06 complete; **C10/C11** declaration discovery; **C07 → C08 → C09** GraphRAG, with A02/A06 already implemented. No runtime certainty promotion.
 4. Adapters: D03→D04 reference-data; D08→D09 GraphQL. Existing D01/D02, D05/D06, D07, D10/D11/D12 done.
 5. Ops: E01 done; E02/E03 pending; E04 archive policy, monitoring drift review.

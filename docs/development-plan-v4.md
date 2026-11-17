@@ -31,7 +31,7 @@ A02, A03, A04, A06, B01, B02, B03, B04, E01, Java SQL flow COW, Java source-text
 | --- | --- | --- | --- |
 | 1 | **B06** large-snapshot-gc-performance | FK-trigger/index планы, GC duration, WAL, locks, dead tuples, 100k/1M; безопасная очистка без чужих таблиц и pinned snapshots | Новые PG15 замеры существенно лучше 120s timeout на сравнимом fixture; целевой SLO утвердить после baseline |
 | 2 | **E02** snapshot-retention-policy | CURRENT/RETIRED/PINNED/FAILED, shared content blobs, derived generations, dry-run, retention pins | Нельзя удалить shared blob/pinned snapshot; orphan blobs очищаются только после доказанного отсутствия ссылок |
-| 3 | **C12** streaming-search-document-rebuild | Удалить `load_snapshot_batch` + большой `_records` из C01 projector, streaming COPY и atomic generation | Документы/хеши совпадают со старым projector; bounded RSS на >1M fixture; rollback |
+| 3 | **C12 [done]** streaming-search-document-rebuild | Bounded context pages, staged COPY and atomic generation; public contracts unchanged | [Acceptance](../openspec/archive/2026-11-17-c12-streaming-search-document-rebuild/completion.md): full parity at 1,000,011 facts, 94.8 MiB RSS; PG15 CI 1489 passed |
 | 4 | **B05** incremental-streaming-pipeline | Лимит bytes/entities/temporary storage в spool/staging, no-change clone, memory/disk/cancellation tests | Предсказуемые resource budgets, корректный source fingerprint и неизменный published pointer при сбое |
 | 5 | **B07/B08** mixed-language and 100+ repositories | Реальные mixed-fixtures, concurrent queries/index/publish/GC, зафиксированные latency/memory/IO | Независимые публикации, отсутствие репозиторных утечек; нагрузочные данные на PG15 |
 
@@ -45,7 +45,7 @@ B06 и A07 можно выполнять параллельно. E02 долже�
 - **C08** Hybrid retrieval — exact/FTS/trigram/vector + bounded graph expansion, explainable ranking, тестовый RU/EN retrieval dataset.
 - **C09** Multi-repo MCP — global search, explainable resolution, bounded backward impact; строго ACL A02 и контекст C03. Никаких глобальных canonical relations.
 
-Приоритет C10/C11 зависит от того, нужны ли Kafka/BPMN сценарии для ближайшего пользовательского поиска. Начать C07 можно параллельно с C12, но C08 требует устойчивых persisted documents и безопасной политики A06.
+Приоритет C10/C11 зависит от того, нужны ли Kafka/BPMN сценарии для ближайшего пользовательского поиска. C12 завершён; C07 можно начинать на bounded persisted documents, а C08 по-прежнему требует безопасной политики A06.
 
 ## Волна 3. Бизнес-источники и эксплуатация (P2)
 
@@ -62,7 +62,7 @@ B06 и A07 можно выполнять параллельно. E02 долже�
 ## Контрольные точки
 
 1. **Migration-safe release:** A07 upgrade fixture, исторический schema resolver и A05 policy.
-2. **Operationally predictable storage:** B06 + E02 + C12 + B05, исключение неограниченных временных файлов/GC latency; pin-safe behavior.
+2. **Operationally predictable storage:** B06 + E02 + C12 [done] + B05, исключение неограниченных временных файлов/GC latency; pin-safe behavior.
 3. **Search-ready GraphRAG:** C07→C08→C09, coverage и корректные version contexts.
 4. **Business workflows:** D03/D04 + D08/D09, end-to-end trace до Java/SQL с Evidence.
 5. **Fleet scale:** B07/B08 + E03, подтверждённые 100+ repo benchmarks и restore.

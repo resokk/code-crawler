@@ -73,3 +73,14 @@ must still match their original values, otherwise all staged work rolls back.
 Regression fixtures exercise all six kinds, tiny pages, complete batch parity,
 mask/skip/reject, 260 secret skips, partial-copy failure, cancellation, GC lease,
 canonical publication changes, context/copy budgets and a benchmark-owned DB.
+
+## Measured acceptance
+
+The fresh-process fixed-degree ring/candidate fixture at clean `f5319f3` produced
+full-record parity at 141,431 and 1,000,011 canonical entities. Stream max RSS was
+91.7 and 94.8 MiB (1.034× growth), compared with batch 521.3 and 3434.5 MiB.
+Both content and complete provenance are hashed, not just counts/content hashes.
+The larger entity count was independently checked with SQL. PG15 used tmpfs with
+explicit capacity and settings; these timings do not establish disk performance.
+No callback, canonical graph, migration or relation certainty was altered to obtain
+these results. See docs/benchmarks/search-projection-pg15.json for all measurements.

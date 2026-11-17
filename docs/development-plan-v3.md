@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | A Security/Correctness | A01 safe GC | A02 открыт PR #8; A03 DB-qualified SQL search [done]; A04 certainty [done]; A05 strict no-bypass; A06 redaction |
 | B Scale/Operations | Sliced indexing, server-side cloning, PG15 1.06M, sliced validation, B04 FK/staging tuning, B01 controlled baseline with recorded limits, B02 bounded readiness | B03 short transactions; B05 true bounded pipeline; B06 GC; B07/08 mixed/100 repos |
-| C Search/Graph | C01–C06 complete | C07 embeddings/model selection, C08 hybrid retrieval, C09 MCP global; C10 Kafka and C11 BPMN worker discovery integration; C12 memory-bounded document rebuild |
+| C Search/Graph | C01–C06, C12 complete | C07 embeddings/model selection, C08 hybrid retrieval, C09 MCP global; C10 Kafka and C11 BPMN worker discovery integration |
 | D Adapters | D01/D02 BPMN; D05/D06 OpenAPI; D07 Kafka; D10 Kotlin; D11 JS/TS; D12 VBScript | D03/D04 reference JSON + loaders; D08/D09 GraphQL schema + Java; increase partial coverage based on tests |
 | E Prod | Some OpenSpec archive operations | E01 metrics, E02 retention, E03 restore; E04 verify archive policy |
 
@@ -49,7 +49,7 @@ The earlier successful 1M benchmark remains a **completed milestone**. Mixed-lan
 B04 is complete: fresh-table FK plans, per-slice fact staging, C/en_US measurements and two synthetic 1M full-cycle repetitions within 900 s on PG15/tmpfs. [Acceptance and CI](../openspec/archive/2026-11-16-b04-bulk-load-fk-optimization/completion.md). B01 now records parser and limited local-disk observations; mixed-language and concurrent-repository coverage remain B07/B08 work.
 
 ### C12: bounded search document rebuild (P1)
-Current C01 storage rebuild materializes full snapshot via `load_snapshot_batch`. Stream projection with bounded batches and atomic generation swap while preserving authorization, redaction, deterministic hashes and old generation on failure.
+Completed: bounded context pages and staged atomic generation swap preserve authorization, redaction, hashes and previous generations on failure. Full-record parity at 1,000,011 facts, streaming RSS 94.8 MiB versus batch 3434.5 MiB. [Acceptance and CI](../openspec/archive/2026-11-17-c12-streaming-search-document-rebuild/completion.md).
 
 ## Wave 2 — complete discovery with new source producers
 

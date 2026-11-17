@@ -226,4 +226,33 @@ BENCHMARK_DATABASE_URL=postgresql://.../postgres \
   --output /tmp/search-projection-pg15.json
 ```
 
-Controlled scale results will be recorded after the verified implementation commit.
+### Controlled parity and memory results
+
+Measured clean implementation: `f5319f3ccd3e69b48be8f5a77d1646e2198debc8`.
+[Full results and environment](benchmarks/search-projection-pg15.json).
+Linux x86_64, Python 3.12.14, PostgreSQL 15.20; host quota 2 CPUs / 8 GiB,
+PGDATA tmpfs 3 GiB, shared_buffers=128MB, work_mem=4MB, locale en_US.utf8,
+fsync/synchronous_commit=on. Rootless Docker reports the shared 8-GiB cgroup;
+the requested 4-GiB container limit is recorded but is not claimed as effective.
+Dedicated-cluster WAL/bgwriter totals include fixture creation/validation and cleanup,
+not only projection. This is not a production-disk latency measurement.
+
+| Canonical facts | Documents, both modes | Batch seconds | Stream seconds | Batch max RSS, MiB | Stream max RSS, MiB |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 141,431 | 28,286 | 63.899 | 65.497 | 521.3 | 91.7 |
+| 1,000,011 | 200,002 | 434.329 | 463.652 | 3,434.5 | 94.8 |
+
+Both full-record SHA256 digests match, including every content/provenance field:
+`13faa67f4702f0baf8ab5b398f3582f5a45ba3d2140eb313e2068d8e64e39f13`
+(141k) and `5a88901f6f2b7aa003007cbc0643284fb1a7a8c1e6748ebe1706e6ab8600933a`
+(>1M). An independent SQL observation confirmed the large canonical entity count.
+Stream RSS grew by **1.034×** for **7.07×** more independent facts, passing the
+predeclared <1.5× RSS-growth acceptance. Neither mode failed or truncated facts.
+
+RSS is `resource.ru_maxrss`, a conservative process-lifetime high-water mark; on
+Linux it may include a retained pre-exec/startup watermark. Import/controller
+costs are not subtracted. The result demonstrates bounded client workspace on
+this fixed-degree synthetic corpus, not a bound on arbitrary nested fact payloads
+or all graph degree distributions. It does not assert a speedup: stream includes
+persistent staging/sealing/swap, while batch measures hydration/formatting only.
+All owned databases were removed, and the dedicated benchmark container stopped.
