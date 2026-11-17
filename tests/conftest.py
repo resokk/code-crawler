@@ -250,7 +250,7 @@ def access_policy_config(monkeypatch):
                 "token_sha256": hashlib.sha256(token.encode()).hexdigest(),
                 "expires_at": 2000000000,
                 "repositories": [repo],
-                "permissions": ["read", "evidence", "source", "discover"],
+                "permissions": ["read", "evidence", "source", "discover", "monitor"],
             }
             for (name, token), repo in zip(
                 tokens.items(), ("app", "other"), strict=True

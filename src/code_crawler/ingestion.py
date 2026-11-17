@@ -17,6 +17,7 @@ from uuid import UUID, uuid4
 import asyncpg
 from pydantic import model_validator
 
+from code_crawler import observability
 from code_crawler.ucm import (
     CodeEntity,
     ContractModel,
@@ -1127,12 +1128,14 @@ async def _lock_empty(
         raise ValueError("ingestion requires an empty snapshot")
 
 
+@observability.timed("stage")
 async def _stage(
     conn: asyncpg.Connection,
     prefix: str,
     stages: dict[str, tuple[str, str]],
     rows: dict[str, list[dict]],
 ) -> None:
+    observability.rows("stage", sum(len(records) for records in rows.values()))
     for table, records in rows.items():
         columns = tuple(records[0])
         if table not in stages:
@@ -1149,6 +1152,7 @@ async def _stage(
         )
 
 
+@observability.timed("transfer")
 async def _transfer(
     conn: asyncpg.Connection, stages: dict[str, tuple[str, str]]
 ) -> None:
@@ -1165,6 +1169,7 @@ async def _transfer(
         tick("Запись в БД: перенос", len(stages))
 
 
+@observability.timed("fk")
 async def _check(conn: asyncpg.Connection, tables: Iterable[str]) -> None:
     if names := sorted(set(tables)):
         # Bulk inserts into new tables otherwise leave FK lookups with empty-table estimates.

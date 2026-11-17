@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import asyncpg
 from pydantic import ValidationError
 
-from code_crawler import discovery
+from code_crawler import discovery, observability
 from code_crawler.resolver_context import GC_LOCK, ResolverContext, verify_context
 
 if TYPE_CHECKING:
@@ -72,6 +72,7 @@ def event(
     status: str, reason: str, context: ResolverContext, key: str | None = None
 ) -> None:
     """Emit per-request hit/miss telemetry without source text or mutable worker counters."""
+    observability.cache(status)
     _LOG.info(
         "resolver_cache",
         extra={

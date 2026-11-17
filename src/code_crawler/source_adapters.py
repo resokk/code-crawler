@@ -14,6 +14,7 @@ from uuid import UUID
 import asyncpg
 from pydantic import Field, model_validator
 
+from code_crawler import observability
 from code_crawler.incremental import (
     AnalysisScope,
     FileAnalysis,
@@ -635,13 +636,15 @@ class PreparedSourceRegistry:
         return tuple(output)
 
 
+@observability.timed("index")
 async def index_sources(
     conn: asyncpg.Connection, repository_id: UUID, root: Path, registry: AdapterRegistry
 ) -> IncrementalResult:
     """Route captured sources through independent adapters into one BUILDING snapshot."""
     root = await asyncio.to_thread(root.resolve, strict=True)
     captured = await _capture(root, repository_id, registry.languages)
-    prepared = await registry.prepare(captured.sources)
+    with observability.span("prepare"):
+        prepared = await registry.prepare(captured.sources)
     return await index_incremental(
         conn,
         repository_id,

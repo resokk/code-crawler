@@ -135,3 +135,7 @@ GC впятеро дольше загрузки. Основное время у�
 На snapshot больше 1 млн сущностей GC не замерялся: при квадратичном росте
 удаление одной копии оценивается часами. До b06 большие snapshots стоит удалять
 редко и вне окна индексации; GC по-прежнему атомарен и не трогает PUBLISHED.
+
+E01 stores redacted per-job/attempt stage aggregates after the canonical transaction.
+GC records a global admin-only observation, without attributing its total duration
+to unrelated repositories. See [observability.md](observability.md).

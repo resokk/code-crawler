@@ -20,7 +20,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 if TYPE_CHECKING:
     from code_crawler.reader import EvidenceFragment
 
-Permission = Literal["read", "evidence", "source", "discover"]
+Permission = Literal["read", "evidence", "source", "discover", "monitor"]
 AUDIT = logging.getLogger("code_crawler.audit")
 
 

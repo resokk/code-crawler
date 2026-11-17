@@ -85,3 +85,9 @@ responses add data_security with PARTIAL derivative status and safe coordinates;
 original canonical Coverage/Certainty is retained. No RPC argument disables this
 policy. Source permission is used only by the explicit authorized source reader.
 See [source-data-security.md](source-data-security.md).
+
+Operational `get_monitoring(repository_key, days=7, job_id=None)` requires a separate
+`monitor` grant plus repository membership. It returns redacted stage percentiles,
+errors, counters and published coverage; see [observability.md](observability.md).
+The server records derived operational counters after its read-only UCM transaction;
+it still never writes canonical facts or publication pointers.
