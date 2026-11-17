@@ -9,6 +9,7 @@ from uuid import UUID
 import asyncpg
 from sqlglot.errors import SqlglotError
 
+from code_crawler import java
 from code_crawler.incremental import (
     FileAnalysis,
     IncrementalResult,
@@ -87,6 +88,7 @@ class JavaLineageAnalyzer(JavaSemanticAnalyzer):
             ),
         )
 
+    @java._cached_text
     def analysis(self, file: _File) -> FileAnalysis:
         base = super().analysis(file)
         entities = list(base.entities)

@@ -7,6 +7,7 @@ from uuid import UUID
 import asyncpg
 import sqlglot
 
+from code_crawler import java
 from code_crawler.incremental import (
     FileAnalysis,
     IncrementalResult,
@@ -226,6 +227,7 @@ class JavaSemanticAnalyzer(JavaExecutionAnalyzer):
             ),
         )
 
+    @java._cached_text
     def analysis(self, file: _File) -> FileAnalysis:
         base = super().analysis(file)
         entities = list(base.entities)
