@@ -7,4 +7,4 @@
 - [x] Test exact/over-limit boundaries, no-SQL methods and concurrent budgets.
 - [x] Test invalid input, report failures, provenance, reuse invalidation and publication safety.
 - [x] Document commands, counters and operational limitations.
-- [ ] Run Ruff, unit/integration and required PostgreSQL 15 CI; archive evidence.
+- [x] Run Ruff, unit/integration and required PostgreSQL 15 CI; archive evidence.

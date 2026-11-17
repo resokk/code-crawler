@@ -19,6 +19,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - B03 short-transaction-indexing: move CPU analysis outside long DB writes — [completed](archive/2026-11-16-b03-short-transaction-indexing/completion.md), PG15 CI 1336 passed
 - java-sql-flow-copy-on-write: lazy Java SQL branch state — [completed](archive/2026-11-17-java-sql-flow-copy-on-write/completion.md), PG15 CI 1414 passed
 - java-source-text-cache: bounded worker-local decoded Java text — [completed](archive/2026-11-17-java-source-text-cache/completion.md), PG15 CI 1431 passed
+- java-sql-path-budget-report: configurable Java path budget and optional metadata JSONL — [completed](archive/2026-11-17-java-sql-path-budget-report/completion.md), PG15 CI 1463 passed
 - B04 bulk-load-fk-optimization: evidence-backed PG15 transfer/FK tuning
 - B05 incremental-streaming-pipeline: bounded in-flight analysis+clone+staging
 - B06 large-snapshot-gc-performance: locks, WAL, orphan blob cleanup
