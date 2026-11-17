@@ -17,6 +17,7 @@ from code_crawler.incremental import (
 )
 from code_crawler.java_calls import _File
 from code_crawler.java_execution import JavaExecutionAnalyzer
+from code_crawler.sql_paths import SqlPathOptions
 from code_crawler.sql_semantic import DIALECTS, StatementAnalysis, analyze_statements
 from code_crawler.ucm import (
     Certainty,
@@ -207,11 +208,15 @@ class JavaSemanticAnalyzer(JavaExecutionAnalyzer):
     """Analyze each recovered candidate using an explicit SQL dialect profile."""
 
     def __init__(
-        self, sources: tuple[SourceInput, ...], dialect: str = "postgres"
+        self,
+        sources: tuple[SourceInput, ...],
+        dialect: str = "postgres",
+        *,
+        sql_options: SqlPathOptions | None = None,
     ) -> None:
         if dialect not in DIALECTS:
             raise ValueError("unsupported SQL dialect profile")
-        super().__init__(sources)
+        super().__init__(sources, sql_options=sql_options)
         self.dialect = dialect
         self.analysis_version = (
             f"java.sql.semantic/1:{dialect}:sqlglot/{sqlglot.__version__}:"
@@ -310,7 +315,12 @@ class JavaSemanticAnalyzer(JavaExecutionAnalyzer):
 
 
 async def index_java_semantic(
-    conn: asyncpg.Connection, repository_id: UUID, root: Path, dialect: str = "postgres"
+    conn: asyncpg.Connection,
+    repository_id: UUID,
+    root: Path,
+    dialect: str = "postgres",
+    *,
+    sql_options: SqlPathOptions | None = None,
 ) -> IncrementalResult:
     """Build semantic facts in a BUILDING snapshot; publication remains explicit."""
     if dialect not in DIALECTS:
@@ -321,6 +331,7 @@ async def index_java_semantic(
         JavaSemanticAnalyzer,
         tuple(s for s in captured.sources if s.file.language == "java"),
         dialect,
+        sql_options=sql_options,
     )
     return await index_incremental(
         conn,

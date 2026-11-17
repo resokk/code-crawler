@@ -31,6 +31,7 @@ from code_crawler.jpa_catalog import JpaCatalog, QueryDefinition, qualify_jpa
 from code_crawler.jpa_flow import JpaFlow, OrmCall, QueryHandle
 from code_crawler.jpql import JpqlAnalysis, analyze_jpql
 from code_crawler.orm_native import native_facts
+from code_crawler.sql_paths import SqlPathOptions
 from code_crawler.ucm import (
     Coverage,
     DataAccess,
@@ -76,10 +77,14 @@ class JavaOrmAnalyzer(JavaDatabaseAnalyzer):
         assignments: tuple[ConnectionAssignment, ...] = (),
         dialect: str = "postgres",
         naming_policy: str = "UNKNOWN",
+        *,
+        sql_options: SqlPathOptions | None = None,
     ) -> None:
         if naming_policy not in ("UNKNOWN", "IDENTITY"):
             raise ValueError("unsupported ORM physical naming policy")
-        super().__init__(sources, schemas, assignments, dialect)
+        super().__init__(
+            sources, schemas, assignments, dialect, sql_options=sql_options
+        )
         self.naming_policy = naming_policy
         self.jpa = JpaCatalog(self)
         self._base_cache = {}
@@ -859,6 +864,8 @@ async def index_java_orm(
     assignments: tuple[ConnectionAssignment, ...] = (),
     dialect: str = "postgres",
     naming_policy: str = "UNKNOWN",
+    *,
+    sql_options: SqlPathOptions | None = None,
 ) -> IncrementalResult:
     """Build JPA semantic facts in a BUILDING snapshot; caller validates/publishes."""
     schemas = []
@@ -875,6 +882,7 @@ async def index_java_orm(
         assignments,
         dialect,
         naming_policy,
+        sql_options=sql_options,
     )
     return await index_incremental(
         conn,

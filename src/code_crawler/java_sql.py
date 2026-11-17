@@ -21,6 +21,7 @@ from code_crawler.incremental import (
 from code_crawler.java_calls import JavaCallAnalyzer, _File
 from code_crawler.java_symbols import _EXCLUDED, _parameter
 from code_crawler.sql import looks_like_sql
+from code_crawler.sql_paths import PathLimitCase, PathStats, SqlPathOptions
 from code_crawler.ucm import (
     Certainty,
     CodeEntity,
@@ -74,6 +75,8 @@ def _copy_state(
 class _SqlFlow(java._Flow):
     def __init__(self, constants: dict, span: java.SourceSpan) -> None:
         super().__init__(constants, [])
+        self.max_paths = _MAX_PATHS
+        self.path_stats: PathStats | None = None
         self._shared = False
         self.fallback = span
         self.frames: list[dict[str, java._Variable | None]] = []
@@ -254,8 +257,13 @@ class _SqlFlow(java._Flow):
             self.queries.append(query)
 
 
-def _limit(flows: list[_SqlFlow], limit: int) -> list[_SqlFlow]:
+def _limit(flows: list[_SqlFlow], limit: int, *, multiplier: int = 1) -> list[_SqlFlow]:
     if len(flows) > limit:
+        if flows and (stats := flows[0].path_stats) is not None:
+            stats.pruning_events += 1
+            stats.attempted_paths_lower_bound = max(
+                stats.attempted_paths_lower_bound, len(flows) * multiplier
+            )
         flows = flows[:limit]
         for flow in flows:
             flow.path_reasons = tuple(dict.fromkeys((*flow.path_reasons, _TRUNCATED)))
@@ -264,7 +272,8 @@ def _limit(flows: list[_SqlFlow], limit: int) -> list[_SqlFlow]:
 
 def _fork(flows: list[_SqlFlow]) -> list[_SqlFlow]:
     # A branch at least doubles the paths, so the excess is cut before it is cloned.
-    return _limit(flows, (_MAX_PATHS + 1) // 2)
+    budget = flows[0].max_paths if flows else _MAX_PATHS
+    return _limit(flows, (budget + 1) // 2, multiplier=2)
 
 
 def _ternaries(node: Node) -> list[Node]:
@@ -308,7 +317,7 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
             result.extend(
                 _paths(node.child_by_field_name("alternative"), [flow.clone()])
             )
-        return _limit(result, _MAX_PATHS)
+        return _limit(result, flows[0].max_paths if flows else _MAX_PATHS)
     if node.type in ("for_statement", "while_statement", "do_statement"):
         result = []
         for flow in _fork(flows):
@@ -319,7 +328,7 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
             one = zero.clone()
             result.append(zero)
             result.extend(_paths(node.child_by_field_name("body"), [one]))
-        return _limit(result, _MAX_PATHS)
+        return _limit(result, flows[0].max_paths if flows else _MAX_PATHS)
     if node.type in (
         "local_variable_declaration",
         *java._FIELDS,
@@ -342,7 +351,7 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
                         variant = flow.clone()
                         variant.choices[ternary.id] = selected
                         expanded.append(variant)
-            flows = _limit(expanded, _MAX_PATHS)
+            flows = _limit(expanded, flows[0].max_paths if flows else _MAX_PATHS)
         for flow in flows:
             flow._visit(node, 0)
         return flows
@@ -352,9 +361,17 @@ def _paths(node: Node | None, flows: list[_SqlFlow]) -> list[_SqlFlow]:
 
 
 def _recover(
-    node: Node, constants: dict, method: bool, flow: _SqlFlow | None = None
+    node: Node,
+    constants: dict,
+    method: bool,
+    flow: _SqlFlow | None = None,
+    *,
+    max_paths: int | None = None,
+    stats: PathStats | None = None,
 ) -> list[java.Query]:
     flow = flow if flow is not None else _SqlFlow(constants, java._span(node))
+    flow.max_paths = _MAX_PATHS if max_paths is None else max_paths
+    flow.path_stats = stats
     pending = [node]
     builders = set()
     while pending:
@@ -438,6 +455,8 @@ def _recover(
             )
         pending.extend(reversed(current.named_children))
     queries.extend(literal_flow.queries)
+    if stats is not None:
+        stats.retained_paths = len(flows)
     truncated = any(_TRUNCATED in state.path_reasons for state in flows)
     for state in flows:
         for variable in state.variables.values():
@@ -455,9 +474,17 @@ def _recover(
 class JavaSqlAnalyzer(JavaCallAnalyzer):
     """Calls plus same-file scoped SQL construction; no execution sink inference."""
 
-    def __init__(self, sources: tuple[SourceInput, ...]) -> None:
+    def __init__(
+        self,
+        sources: tuple[SourceInput, ...],
+        *,
+        sql_options: SqlPathOptions | None = None,
+    ) -> None:
+        self.sql_options = sql_options or SqlPathOptions(max_paths=_MAX_PATHS)
         super().__init__(sources)
-        self.analysis_version = "java.sql/1:" + self.analysis_version
+        self.analysis_version = (
+            f"java.sql/1:paths={self.sql_options.max_paths}:" + self.analysis_version
+        )
         self.sql_coverage = Coverage(
             capability="java.sql.construction",
             analyzer_version="1",
@@ -489,7 +516,37 @@ class JavaSqlAnalyzer(JavaCallAnalyzer):
             constants = extractor.parsed._constant_scopes.get(
                 class_info.symbol.qualified_name, {}
             )
-            recovered = _recover(node, constants, owner.symbol_kind != "CLASS")
+            observed = (
+                self.sql_options.on_method is not None and owner.symbol_kind != "CLASS"
+            )
+            stats = PathStats() if observed else None
+            recovered = _recover(
+                node,
+                constants,
+                owner.symbol_kind != "CLASS",
+                max_paths=self.sql_options.max_paths,
+                stats=stats,
+            )
+            if observed:
+                case = None
+                if stats.pruning_events:
+                    case = PathLimitCase(
+                        repository_id=file.source.file.repository_id,
+                        path=file.source.file.path,
+                        content_sha256=file.source.file.content_sha256,
+                        owner_id=owner.id,
+                        qualified_name=owner.qualified_name,
+                        symbol_kind=owner.symbol_kind,
+                        start_line=node.start_point.row + 1,
+                        end_line=node.end_point.row + 1,
+                        start_byte=node.start_byte,
+                        end_byte=node.end_byte,
+                        max_paths=self.sql_options.max_paths,
+                        attempted_paths_lower_bound=stats.attempted_paths_lower_bound,
+                        pruning_events=stats.pruning_events,
+                        retained_paths=stats.retained_paths,
+                    )
+                self.sql_options.on_method(case)
             grouped = defaultdict(list)
             for query in recovered:
                 if query.source_span is not None:
@@ -628,13 +685,19 @@ class JavaSqlAnalyzer(JavaCallAnalyzer):
 
 
 async def index_java_sql(
-    conn: asyncpg.Connection, repository_id: UUID, root: Path
+    conn: asyncpg.Connection,
+    repository_id: UUID,
+    root: Path,
+    *,
+    sql_options: SqlPathOptions | None = None,
 ) -> IncrementalResult:
     """Build a SQL construction snapshot; caller explicitly validates and publishes."""
     root = await asyncio.to_thread(root.resolve, strict=True)
     captured = await _capture(root, repository_id, {".java": "java"})
     analyzer = await asyncio.to_thread(
-        JavaSqlAnalyzer, tuple(s for s in captured.sources if s.file.language == "java")
+        JavaSqlAnalyzer,
+        tuple(s for s in captured.sources if s.file.language == "java"),
+        sql_options=sql_options,
     )
     return await index_incremental(
         conn,

@@ -20,6 +20,7 @@ from code_crawler.incremental import (
 )
 from code_crawler.java_calls import _File, _Site
 from code_crawler.java_sql import JavaSqlAnalyzer, _recover, _SqlFlow
+from code_crawler.sql_paths import SqlPathOptions
 from code_crawler.ucm import (
     Certainty,
     Coverage,
@@ -321,8 +322,13 @@ class _ExecutionFlow(_SqlFlow):
 class JavaExecutionAnalyzer(JavaSqlAnalyzer):
     """Add statically recognized JDBC/Spring invocation sites to SQL construction."""
 
-    def __init__(self, sources: tuple[SourceInput, ...]) -> None:
-        super().__init__(sources)
+    def __init__(
+        self,
+        sources: tuple[SourceInput, ...],
+        *,
+        sql_options: SqlPathOptions | None = None,
+    ) -> None:
+        super().__init__(sources, sql_options=sql_options)
         self.analysis_version = "java.sql.execution/1:" + self.analysis_version
         self.execution_coverage = Coverage(
             capability="java.sql.execution",
@@ -351,6 +357,7 @@ class JavaExecutionAnalyzer(JavaSqlAnalyzer):
                 constants,
                 True,
                 _ExecutionFlow(self, file, method.node, constants, local_events),
+                max_paths=self.sql_options.max_paths,
             )
             pending = list(method.node.named_children)
             unsupported = False
@@ -548,7 +555,11 @@ class JavaExecutionAnalyzer(JavaSqlAnalyzer):
 
 
 async def index_java_execution(
-    conn: asyncpg.Connection, repository_id: UUID, root: Path
+    conn: asyncpg.Connection,
+    repository_id: UUID,
+    root: Path,
+    *,
+    sql_options: SqlPathOptions | None = None,
 ) -> IncrementalResult:
     """Build execution facts in a BUILDING snapshot; validation/publication are explicit."""
     root = await asyncio.to_thread(root.resolve, strict=True)
@@ -556,6 +567,7 @@ async def index_java_execution(
     analyzer = await asyncio.to_thread(
         JavaExecutionAnalyzer,
         tuple(s for s in captured.sources if s.file.language == "java"),
+        sql_options=sql_options,
     )
     return await index_incremental(
         conn,
