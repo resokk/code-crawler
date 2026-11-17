@@ -39,7 +39,7 @@ from code_crawler.ucm import (
     logical_id,
 )
 
-_MAX_PATHS = 1024
+_MAX_PATHS = 256
 _TRUNCATED = "path limit reached: variants truncated"
 
 
