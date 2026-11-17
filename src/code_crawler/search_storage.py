@@ -3,7 +3,8 @@
 import asyncio
 import hashlib
 import json
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Iterator
+from threading import Event
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -15,8 +16,9 @@ from code_crawler.data_security import (
     structural_value,
 )
 from code_crawler.ingestion import UcmBatch
-from code_crawler.publication import load_snapshot_batch
 from code_crawler.search_documents import _project_raw
+from code_crawler.search_projection import projection_pages
+from code_crawler.snapshots import pin_snapshot
 from code_crawler.ucm import Relation
 
 PROJECTION_VERSION = "search-documents-v2-security"
@@ -31,12 +33,69 @@ def _json(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
+_COLUMNS = (
+    "repository_id",
+    "snapshot_id",
+    "generation_id",
+    "document_id",
+    "entity_id",
+    "document_type",
+    "content",
+    "content_sha256",
+    "provenance",
+)
+_COPY_BYTES = 4 * 1024 * 1024
+
+
+def _empty_report(policy: SecretPolicy) -> dict:
+    return {
+        "policy_version": policy.version,
+        "status": "COMPLETE",
+        "redacted_documents": 0,
+        "skipped_documents": 0,
+        "skipped_entity_ids": [],
+        "categories": [],
+        "skipped_ids_truncated": False,
+    }
+
+
+def _merge_report(total: dict, page: dict) -> None:
+    for key in ("redacted_documents", "skipped_documents"):
+        total[key] += page[key]
+    if page["status"] == "PARTIAL":
+        total["status"] = "PARTIAL"
+    total["categories"] = sorted(set(total["categories"]) | set(page["categories"]))
+    total["skipped_entity_ids"].extend(
+        page["skipped_entity_ids"][: 256 - len(total["skipped_entity_ids"])]
+    )
+    total["skipped_ids_truncated"] = total["skipped_documents"] > len(
+        total["skipped_entity_ids"]
+    )
+
+
+def _copy_chunks(records: list[tuple]) -> Iterator[list[tuple]]:
+    chunk, size = [], 0
+    for row in records:
+        weight = sum(len(value.encode()) for value in row)
+        if weight > _COPY_BYTES:
+            raise ValueError("search document exceeds projection byte budget")
+        if chunk and size + weight > _COPY_BYTES:
+            yield chunk
+            chunk, size = [], 0
+        chunk.append(row)
+        size += weight
+    if chunk:
+        yield chunk
+
+
 def _records(
     batch: UcmBatch,
     redact: Callable[[str], str],
     *,
     security_policy: SecretPolicy = DEFAULT_POLICY,
     report: dict | None = None,
+    entity_ids: Collection[str] | None = None,
+    cancelled: Event | None = None,
 ) -> list[tuple]:
     policy = redact
 
@@ -62,15 +121,10 @@ def _records(
                 relation.model_dump(mode="json")
             )
     records = []
-    aggregate = {
-        "policy_version": security_policy.version,
-        "status": "COMPLETE",
-        "redacted_documents": 0,
-        "skipped_documents": 0,
-        "skipped_entity_ids": [],
-        "categories": [],
-    }
-    for document in _project_raw(batch.entities):
+    aggregate = _empty_report(security_policy)
+    for document in _project_raw(batch.entities, entity_ids=entity_ids):
+        if cancelled is not None and cancelled.is_set():
+            raise asyncio.CancelledError
         # SQL text is source, while the remaining lines describe recorded facts.
         source = None
         summary = document.text
@@ -166,6 +220,35 @@ def _records(
     return records
 
 
+async def _page_records(
+    batch: UcmBatch,
+    redact: Callable[[str], str],
+    *,
+    security_policy: SecretPolicy,
+    report: dict,
+    entity_ids: list[str],
+) -> list[tuple]:
+    cancelled = Event()
+    worker = asyncio.create_task(
+        asyncio.to_thread(
+            _records,
+            batch,
+            redact,
+            security_policy=security_policy,
+            report=report,
+            entity_ids=entity_ids,
+            cancelled=cancelled,
+        )
+    )
+    try:
+        return await asyncio.shield(worker)
+    except asyncio.CancelledError:
+        cancelled.set()
+        # Do not release the lease/transaction while caller policy is still running.
+        await asyncio.gather(worker, return_exceptions=True)
+        raise
+
+
 async def rebuild_search_documents(
     conn: asyncpg.Connection,
     repository_id: UUID,
@@ -191,6 +274,7 @@ async def rebuild_search_documents(
     SecretPolicy("reject").clean(policy_version)
     generation_id = uuid4()
     async with conn.transaction():
+        await pin_snapshot(conn, snapshot_id)
         snapshot = await conn.fetchrow(
             "SELECT repository_id,state FROM ucm_snapshots WHERE id=$1",
             snapshot_id,
@@ -199,15 +283,39 @@ async def rebuild_search_documents(
             raise ValueError("snapshot missing or belongs to another repository")
         if snapshot["state"] not in ("READY", "PUBLISHED", "RETIRED"):
             raise ValueError("search rebuild requires a validated snapshot")
-        batch = await load_snapshot_batch(conn, snapshot_id)
-        security_report = {}
-        records = await asyncio.to_thread(
-            _records,
-            batch,
-            redact,
-            security_policy=security_policy,
-            report=security_report,
+        canonical = await conn.fetchval(
+            "SELECT snapshot_id FROM ucm_repository_publications WHERE repository_id=$1",
+            repository_id,
         )
+        stage = "search_stage_" + generation_id.hex
+        await conn.execute(
+            f"CREATE TEMP TABLE {stage} (LIKE search_documents INCLUDING DEFAULTS) ON COMMIT DROP"
+        )
+        count = 0
+        security_report = _empty_report(security_policy)
+        async for ids, entities in projection_pages(conn, snapshot_id):
+            page_report = {}
+            records = await _page_records(
+                UcmBatch.model_construct(
+                    repository_id=repository_id, entities=entities
+                ),
+                redact,
+                security_policy=security_policy,
+                report=page_report,
+                entity_ids=ids,
+            )
+            _merge_report(security_report, page_report)
+            for chunk in _copy_chunks(records):
+                await conn.copy_records_to_table(
+                    stage,
+                    schema_name="pg_temp",
+                    columns=_COLUMNS,
+                    records=(
+                        (repository_id, snapshot_id, generation_id, *row)
+                        for row in chunk
+                    ),
+                )
+                count += len(chunk)
         await conn.execute(
             """INSERT INTO search_index_generations
                (id,repository_id,snapshot_id,projection_version,policy_version,document_count,security_report)
@@ -217,25 +325,11 @@ async def rebuild_search_documents(
             snapshot_id,
             PROJECTION_VERSION,
             f"{security_policy.version}/{policy_version}",
-            len(records),
+            count,
             _json(security_report),
         )
-        await conn.copy_records_to_table(
-            "search_documents",
-            columns=(
-                "repository_id",
-                "snapshot_id",
-                "generation_id",
-                "document_id",
-                "entity_id",
-                "document_type",
-                "content",
-                "content_sha256",
-                "provenance",
-            ),
-            records=(
-                (repository_id, snapshot_id, generation_id, *row) for row in records
-            ),
+        await conn.execute(
+            f"INSERT INTO search_documents ({','.join(_COLUMNS)}) SELECT {','.join(_COLUMNS)} FROM pg_temp.{stage}"
         )
         await conn.execute(
             "UPDATE search_index_generations SET sealed=true WHERE id=$1",
@@ -246,6 +340,11 @@ async def rebuild_search_documents(
             "SELECT id FROM ucm_repositories WHERE id=$1 FOR UPDATE",
             repository_id,
         )
+        if canonical != await conn.fetchval(
+            "SELECT snapshot_id FROM ucm_repository_publications WHERE repository_id=$1",
+            repository_id,
+        ):
+            raise ValueError("canonical publication changed during search rebuild")
         current = await conn.fetchval(
             """SELECT generation_id FROM search_index_publications
                WHERE repository_id=$1 AND snapshot_id=$2""",

@@ -19,3 +19,14 @@ All items are intentionally open until code is implemented and tests pass.
 - [ ] 15. Add PostgreSQL 15 integration fixtures, including reuse/rollback and read API consistency.
 - [ ] 16. Run full required PG15 CI and benchmark when relevant; record SHA and evidence in completion.md.
 - [ ] 17. Update docs, close tasks only after verified acceptance and then archive the OpenSpec change.
+
+## Initial implementation verification
+
+- Base current main includes completed B02/B03; docs-only audit update `d5aa6c3` integrated.
+- Full local mandatory PostgreSQL 15 suite: 1474 passed in 333.56s.
+- Final focused projection/security/storage suite: 24 passed in 15.24s, including
+  the subsequently added cancellation-worker join check.
+- Ruff lint and formatting passed (449 files).
+- Small fresh-process benchmark: 31 facts, six documents; all six record fields
+  (IDs, type, content, hash, provenance) match batch reference.
+- Large 141k/>1M measurements and mandatory remote CI are pending; no archive yet.
