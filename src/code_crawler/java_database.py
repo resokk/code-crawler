@@ -28,6 +28,7 @@ from code_crawler.java_execution import _ExecutionFlow
 from code_crawler.java_lineage import JavaLineageAnalyzer
 from code_crawler.java_semantic import _envelope, _relation
 from code_crawler.java_sql import _recover
+from code_crawler.sql_paths import SqlPathOptions
 from code_crawler.ucm import (
     Coverage,
     DataAccess,
@@ -54,8 +55,10 @@ class JavaDatabaseAnalyzer(JavaLineageAnalyzer):
         schemas: tuple[SchemaImport, ...],
         assignments: tuple[ConnectionAssignment, ...],
         dialect: str = "postgres",
+        *,
+        sql_options: SqlPathOptions | None = None,
     ) -> None:
-        super().__init__(sources, dialect)
+        super().__init__(sources, dialect, sql_options=sql_options)
         self.schemas = {(s.database_key, s.version_key): s for s in schemas}
         if len(self.schemas) != len(schemas):
             raise ValueError("duplicate database schema version")
@@ -412,6 +415,8 @@ async def index_java_database(
     root: Path,
     assignments: tuple[ConnectionAssignment, ...],
     dialect: str = "postgres",
+    *,
+    sql_options: SqlPathOptions | None = None,
 ) -> IncrementalResult:
     """Load explicit schema versions and build contextual identities in a BUILDING snapshot."""
     schemas = []
@@ -427,6 +432,7 @@ async def index_java_database(
         tuple(schemas),
         assignments,
         dialect,
+        sql_options=sql_options,
     )
     return await index_incremental(
         conn,

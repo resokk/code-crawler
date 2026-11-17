@@ -27,6 +27,7 @@ from code_crawler.java_calls import _File
 from code_crawler.java_semantic import JavaSemanticAnalyzer, _envelope, _relation
 from code_crawler.java_sql import _recover
 from code_crawler.sql_parameters import analyze_parameters
+from code_crawler.sql_paths import SqlPathOptions
 from code_crawler.sql_semantic import DIALECTS
 from code_crawler.ucm import (
     Coverage,
@@ -74,9 +75,13 @@ class JavaLineageAnalyzer(JavaSemanticAnalyzer):
     """Capture local binding snapshots and conservative SQL parameter associations."""
 
     def __init__(
-        self, sources: tuple[SourceInput, ...], dialect: str = "postgres"
+        self,
+        sources: tuple[SourceInput, ...],
+        dialect: str = "postgres",
+        *,
+        sql_options: SqlPathOptions | None = None,
     ) -> None:
-        super().__init__(sources, dialect)
+        super().__init__(sources, dialect, sql_options=sql_options)
         self.analysis_version = "java.sql.lineage/1:" + self.analysis_version
         self.lineage_coverage = Coverage(
             capability="sql.parameter.lineage",
@@ -540,7 +545,12 @@ class JavaLineageAnalyzer(JavaSemanticAnalyzer):
 
 
 async def index_java_lineage(
-    conn: asyncpg.Connection, repository_id: UUID, root: Path, dialect: str = "postgres"
+    conn: asyncpg.Connection,
+    repository_id: UUID,
+    root: Path,
+    dialect: str = "postgres",
+    *,
+    sql_options: SqlPathOptions | None = None,
 ) -> IncrementalResult:
     """Build parameter lineage in a BUILDING snapshot; caller validates/publishes."""
     if dialect not in DIALECTS:
@@ -551,6 +561,7 @@ async def index_java_lineage(
         JavaLineageAnalyzer,
         tuple(s for s in captured.sources if s.file.language == "java"),
         dialect,
+        sql_options=sql_options,
     )
     return await index_incremental(
         conn,

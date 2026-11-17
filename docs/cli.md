@@ -121,3 +121,9 @@ Canonical `index`/`index-sources` also produce local OpenAPI → Spring handler
 bindings and deferred Feign selectors, using the selected Java profile. Binding
 adds no new CLI options; known captured context is used without runtime lookup.
 See [openapi-java-bindings.md](openapi-java-bindings.md).
+
+Java SQL profiling options on `index` and `index-sources`:
+`--java-sql-max-paths N` changes the retained-path budget (default 256), and
+`--java-sql-path-report /tmp/cases.jsonl` exports overflow metadata for reanalyzed
+methods. Reports must be outside the indexed root. Scope, JSONL fields, retry and
+publication behavior: [java-sql-path-budget.md](java-sql-path-budget.md).

@@ -30,7 +30,8 @@ Returned UCM text still lives as long as the facts that need it; clearing the
 cache releases its own references, not application results.
 
 No analysis/version/schema/publication change, literal-based pruning or path
-merging. SQL still uses the existing 256-path budget and partial reasons. Existing
+merging. SQL uses its configured path budget (default 256) and existing partial reasons;
+the text cache does not change them. Existing
 published snapshots and archived source bytes are unaffected.
 
 ## Reproducible measurement

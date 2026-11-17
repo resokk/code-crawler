@@ -139,3 +139,9 @@ GC впятеро дольше загрузки. Основное время у�
 E01 stores redacted per-job/attempt stage aggregates after the canonical transaction.
 GC records a global admin-only observation, without attributing its total duration
 to unrelated repositories. See [observability.md](observability.md).
+
+Java SQL jobs persist `java_sql_max_paths` (default 256) and the optional absolute
+`java_sql_path_report` destination. Retry restores both. New jobs store the resolved
+root. Report export runs before publication; export failure records FAILED with
+the built snapshot ID and leaves the old publication intact. Report ANALYZED status
+refers to analysis, not publication. See [java-sql-path-budget.md](java-sql-path-budget.md).

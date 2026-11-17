@@ -71,3 +71,57 @@ def test_snapshot_argument_errors_fail_before_database_access(monkeypatch, argum
     with pytest.raises(SystemExit) as error:
         cli.main()
     assert error.value.code == 2
+
+
+@pytest.mark.parametrize("command", ["index", "index-sources"])
+def test_sql_path_flags_are_parsed_and_forwarded(monkeypatch, command):
+    import sys
+
+    observed = []
+
+    async def fake(**options):
+        observed.append(options)
+
+    monkeypatch.setattr(
+        cli, "index" if command == "index" else "index_registered", fake
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "code-crawler",
+            command,
+            "/tmp/repo",
+            "--repository-key",
+            "repo",
+            "--java-sql-max-paths",
+            "1024",
+            "--java-sql-path-report",
+            "/tmp/cases.jsonl",
+        ],
+    )
+    cli.main()
+    assert observed[0]["java_sql_max_paths"] == 1024
+    assert observed[0]["java_sql_path_report"] == "/tmp/cases.jsonl"
+
+
+@pytest.mark.parametrize("budget", ["0", "-1", "65537", "1.5"])
+def test_invalid_sql_path_cli_budget_fails_before_execution(monkeypatch, budget):
+    import sys
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "code-crawler",
+            "index-sources",
+            "/tmp/repo",
+            "--repository-key",
+            "repo",
+            "--java-sql-max-paths",
+            budget,
+        ],
+    )
+    with pytest.raises(SystemExit) as error:
+        cli.main()
+    assert error.value.code == 2

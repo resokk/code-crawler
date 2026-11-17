@@ -26,6 +26,7 @@ from code_crawler.source_adapters import (
     AdapterIssue,
     SourceRoute,
 )
+from code_crawler.sql_paths import SqlPathOptions
 from code_crawler.ucm import (
     Coverage,
     EntityType,
@@ -116,8 +117,18 @@ class JavaSourceAdapter:
     assignments: tuple[ConnectionAssignment, ...] = ()
     dialect: Literal["postgres", "mysql", "tsql"] = "postgres"
     naming_policy: Literal["UNKNOWN", "IDENTITY"] = "UNKNOWN"
+    sql_options: SqlPathOptions | None = None
 
     def __post_init__(self) -> None:
+        if (
+            self.profile in ("symbols", "calls")
+            and self.sql_options is not None
+            and (
+                self.sql_options.max_paths != 256
+                or self.sql_options.on_method is not None
+            )
+        ):
+            raise ValueError("SQL path options require a SQL-enabled Java profile")
         if (
             self.profile not in JAVA_PROFILES
             or self.dialect not in ("postgres", "mysql", "tsql")
@@ -193,16 +204,24 @@ class JavaSourceAdapter:
                 "execution": JavaExecutionAnalyzer,
             }
             if self.profile in factories:
-                return factories[self.profile](sources)
+                return (
+                    factories[self.profile](sources)
+                    if self.profile == "calls"
+                    else factories[self.profile](sources, sql_options=self.sql_options)
+                )
             if self.profile in ("semantic", "lineage"):
                 return (
                     JavaSemanticAnalyzer
                     if self.profile == "semantic"
                     else JavaLineageAnalyzer
-                )(sources, self.dialect)
+                )(sources, self.dialect, sql_options=self.sql_options)
             if self.profile == "database":
                 return JavaDatabaseAnalyzer(
-                    sources, self.schemas, self.assignments, self.dialect
+                    sources,
+                    self.schemas,
+                    self.assignments,
+                    self.dialect,
+                    sql_options=self.sql_options,
                 )
             return JavaOrmAnalyzer(
                 sources,
@@ -210,6 +229,7 @@ class JavaSourceAdapter:
                 self.assignments,
                 self.dialect,
                 self.naming_policy,
+                sql_options=self.sql_options,
             )
 
         try:

@@ -28,6 +28,7 @@ from code_crawler import (
     resolver_cache,
     snapshots,
     source_evidence,
+    sql_paths,
 )
 from code_crawler.bpmn_adapter import BpmnSourceAdapter
 from code_crawler.bpmn_bindings import BINDING_PROFILES
@@ -148,6 +149,8 @@ async def index(
     naming_policy: str | None = None,
     connections: str | None = None,
     bpmn_profile: str | None = None,
+    java_sql_max_paths: int | None = None,
+    java_sql_path_report: str | None = None,
 ) -> None:
     """Build and publish canonical UCM by default; legacy requires explicit selection."""
     if backend == "legacy":
@@ -157,6 +160,8 @@ async def index(
                 repository_key,
                 java_profile,
                 bpmn_profile,
+                java_sql_max_paths,
+                java_sql_path_report,
                 dialect,
                 naming_policy,
                 connections,
@@ -167,6 +172,9 @@ async def index(
         return
     if backend != "ucm":
         raise SystemExit("unknown index backend")
+    sql_paths.validate_max_paths(
+        java_sql_max_paths if java_sql_max_paths is not None else 256
+    )
     with operation("Подготовка canonical репозитория"):
         if repository_key is not None and not repository_key.strip():
             raise ValueError("repository key must be nonblank")
@@ -184,6 +192,10 @@ async def index(
         connections,
         publish=True,
         bpmn_profile=bpmn_profile or "auto",
+        java_sql_max_paths=java_sql_max_paths
+        if java_sql_max_paths is not None
+        else 256,
+        java_sql_path_report=java_sql_path_report,
     )
 
 
@@ -505,6 +517,8 @@ async def index_registered(
     publish: bool = False,
     job_id: UUID | None = None,
     bpmn_profile: str = "auto",
+    java_sql_max_paths: int = 256,
+    java_sql_path_report: str | None = None,
 ) -> None:
     parameters = {
         "root": root,
@@ -515,6 +529,8 @@ async def index_registered(
         "naming_policy": naming_policy,
         "connections": connections,
         "publish": publish,
+        "java_sql_max_paths": java_sql_max_paths,
+        "java_sql_path_report": java_sql_path_report,
     }
     with operation("Индексация source adapters") as progress:
         tasks: dict[str, TaskID] = {}
@@ -533,85 +549,133 @@ async def index_registered(
 
         ingestion.progress.set(advance)
         path = await asyncio.to_thread(Path(root).resolve, strict=True)
-        assignments = ()
-        if connections is not None:
-            content = await asyncio.to_thread(Path(connections).read_bytes)
-            assignments = await asyncio.to_thread(
-                TypeAdapter(tuple[ConnectionAssignment, ...]).validate_json, content
-            )
-        conn = await db.connect()
-        try:
-            pending, unknown = await db.schema_state(conn)
-            if pending or unknown:
-                raise RuntimeError(
-                    "схема БД не соответствует коду, см. `code-crawler db status`"
+        parameters["root"] = str(path)
+        if java_profile in ("symbols", "calls") and (
+            java_sql_max_paths != 256 or java_sql_path_report is not None
+        ):
+            raise ValueError("SQL path options require a SQL-enabled Java profile")
+        async with sql_paths.reporting(
+            java_sql_path_report, path, repository_key, java_sql_max_paths
+        ) as path_report:
+            if path_report is not None:
+                parameters["java_sql_path_report"] = str(path_report.path)
+            assignments = ()
+            if connections is not None:
+                content = await asyncio.to_thread(Path(connections).read_bytes)
+                assignments = await asyncio.to_thread(
+                    TypeAdapter(tuple[ConnectionAssignment, ...]).validate_json, content
                 )
-            schemas = []
-            for key, version in sorted(
-                {(a.context.database_key, a.context.version_key) for a in assignments}
-            ):
-                schemas.append(await database_schema.load_schema(conn, key, version))
-            adapter = JavaSourceAdapter(
-                profile=java_profile,
-                schemas=tuple(schemas),
-                assignments=assignments,
-                dialect=dialect,
-                naming_policy=naming_policy,
-            )
-            registry = AdapterRegistry(
-                (
-                    KafkaSourceAdapter(java_adapter=adapter),
-                    GroovySourceAdapter(dialect=dialect),
-                    PlplusSourceAdapter(),
-                    BpmnSourceAdapter(profile=bpmn_profile),
-                    OpenApiSourceAdapter(),
-                    KotlinSourceAdapter(),
-                    JavaScriptSourceAdapter(),
-                    TypeScriptSourceAdapter(include_json=False),
-                    VbscriptSourceAdapter(dialect=dialect),
-                )
-            )
-            repository = await snapshots.register_repository(
-                conn,
-                snapshots.RepositoryInput(
-                    repository_key=repository_key,
-                    display_name=repository_key,
-                    source=str(path),
-                ),
-            )
-            if job_id is None:
-                job_id = await jobs.begin(conn, repository, parameters)
-            console.print(f"Ingest job: {job_id}")
-            attempt = await conn.fetchval(
-                "SELECT attempt FROM ingest_jobs WHERE id=$1", job_id
-            )
-            async with observability.recording(conn, (repository,), job_id, attempt):
-                try:
-                    result = await index_sources(conn, repository, path, registry)
-                    console.print(f"BUILDING snapshot: {result.snapshot_id}")
-                    await jobs.advance(
-                        conn,
-                        job_id,
-                        "PUBLISH" if publish else "INDEX",
-                        result.snapshot_id,
+            conn = await db.connect()
+            try:
+                pending, unknown = await db.schema_state(conn)
+                if pending or unknown:
+                    raise RuntimeError(
+                        "схема БД не соответствует коду, см. `code-crawler db status`"
                     )
-                    if publish:
-                        await _publish_cli_snapshot(
-                            conn, result.snapshot_id, result.base_snapshot_id
+                schemas = []
+                for key, version in sorted(
+                    {
+                        (a.context.database_key, a.context.version_key)
+                        for a in assignments
+                    }
+                ):
+                    schemas.append(
+                        await database_schema.load_schema(conn, key, version)
+                    )
+                adapter = JavaSourceAdapter(
+                    profile=java_profile,
+                    schemas=tuple(schemas),
+                    assignments=assignments,
+                    dialect=dialect,
+                    naming_policy=naming_policy,
+                    sql_options=sql_paths.SqlPathOptions(
+                        max_paths=java_sql_max_paths,
+                        on_method=path_report.record if path_report else None,
+                    ),
+                )
+                registry = AdapterRegistry(
+                    (
+                        KafkaSourceAdapter(java_adapter=adapter),
+                        GroovySourceAdapter(dialect=dialect),
+                        PlplusSourceAdapter(),
+                        BpmnSourceAdapter(profile=bpmn_profile),
+                        OpenApiSourceAdapter(),
+                        KotlinSourceAdapter(),
+                        JavaScriptSourceAdapter(),
+                        TypeScriptSourceAdapter(include_json=False),
+                        VbscriptSourceAdapter(dialect=dialect),
+                    )
+                )
+                repository = await snapshots.register_repository(
+                    conn,
+                    snapshots.RepositoryInput(
+                        repository_key=repository_key,
+                        display_name=repository_key,
+                        source=str(path),
+                    ),
+                )
+                if job_id is None:
+                    job_id = await jobs.begin(conn, repository, parameters)
+                console.print(f"Ingest job: {job_id}")
+                attempt = await conn.fetchval(
+                    "SELECT attempt FROM ingest_jobs WHERE id=$1", job_id
+                )
+                async with observability.recording(
+                    conn, (repository,), job_id, attempt
+                ):
+                    try:
+                        result = await index_sources(conn, repository, path, registry)
+                        console.print(f"BUILDING snapshot: {result.snapshot_id}")
+                        await jobs.advance(
+                            conn,
+                            job_id,
+                            "PUBLISH" if publish else "INDEX",
+                            result.snapshot_id,
                         )
-                except Exception as error:
-                    # Сбой записи статуса не должен скрыть исходную ошибку; reap пометит позже.
-                    with suppress(Exception):
-                        await jobs.finish(conn, job_id, error)
-                    raise
-                await jobs.finish(conn, job_id)
-            await _snapshot_report(conn, result.snapshot_id)
-        finally:
-            await conn.close()
-            console.print("Время по этапам:", *clock.report(), sep="\n")
+                        if path_report is not None:
+                            await asyncio.to_thread(
+                                path_report.finish,
+                                "ANALYZED",
+                                {
+                                    "snapshot_id": str(result.snapshot_id),
+                                    "reused_files": len(result.plan.reused),
+                                    "reanalyzed_files": len(result.plan.reanalyze),
+                                },
+                            )
+                        if publish:
+                            await _publish_cli_snapshot(
+                                conn, result.snapshot_id, result.base_snapshot_id
+                            )
+                    except Exception as error:
+                        # Сбой записи статуса не должен скрыть исходную ошибку; reap пометит позже.
+                        with suppress(Exception):
+                            await jobs.finish(conn, job_id, error)
+                        raise
+                    await jobs.finish(conn, job_id)
+                await _snapshot_report(conn, result.snapshot_id)
+            finally:
+                await conn.close()
+                console.print("Время по этапам:", *clock.report(), sep="\n")
+
+
+def _sql_max_paths(value: str) -> int:
+    try:
+        return sql_paths.validate_max_paths(int(value))
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
 
 
 def _canonical_options(parser: argparse.ArgumentParser, *, defaults: bool) -> None:
+    parser.add_argument(
+        "--java-sql-max-paths",
+        type=_sql_max_paths,
+        default=256 if defaults else None,
+        help="Java SQL retained-path budget (1..65536, default 256)",
+    )
+    parser.add_argument(
+        "--java-sql-path-report",
+        help="Private JSONL overflow report outside indexed root; reanalyzed methods only",
+    )
     parser.add_argument(
         "--bpmn-profile", choices=BINDING_PROFILES, default="auto" if defaults else None
     )
