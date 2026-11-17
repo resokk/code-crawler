@@ -11,7 +11,7 @@
 ## Measured basis, limitations
 
 - B01 independent PG15/2CPU/8GiB baseline at commit `6eaa984`: 400 Java files / 140717 entities, **92.576s indexing** + **43.132s validation** median of 3; 1000 files / 352817 entities, 258.442s + 130.865s single run. 3002-file attempt stopped by disk reserve and cannot be used as a completed >1M result. The historical successful 1.06M test was on a different machine and code. [Evidence](performance-baseline.md).
-- Breakdown of 400-file **indexing**, not additive to validation: analyze 37.298s, stage 2.748s, transfer 15.758s, FK 10.761s, prepare 3.784s, capture 0.033s; remaining ~32.2s covers row conversion, snapshot/manifest/verification/overhead. Nested times cannot be summed naïvely.
+- Breakdown of 400-file **indexing**, not additive to validation: analyze 37.298s, stage 2.748s, transfer 15.758s, FK 10.761s, prepare 3.784s, capture 0.033s; remaining ~22.2s covers row conversion, snapshot/manifest/verification/overhead. Nested times cannot be summed naïvely.
 - Existing parallel Java feature on 2-CPU quota: small corpus 1 worker 0.019s vs 2 workers 0.725s; CPU-heavy 1 worker 6.008s vs 2 workers 3.811s; catalog-heavy 1 worker 6.138s vs 2 workers 8.805s. Four workers underperformed in all three fixtures. This is one fresh-process run/case, not production default guidance. [Evidence](parallel-snapshot-preparation.md).
 - B03 sampled write transaction on 400 files 72.03 → 25.11s; overall indexing 72.05 → 70.46s, spool ~64MB and parent RSS +5.7%, single controlled comparison. Optimization shifted time/space, it did not make full indexing dramatically faster.
 
