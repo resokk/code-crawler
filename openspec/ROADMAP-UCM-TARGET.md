@@ -52,7 +52,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - D12 vbscript-ucm-adapter: symbols, late binding and SQL patterns — [completed](archive/2026-11-15-d12-vbscript-ucm-adapter/completion.md), PG15 CI 1094 passed
 
 ## Stream E — production readiness
-- E01 observability-and-coverage-dashboard: job/adapter/search diagnostics
+- E01 observability-and-coverage-dashboard: job/adapter/search diagnostics — [completed](archive/2026-11-17-e01-observability-and-coverage-dashboard/completion.md), PG15 CI 1382 passed
 - E02 snapshot-retention-policy: pins, generations and shared blobs
 - E03 backup-restore-validation: consistent PG15, UCM source evidence recovery
 - E04 openspec-archive-policy: preserve proposal/design/spec/task history

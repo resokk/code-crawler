@@ -14,4 +14,4 @@
 - [x] 12. Verify snapshot pointer immutability and evidence availability after failure/recovery.
 - [x] 13. Add PostgreSQL 15 integration or operator runbook validation when relevant.
 - [x] 14. Document constraints, security boundaries and explicit Coverage.
-- [ ] 15. Run ruff, pytest --require-postgres, CI and failure-injection suite; archive only after all checks pass.
+- [x] 15. Run ruff, pytest --require-postgres, CI and failure-injection suite; archive only after all checks pass.
