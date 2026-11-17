@@ -15,6 +15,7 @@ from code_crawler.java_execution import JavaExecutionAnalyzer
 from code_crawler.java_http_catalog import java_http_catalog, mentions_http
 from code_crawler.java_lineage import JavaLineageAnalyzer
 from code_crawler.java_orm import JavaOrmAnalyzer
+from code_crawler.java_parallel import JavaProcessPool, WorkerConfig, validate_workers
 from code_crawler.java_semantic import JavaSemanticAnalyzer
 from code_crawler.java_sql import JavaSqlAnalyzer
 from code_crawler.java_symbols import JavaSymbolsResult, extract
@@ -118,8 +119,10 @@ class JavaSourceAdapter:
     dialect: Literal["postgres", "mysql", "tsql"] = "postgres"
     naming_policy: Literal["UNKNOWN", "IDENTITY"] = "UNKNOWN"
     sql_options: SqlPathOptions | None = None
+    analysis_workers: int = 1
 
     def __post_init__(self) -> None:
+        validate_workers(self.analysis_workers)
         if (
             self.profile in ("symbols", "calls")
             and self.sql_options is not None
@@ -197,43 +200,8 @@ class JavaSourceAdapter:
             await prepared.prepare_http()
             return prepared
 
-        def build() -> JavaCallAnalyzer:
-            factories = {
-                "calls": JavaCallAnalyzer,
-                "sql": JavaSqlAnalyzer,
-                "execution": JavaExecutionAnalyzer,
-            }
-            if self.profile in factories:
-                return (
-                    factories[self.profile](sources)
-                    if self.profile == "calls"
-                    else factories[self.profile](sources, sql_options=self.sql_options)
-                )
-            if self.profile in ("semantic", "lineage"):
-                return (
-                    JavaSemanticAnalyzer
-                    if self.profile == "semantic"
-                    else JavaLineageAnalyzer
-                )(sources, self.dialect, sql_options=self.sql_options)
-            if self.profile == "database":
-                return JavaDatabaseAnalyzer(
-                    sources,
-                    self.schemas,
-                    self.assignments,
-                    self.dialect,
-                    sql_options=self.sql_options,
-                )
-            return JavaOrmAnalyzer(
-                sources,
-                self.schemas,
-                self.assignments,
-                self.dialect,
-                self.naming_policy,
-                sql_options=self.sql_options,
-            )
-
         try:
-            analyzer = await asyncio.to_thread(build)
+            analyzer = await asyncio.to_thread(_build_analyzer, self, sources)
         except ValueError as error:
             issues = []
             # Only failed catalog construction reparses to preserve structured parser errors.
@@ -253,6 +221,44 @@ class JavaSourceAdapter:
         return prepared
 
 
+def _build_analyzer(
+    adapter: JavaSourceAdapter, sources: tuple[SourceInput, ...]
+) -> JavaCallAnalyzer:
+    factories = {
+        "calls": JavaCallAnalyzer,
+        "sql": JavaSqlAnalyzer,
+        "execution": JavaExecutionAnalyzer,
+    }
+    if adapter.profile in factories:
+        return (
+            factories[adapter.profile](sources)
+            if adapter.profile == "calls"
+            else factories[adapter.profile](sources, sql_options=adapter.sql_options)
+        )
+    if adapter.profile in ("semantic", "lineage"):
+        return (
+            JavaSemanticAnalyzer
+            if adapter.profile == "semantic"
+            else JavaLineageAnalyzer
+        )(sources, adapter.dialect, sql_options=adapter.sql_options)
+    if adapter.profile == "database":
+        return JavaDatabaseAnalyzer(
+            sources,
+            adapter.schemas,
+            adapter.assignments,
+            adapter.dialect,
+            sql_options=adapter.sql_options,
+        )
+    return JavaOrmAnalyzer(
+        sources,
+        adapter.schemas,
+        adapter.assignments,
+        adapter.dialect,
+        adapter.naming_policy,
+        sql_options=adapter.sql_options,
+    )
+
+
 class _PreparedJava:
     def __init__(
         self,
@@ -264,6 +270,8 @@ class _PreparedJava:
         self.sources = sources
         self._symbol_catalog = {}
         self.analyzer = analyzer
+        self._parallel: JavaProcessPool | None = None
+        self._parallel_lock = asyncio.Lock()
         self.analysis_version = (
             analyzer.analysis_version if analyzer else "java.symbols/1"
         )
@@ -344,7 +352,57 @@ class _PreparedJava:
                 return tuple(results)
 
             return await asyncio.to_thread(collect)
-        analyses = await self.analyzer(sources)
+        if self.adapter.analysis_workers == 1:
+            analyses = await self.analyzer(sources)
+        elif not sources:
+            analyses = ()
+        else:
+            for source in sources:
+                context = self.analyzer.files.get(source.file.path)
+                if context is None or context.source != source:
+                    raise ValueError(
+                        "Java catalog does not match captured source; rebuild analyzer"
+                    )
+            async with self._parallel_lock:
+                if self._parallel is None:
+                    options = self.adapter.sql_options or SqlPathOptions()
+                    config = WorkerConfig(
+                        sources=self.sources,
+                        profile=self.adapter.profile,
+                        schemas=self.adapter.schemas,
+                        assignments=self.adapter.assignments,
+                        dialect=self.adapter.dialect,
+                        naming_policy=self.adapter.naming_policy,
+                        max_paths=options.max_paths,
+                        report_enabled=options.on_method is not None,
+                        expected_version=self.analyzer.analysis_version,
+                    )
+                    pending = asyncio.create_task(
+                        asyncio.to_thread(
+                            JavaProcessPool,
+                            config,
+                            min(self.adapter.analysis_workers, len(self.sources)),
+                        )
+                    )
+                    try:
+                        self._parallel = await asyncio.shield(pending)
+                    except asyncio.CancelledError:
+                        pool = await pending
+                        await pool.aclose(abort=True)
+                        raise
+            analyses, events = await self._parallel.analyze(sources)
+            callback = (
+                self.adapter.sql_options.on_method if self.adapter.sql_options else None
+            )
+            if callback is not None:
+
+                def replay():
+                    for event in events:
+                        callback(event)
+
+                await asyncio.to_thread(replay)
+            for _ in analyses:
+                tick("Java: анализ", len(sources))
 
         def collect() -> tuple[AdapterFileResult, ...]:
             results = []
@@ -386,6 +444,11 @@ class _PreparedJava:
             return tuple(results)
 
         return await asyncio.to_thread(collect)
+
+    async def aclose(self, *, abort: bool = False) -> None:
+        if self._parallel is not None:
+            pool, self._parallel = self._parallel, None
+            await pool.aclose(abort=abort)
 
 
 def java_adapter_catalog() -> tuple[AdapterDescriptor, ...]:

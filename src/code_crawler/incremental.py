@@ -496,6 +496,7 @@ async def index_incremental(
     analysis_version: str,
     captured: _Worktree | None = None,
     scopes: tuple[AnalysisScope, ...] = (),
+    analysis_complete: Callable[[], Awaitable[None]] | None = None,
 ) -> IncrementalResult:
     """Analyze changed/dependent files, reusing the published UCM facts of other files.
 
@@ -542,6 +543,7 @@ async def index_incremental(
             captured,
             scopes,
             published,
+            analysis_complete=analysis_complete,
         )
 
 
@@ -555,6 +557,7 @@ async def _index_baseline(
     captured: _Worktree,
     scopes: tuple[AnalysisScope, ...],
     published: asyncpg.Record | None,
+    analysis_complete: Callable[[], Awaitable[None]] | None = None,
 ) -> IncrementalResult:
     owner = {suffix: scope for scope in scopes for suffix in scope.suffixes}
     profile_hash = _hash([analysis_version, sorted(languages.items())])
@@ -689,6 +692,8 @@ async def _index_baseline(
         frames, spool_bytes = await _prepare_spool(
             stream, snap, repository_id, captured.sources, selected, analyze
         )
+        if analysis_complete is not None:
+            await analysis_complete()
         preparation_seconds = time.perf_counter() - prepare_started
         if not await _verify(root, repository_id, languages, captured):
             raise ValueError("worktree changed during analysis")

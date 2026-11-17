@@ -125,3 +125,32 @@ def test_invalid_sql_path_cli_budget_fails_before_execution(monkeypatch, budget)
     with pytest.raises(SystemExit) as error:
         cli.main()
     assert error.value.code == 2
+
+
+@pytest.mark.parametrize("command", ["index", "index-sources"])
+def test_analysis_workers_flag_is_forwarded(monkeypatch, command):
+    import sys
+
+    seen = []
+
+    async def fake(**options):
+        seen.append(options)
+
+    monkeypatch.setattr(
+        cli, "index" if command == "index" else "index_registered", fake
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "code-crawler",
+            command,
+            "/tmp/repo",
+            "--repository-key",
+            "repo",
+            "--analysis-workers",
+            "4",
+        ],
+    )
+    cli.main()
+    assert seen[0]["analysis_workers"] == 4

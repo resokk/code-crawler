@@ -22,6 +22,7 @@ Current capabilities: canonical UCM with immutable snapshots, Java/Groovy/PLPlus
 - java-sql-flow-copy-on-write: lazy Java SQL branch state — [completed](archive/2026-11-17-java-sql-flow-copy-on-write/completion.md), PG15 CI 1414 passed
 - java-source-text-cache: bounded worker-local decoded Java text — [completed](archive/2026-11-17-java-source-text-cache/completion.md), PG15 CI 1431 passed
 - java-sql-path-budget-report: configurable Java path budget and optional metadata JSONL — [completed](archive/2026-11-17-java-sql-path-budget-report/completion.md), PG15 CI 1463 passed
+- parallel-snapshot-preparation: opt-in bounded Java CPU workers — [completed](archive/2026-11-17-parallel-snapshot-preparation/completion.md), PG15 CI 1477 passed
 - B04 bulk-load-fk-optimization: [completed](archive/2026-11-16-b04-bulk-load-fk-optimization/completion.md), PG15 plans and bounded per-slice fact staging
 - B05 incremental-streaming-pipeline: bounded in-flight analysis+clone+staging
 - B06 large-snapshot-gc-performance: locks, WAL, orphan blob cleanup

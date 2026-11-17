@@ -519,6 +519,12 @@ class PreparedSourceRegistry:
             output.update({result.path: result for result in converted})
         return tuple(output[path] for path in sorted(output))
 
+    async def aclose(self, *, abort: bool = False) -> None:
+        for _, implementation, _ in self.prepared.values():
+            close = getattr(implementation, "aclose", None)
+            if close is not None:
+                await close(abort=abort)
+
     @staticmethod
     def _validate(
         descriptor: AdapterDescriptor,
@@ -645,13 +651,17 @@ async def index_sources(
     captured = await _capture(root, repository_id, registry.languages)
     with observability.span("prepare"):
         prepared = await registry.prepare(captured.sources)
-    return await index_incremental(
-        conn,
-        repository_id,
-        root,
-        prepared,
-        languages=registry.languages,
-        analysis_version=prepared.analysis_version,
-        captured=captured,
-        scopes=prepared.scopes,
-    )
+    try:
+        return await index_incremental(
+            conn,
+            repository_id,
+            root,
+            prepared,
+            languages=registry.languages,
+            analysis_version=prepared.analysis_version,
+            captured=captured,
+            scopes=prepared.scopes,
+            analysis_complete=prepared.aclose,
+        )
+    finally:
+        await prepared.aclose(abort=True)

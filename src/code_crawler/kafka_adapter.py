@@ -328,6 +328,9 @@ class _Prepared:
     descriptor: AdapterDescriptor
     analysis_version: str
 
+    async def aclose(self, *, abort: bool = False) -> None:
+        await self.java.aclose(abort=abort)
+
     async def export_catalogs(self) -> tuple[AdapterCatalog, ...]:
         return await self.java.export_catalogs()
 
