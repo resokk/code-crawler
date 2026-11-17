@@ -54,7 +54,25 @@ class _SqlFlow(java._Flow):
 
     def clone(self) -> "_SqlFlow":
         result = copy.copy(self)
-        result.variables, result.frames = copy.deepcopy((self.variables, self.frames))
+        # Variables and values are the only mutable parts of the state: fragments,
+        # reasons and spans are immutable, so a deepcopy of them only costs time.
+        # The memo keeps one copy per object, preserving sharing as deepcopy did.
+        memo: dict[int, java._Variable] = {}
+
+        def own(variable: java._Variable | None) -> java._Variable | None:
+            if variable is None:
+                return None
+            copied = memo.get(id(variable))
+            if copied is None:
+                copied = memo[id(variable)] = copy.copy(variable)
+                if copied.value is not None:
+                    copied.value = copy.copy(copied.value)
+            return copied
+
+        result.variables = {name: own(v) for name, v in self.variables.items()}
+        result.frames = [
+            {name: own(v) for name, v in frame.items()} for frame in self.frames
+        ]
         result.choices = dict(self.choices)
         result.queries = list(self.queries)
         result.reads = set()
