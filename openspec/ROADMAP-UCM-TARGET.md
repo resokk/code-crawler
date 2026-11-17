@@ -1,17 +1,19 @@
-# Code-crawler: OpenSpec target roadmap (updated 2026-11-15, b5b3f35)
+# Code-crawler: OpenSpec target roadmap (updated 2026-11-17, e133ccc)
 
 ## Status and rules
-The original 39 changes are tracked across active `changes/` and completed `archive/` directories, with proposal.md, design.md, specs/<capability>/spec.md and tasks.md. Many features are **already implemented**, and the baseline is now `b5b3f35ee50fcb0d8546af57898a0436ae642415`. Check [development plan v3](../docs/development-plan-v3.md) and [current review](../docs/review-2026-11-15-b5b3f35.md) for accurate status and priorities. Do not reimplement archived changes.
 
-Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in PostgreSQL 15, Java/Groovy/PLPlus, SQL construction/execution/lineage, ORM, source archive, incremental CLI and publication, structural/lexical search, stateless read-only FastMCP. Confirmed recent GitHub Actions PG15 succeeded on baseline. Reuse these implementations; do not reimplement them.
+The backlog is tracked in active `openspec/changes` and completed `openspec/archive` with evidence receipts. Latest audited main: `e133cccb65a39fa62615cc484441a6f523ec6973`. See [review 2026-11-17](../docs/review-2026-11-17-e133ccc.md) and [development plan v4](../docs/development-plan-v4.md). A02/A03/A04/A06, B01/B02/B03/B04 and E01 are now implemented; do not reimplement. New A07 is a migration-history/search_path safety follow-up. Successful PG15 CI at [run 44165042979](https://github.com/resokk/code-crawler/actions/runs/44165042979) checks a fresh database but does not establish upgrade compatibility on old populated DB.
+
+Current capabilities: canonical UCM with immutable snapshots, Java/Groovy/PLPlus/Kotlin/JS/TS/VBScript, SQL and ORM, BPMN, OpenAPI, Kafka, independent repository publication, structural/lexical discovery, query-time multi-repo resolver with cache/traversal, read-only authenticated MCP, redaction and monitoring. Unfinished capabilities remain explicitly PARTIAL.
 
 ## Stream A — correctness/security (before corporate deployment)
 - A01 safe-snapshot-gc: explicit UCM GC table allowlist and rollback — [completed](archive/2026-11-15-a01-safe-snapshot-gc/completion.md), PG15 CI 1112 passed
 - A02 mcp-repository-access-control: principal authentication and repository ACL — [completed](archive/2026-11-15-a02-mcp-repository-access-control/completion.md), PG15 CI 1252 passed
 - A03 database-qualified-structural-search: database/version/object scoped SQL access search — [completed](archive/2026-11-16-a03-database-qualified-structural-search/completion.md), PG15 CI 1284 passed
-- A04 sql-search-certainty-contract: discovered SQL versus proven execution and target identity
-- A05 required-main-ci-check: main branch required status check, requires GitHub admin settings
+- A04 sql-search-certainty-contract: [completed](archive/2026-11-16-a04-sql-search-certainty-contract/completion.md), SQL discovery/execution certainty
+- A05 required-main-ci-check: branch protection/no-bypass administrative verification remains active
 - A06 source-data-security-policy: raw evidence ACL, redaction of search/embedding inputs — [completed](archive/2026-11-16-a06-source-data-security-policy/completion.md), PG15 CI 1305 passed
+- A07 migration-history-and-schema-resolution: NEW — edited historic SQL, no checksums, implicit search_path; upgrade safety
 
 ## Stream B — performance/reliability (measure first)
 - B01 pg15-end-to-end-performance-baseline: [completed](archive/2026-11-16-b01-pg15-end-to-end-performance-baseline/completion.md), 400/1000-file results and documented >1M-target disk limit; PG15 CI 1325 passed
@@ -20,7 +22,7 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - java-sql-flow-copy-on-write: lazy Java SQL branch state — [completed](archive/2026-11-17-java-sql-flow-copy-on-write/completion.md), PG15 CI 1414 passed
 - java-source-text-cache: bounded worker-local decoded Java text — [completed](archive/2026-11-17-java-source-text-cache/completion.md), PG15 CI 1431 passed
 - java-sql-path-budget-report: configurable Java path budget and optional metadata JSONL — [completed](archive/2026-11-17-java-sql-path-budget-report/completion.md), PG15 CI 1463 passed
-- B04 bulk-load-fk-optimization: evidence-backed PG15 transfer/FK tuning
+- B04 bulk-load-fk-optimization: [completed](archive/2026-11-16-b04-bulk-load-fk-optimization/completion.md), PG15 plans and bounded per-slice fact staging
 - B05 incremental-streaming-pipeline: bounded in-flight analysis+clone+staging
 - B06 large-snapshot-gc-performance: locks, WAL, orphan blob cleanup
 - B07 mixed-language-incremental-regression: real Java/Groovy/PLPlus fixture
@@ -60,12 +62,13 @@ Existing project capabilities: Python 3.12, canonical immutable UCM snapshots in
 - E03 backup-restore-validation: consistent PG15, UCM source evidence recovery
 - E04 openspec-archive-policy: preserve proposal/design/spec/task history
 
-## Critical path
-1. **Immediate safety**: A01 completed; A02 open as [PR #8](https://github.com/resokk/code-crawler/pull/8) and MUST precede network MCP exposure; A05 admin-bypass policy and A06 redaction remain open.
-2. **Performance**: >1M snapshot indexing now succeeds (405.4s index + 213.2s validation, 1012MiB); B06 GC (~123s/141k) is urgent, B02 SQL validation is bounded by slices/LRU with SQL global checks, B03/B05 follow; B07/B08 for regression/load.
-3. **Search**: C01–C06 completed; C10/C11 fill missing typed discovery coverage. C07 (after A06) → C08 → C09 (after A02). C12 removes full UCM materialization from document generation.
-4. **Adapters**: D01 → D02; D03 → D04; D05 → D06; D08 → D09; D07/D10/D11/D12 independent after registry readiness. Avoid cross-repo links at ingestion.
-5. **Operations**: E01–E04 after corresponding data/ACL boundaries, and E02 before destructive large-scale GC.
+## Critical path (revised 2026-11-17)
+
+1. Migration and governance: **A07 first** for upgrading existing databases; **A05** required rules verification.
+2. Storage operations: **B06** GC measured above 120s on 141k; coordinate with **E02** retention/source blob lifecycle. B05 bounded spool/staging, C12 bounded search projection; B07/B08 after.
+3. Search: C01–C06 complete; **C10/C11** declaration discovery; **C07 → C08 → C09** GraphRAG, with A02/A06 already implemented. No runtime certainty promotion.
+4. Adapters: D03→D04 reference-data; D08→D09 GraphQL. Existing D01/D02, D05/D06, D07, D10/D11/D12 done.
+5. Ops: E01 done; E02/E03 pending; E04 archive policy, monitoring drift review.
 
 ## Invariants and Definition of Done
 - One repository indexed without consulting other repository indexes. ExternalReference resolved only at query time and in explicit version context.
