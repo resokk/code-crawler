@@ -145,3 +145,8 @@ Java SQL jobs persist `java_sql_max_paths` (default 256) and the optional absolu
 root. Report export runs before publication; export failure records FAILED with
 the built snapshot ID and leaves the old publication intact. Report ANALYZED status
 refers to analysis, not publication. See [java-sql-path-budget.md](java-sql-path-budget.md).
+
+`analysis_workers` is saved for retry (default 1 for older jobs). It is operational,
+not part of fact identity. Managed Java workers are closed before canonical writes;
+worker failure cannot replace the publication. See
+[parallel-snapshot-preparation.md](parallel-snapshot-preparation.md).

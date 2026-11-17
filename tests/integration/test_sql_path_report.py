@@ -39,6 +39,7 @@ def test_cli_budget_report_reuse_retry_parameters_and_export_failure(
                     "postgres",
                     "UNKNOWN",
                     publish=True,
+                    analysis_workers=2,
                     java_sql_max_paths=budget,
                     java_sql_path_report=str(path),
                 )
@@ -80,6 +81,7 @@ def test_cli_budget_report_reuse_retry_parameters_and_export_failure(
                     "SELECT parameters FROM ingest_jobs ORDER BY created_at DESC LIMIT 1"
                 )
             )
+            assert parameters["analysis_workers"] == 2
             assert parameters["java_sql_max_paths"] == 4
             assert parameters["java_sql_path_report"] == str(
                 (tmp_path / "third.jsonl").resolve()

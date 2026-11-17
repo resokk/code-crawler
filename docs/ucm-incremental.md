@@ -203,3 +203,9 @@ TEST_DATABASE_URL=postgresql://... uv run --locked python -m code_crawler.transa
   --groups 199 --output /tmp/b03-after.json
 git worktree remove /tmp/crawler-b03-parent
 ```
+
+Opt-in Java process preparation preserves captured-byte/catalogue identity and
+ordered slices. The registry supplies an optional `analysis_complete` callback to
+release processes after preparation and before the write transaction; finally
+cleanup covers errors/cancellation. PostgreSQL and row normalization remain in the
+parent. See [parallel-snapshot-preparation.md](parallel-snapshot-preparation.md).

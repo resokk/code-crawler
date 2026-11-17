@@ -38,6 +38,7 @@ from code_crawler.java_adapter import (
     JAVA_PROFILES,
     JavaSourceAdapter,
 )
+from code_crawler.java_parallel import validate_workers
 from code_crawler.javascript_adapter import (
     JavaScriptSourceAdapter,
     TypeScriptSourceAdapter,
@@ -151,6 +152,7 @@ async def index(
     bpmn_profile: str | None = None,
     java_sql_max_paths: int | None = None,
     java_sql_path_report: str | None = None,
+    analysis_workers: int | None = None,
 ) -> None:
     """Build and publish canonical UCM by default; legacy requires explicit selection."""
     if backend == "legacy":
@@ -162,6 +164,7 @@ async def index(
                 bpmn_profile,
                 java_sql_max_paths,
                 java_sql_path_report,
+                analysis_workers,
                 dialect,
                 naming_policy,
                 connections,
@@ -172,6 +175,7 @@ async def index(
         return
     if backend != "ucm":
         raise SystemExit("unknown index backend")
+    validate_workers(analysis_workers if analysis_workers is not None else 1)
     sql_paths.validate_max_paths(
         java_sql_max_paths if java_sql_max_paths is not None else 256
     )
@@ -196,6 +200,7 @@ async def index(
         if java_sql_max_paths is not None
         else 256,
         java_sql_path_report=java_sql_path_report,
+        analysis_workers=analysis_workers if analysis_workers is not None else 1,
     )
 
 
@@ -519,7 +524,9 @@ async def index_registered(
     bpmn_profile: str = "auto",
     java_sql_max_paths: int = 256,
     java_sql_path_report: str | None = None,
+    analysis_workers: int = 1,
 ) -> None:
+    validate_workers(analysis_workers)
     parameters = {
         "root": root,
         "repository_key": repository_key,
@@ -531,6 +538,7 @@ async def index_registered(
         "publish": publish,
         "java_sql_max_paths": java_sql_max_paths,
         "java_sql_path_report": java_sql_path_report,
+        "analysis_workers": analysis_workers,
     }
     with operation("Индексация source adapters") as progress:
         tasks: dict[str, TaskID] = {}
@@ -584,6 +592,7 @@ async def index_registered(
                     )
                 adapter = JavaSourceAdapter(
                     profile=java_profile,
+                    analysis_workers=analysis_workers,
                     schemas=tuple(schemas),
                     assignments=assignments,
                     dialect=dialect,
@@ -665,7 +674,20 @@ def _sql_max_paths(value: str) -> int:
         raise argparse.ArgumentTypeError(str(error)) from error
 
 
+def _analysis_workers(value: str) -> int:
+    try:
+        return validate_workers(int(value))
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+
+
 def _canonical_options(parser: argparse.ArgumentParser, *, defaults: bool) -> None:
+    parser.add_argument(
+        "--analysis-workers",
+        type=_analysis_workers,
+        default=1 if defaults else None,
+        help="Java analysis processes (1..32, default 1)",
+    )
     parser.add_argument(
         "--java-sql-max-paths",
         type=_sql_max_paths,

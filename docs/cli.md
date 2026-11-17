@@ -127,3 +127,8 @@ Java SQL profiling options on `index` and `index-sources`:
 `--java-sql-path-report /tmp/cases.jsonl` exports overflow metadata for reanalyzed
 methods. Reports must be outside the indexed root. Scope, JSONL fields, retry and
 publication behavior: [java-sql-path-budget.md](java-sql-path-budget.md).
+
+`index` and `index-sources` accept `--analysis-workers N` (1..32, default 1) for
+managed Java process analysis. Settings persist for retry without changing fact
+identity. Memory/catalogue replication and supported phases:
+[parallel-snapshot-preparation.md](parallel-snapshot-preparation.md).
