@@ -310,3 +310,9 @@ KAFKA_PRODUCES_TO, KAFKA_CONSUMES_FROM, KAFKA_DECLARES_TOPIC relations.
 Migration 0027 extends normalized registries; canonical validation enforces symbol
 subtypes. Resource selectors and configuration are source candidates, not runtime
 or cross-repository dependencies: [Kafka contract](kafka-message-intelligence.md).
+
+C11 добавляет Symbol kind `BPMN_WORKER` для явной поддержанной Java worker
+registration и `BPMN_WORKER_HANDLER` (SYMBOL → SYMBOL, worker → METHOD).
+BPMN_ATTRIBUTE хранит literal engine/worker_type; handler relation сохраняет
+D02 Evidence и PARTIAL coverage `bpmn.worker.declarations`. Это декларация,
+не доказанное runtime выполнение. Правила BPMN_HANDLER для XML tasks сохранены.

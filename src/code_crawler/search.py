@@ -951,9 +951,10 @@ def _discovery_qualifier(kind: str, qualifier: dict | None) -> dict:
         },
         "BPMN_PROCESS": {"target_namespace"},
         "HTTP": {"service", "contract_id", "method"},
-        "BPMN_WORKER": {"namespace"},
+        "BPMN_WORKER": {"namespace", "service", "engine"},
         "REFERENCE_DATA": {"namespace"},
-        "KAFKA": {"cluster"},
+        "KAFKA": {"cluster", "environment"},
+        "KAFKA_TOPIC": {"cluster", "environment"},
     }
     if not isinstance(value, dict) or not set(value) <= fields[kind]:
         raise ValueError("invalid discovery qualifier fields")
@@ -1144,6 +1145,11 @@ SELECT jsonb_build_object(
         result["coverage"]["status"] = "PARTIAL"
         result["coverage"]["reasons"].append(
             "OpenAPI contract declarations only; runtime service bindings and callback/webhook targets are unresolved"
+        )
+    if kind in ("KAFKA", "KAFKA_TOPIC", "BPMN_WORKER"):
+        result["coverage"]["status"] = "PARTIAL"
+        result["coverage"]["reasons"].append(
+            "Source declarations only; deployment, activation and runtime execution are not proven"
         )
     result["resolution"] = (
         "AMBIGUOUS" if result["match_count_lower_bound"] > 1 else "UNRESOLVED"

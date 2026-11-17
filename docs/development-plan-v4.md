@@ -39,8 +39,8 @@ B06 и A07 можно выполнять параллельно. E02 долже�
 
 ## Волна 2. Завершение query-time discovery и MCP (P1/P2)
 
-- **C10** Kafka topic discovery — после D07: **declarations only**, cluster/namespace identity, C04 candidate uncertainty, version-context compatibility.
-- **C11** BPMN worker discovery — после D02: definite handler declaration vs external worker reference; ambiguous/partial без выдуманного runtime linkage.
+- **C10** Kafka topic discovery — реализовано, ожидает полный PG15 CI: **declarations only**, cluster/namespace identity, C04 candidate uncertainty, version-context compatibility.
+- **C11** BPMN worker discovery — реализовано, ожидает полный PG15 CI: definite handler declaration vs external worker reference; ambiguous/partial без выдуманного runtime linkage.
 - **C07** Embedding pipeline — выбрать модель для RU/EN code+SQL+schema, pgvector 0.8.0, model/preprocessing registry, redacted C01 input, content-hash cache, generation lifecycle. Ресурсы inference измерить на целевом железе.
 - **C08** Hybrid retrieval — exact/FTS/trigram/vector + bounded graph expansion, explainable ranking, тестовый RU/EN retrieval dataset.
 - **C09** Multi-repo MCP — global search, explainable resolution, bounded backward impact; строго ACL A02 и контекст C03. Никаких глобальных canonical relations.

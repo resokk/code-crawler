@@ -279,7 +279,7 @@ def test_atomic_failure_rollback_refresh_generation_and_gc(database_url, monkeyp
             unavailable = await lookup(conn)
             # One repository still has v1, so version-skew is explicit.
             assert unavailable["availability"] == "PARTIAL"
-            monkeypatch.setattr(discovery, "VERSION", "discovery/2")
+            monkeypatch.setattr(discovery, "VERSION", "discovery/3")
             await discovery.refresh_discovery(conn, "one")
             await jobs.collect_garbage(conn, keep_retired=0)
             assert not await conn.fetchval(
@@ -335,7 +335,9 @@ def test_bpmn_namespace_precision_and_unknown_target_types(database_url):
                     qualifier=qualifier,
                 )
                 assert unsupported["coverage"]["status"] == (
-                    "PARTIAL" if kind == "HTTP" else "UNSUPPORTED"
+                    "PARTIAL"
+                    if kind in ("HTTP", "KAFKA", "BPMN_WORKER")
+                    else "UNSUPPORTED"
                 )
                 assert not unsupported["items"]
         finally:

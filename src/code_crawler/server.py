@@ -389,6 +389,7 @@ async def search_discovery_entries(
         "BPMN_WORKER",
         "REFERENCE_DATA",
         "KAFKA",
+        "KAFKA_TOPIC",
     ],
     lookup_key: Annotated[str, Field(min_length=1, max_length=4096)],
     repository_keys: list[str] | None = None,
@@ -400,7 +401,7 @@ async def search_discovery_entries(
 ) -> dict:
     """Найти потенциальные цели в разрешённых published репозиториях.
 
-    Точный lookup_key — FQN, DB identifier, HTTP path или BPMN process id. qualifier уточняет
+    Точный lookup_key — FQN, DB identifier, HTTP path, BPMN process/worker key или Kafka topic. qualifier уточняет
     signature/namespace/context. Совпадение не доказывает dependency. Доступ задаёт
     server DISCOVERY_REPOSITORY_KEYS; клиент может только сузить scope. Следующая
     страница требует fingerprint предыдущей, чтобы не смешать поколения.

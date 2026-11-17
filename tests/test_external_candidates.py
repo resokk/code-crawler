@@ -126,3 +126,43 @@ def test_concrete_type_names_are_not_confused_with_unknown_markers(type_name):
     assert normalize_selector(
         SymbolSelector(qualified_name="api.Client.m", parameter_type_names=(type_name,))
     ).complete
+
+
+@pytest.mark.parametrize(
+    "encoded",
+    [
+        "orders",
+        "{}",
+        "null",
+        "[]",
+        "[null,null,null]",
+        '[null,null,".."]',
+        '[null,null,"${topic}"]',
+        '[null,null,"orders","site","id",true]',
+        '[{},null,"orders"]',
+    ],
+)
+def test_malformed_or_dynamic_kafka_keys_never_become_lookup_keys(encoded):
+    lookup = normalize_selector(
+        SymbolSelector(qualified_name="kafka.topic::" + encoded)
+    )
+    assert lookup.kind == "KAFKA_TOPIC" and not lookup.key and not lookup.complete
+
+
+def test_kafka_site_identity_is_not_a_cross_repository_key():
+    lookup = normalize_selector(
+        SymbolSelector(
+            qualified_name='kafka.topic::["broker:9092",null,"orders","site","local-id",0]'
+        )
+    )
+    assert lookup.key == ("orders",) and lookup.qualifiers == (
+        ("cluster", "broker:9092"),
+    )
+    assert not lookup.complete
+
+
+@pytest.mark.parametrize("value", ["${worker}", "#{worker}", "<unknown>"])
+def test_dynamic_worker_selector_has_no_lookup_key(value):
+    assert not normalize_selector(
+        SymbolSelector(qualified_name="bpmn.worker::" + value)
+    ).key

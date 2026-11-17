@@ -9,7 +9,7 @@ identifier keys. Схема JSON lookup keys и контракт C03 сохра�
 
 ## Lifecycle и versioning
 
-Проектор `discovery/2` строит все entries внутри транзакции canonical publication;
+Проектор `discovery/3` строит все entries внутри транзакции canonical publication;
 READY выставляется после всех SQL projections. Ошибка откатывает publication и
 поколение вместе. Idempotent refresh той же версии ничего не меняет.
 `code-crawler discovery refresh REPOSITORY_KEY` обновляет текущий published
@@ -51,9 +51,33 @@ Lookup keys case-sensitive: нет lowercase, fuzzy или semantic folding.
   и target_namespace из definitions того же captured файла. Без target_namespace
   поиск может вернуть несколько независимых processes.
 
-BPMN_WORKER, REFERENCE_DATA/DATASET и KAFKA/KAFKA_TOPIC остаются UNSUPPORTED:
-пока нет normative UCM target producers этих видов. ExternalReference с worker,
-route или topic не доказывает существование цели и не становится definition.
+- KAFKA_TOPIC: только static topic Symbol с входящим KAFKA_DECLARES_TOPIC от
+  KAFKA_DECLARATION с API `org.apache.kafka.clients.admin.NewTopic`. Отправка,
+  подписка/listener и client configuration не являются декларациями целей.
+  JSON lookup key — `[topic]`, qualifier — optional `cluster`, `environment` из
+  D07; `KAFKA` сохранён как совместимый вид с тем же набором деклараций (его
+  прежний обязательный cluster filter сохранён). Новый KAFKA_TOPIC допускает
+  отсутствие контекста и возвращает все декларации с этим точным именем.
+- BPMN_WORKER: только typed `BPMN_WORKER` Symbol с BPMN_WORKER_HANDLER к canonical
+  Java Method и literal BPMN_ATTRIBUTE `engine`, `worker_type`. Поддерживаются
+  строгие D02 Camunda 7 ExternalTaskSubscription + ExternalTaskHandler и Camunda 8
+  JobWorker; ordinary beans, delegates и BPMN tasks не становятся workers.
+  JSON lookup key — `[worker_type]`; qualifier содержит `engine`, `handler_id`,
+  nullable `namespace`/`service`. Namespace/service не угадываются из package.
+
+Для обоих видов coverage всегда PARTIAL: декларация не доказывает deployment,
+activation, broker resource existence или delivery/execution. Точный фильтр по
+известному контексту не совпадает с неизвестным. Несколько деклараций сохраняют
+AMBIGUOUS. Snapshot/generation и Evidence range остаются частью каждой записи.
+Повторяющиеся attribute names исключают декларацию вместо недетерминированного
+выбора значения. REFERENCE_DATA/DATASET пока UNSUPPORTED.
+
+Миграция 0032 добавляет BPMN_WORKER и BPMN_WORKER_HANDLER; прошлые миграции не
+изменены. Для Kafka достаточно refresh существующего D07 snapshot; для worker
+definitions старые Java snapshots надо переиндексировать — refresh не извлекает
+новые canonical факты. Java analysis fingerprint включает worker/1 и hash D02
+catalog. Старые retained snapshots с уже созданными discovery/3 поколениями
+по-прежнему читаются через C03 pinned context; обновление latest их не заменяет.
 
 ## API, доступ и неопределённость
 

@@ -176,6 +176,7 @@ class Symbol(EntityEnvelope):
         "PARAMETER",
         "LOCAL_VARIABLE",
         "BPMN_ELEMENT",
+        "BPMN_WORKER",
         "KAFKA_TOPIC",
         "KAFKA_PRODUCER",
         "KAFKA_CONSUMER",
@@ -343,6 +344,7 @@ class RelationKind(StrEnum):
     OPENAPI_RESPONSE_DTO = "OPENAPI_RESPONSE_DTO"
     OPENAPI_JAVA_PARAMETER = "OPENAPI_JAVA_PARAMETER"
     BPMN_HANDLER = "BPMN_HANDLER"
+    BPMN_WORKER_HANDLER = "BPMN_WORKER_HANDLER"
     BPMN_INPUT_MAPPING = "BPMN_INPUT_MAPPING"
     BPMN_OUTPUT_MAPPING = "BPMN_OUTPUT_MAPPING"
     BPMN_READS_VARIABLE = "BPMN_READS_VARIABLE"
@@ -429,6 +431,7 @@ _RELATION_ENDPOINTS = MappingProxyType(
             kind: _pairs("SYMBOL", "SYMBOL")
             for kind in (
                 RelationKind.BPMN_HANDLER,
+                RelationKind.BPMN_WORKER_HANDLER,
                 RelationKind.BPMN_INPUT_MAPPING,
                 RelationKind.BPMN_OUTPUT_MAPPING,
                 RelationKind.BPMN_FLOW_SOURCE,
@@ -605,6 +608,11 @@ def validate_relation_endpoints(
         and actual[0].symbol_kind != "BPMN_ELEMENT"
     ):
         raise ValueError("BPMN binding origin must be a BPMN element")
+    if relation.relation_kind == RelationKind.BPMN_WORKER_HANDLER and (
+        actual[0].symbol_kind != "BPMN_WORKER"
+        or any(target.symbol_kind != "METHOD" for target in actual[1:])
+    ):
+        raise ValueError("worker declaration must point to a canonical handler method")
     if relation.relation_kind == RelationKind.BPMN_HANDLER and any(
         target.symbol_kind != "METHOD" for target in actual[1:]
     ):

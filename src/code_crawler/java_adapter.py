@@ -35,6 +35,7 @@ from code_crawler.ucm import (
     SourceRange,
     SqlStatement,
 )
+from code_crawler.worker_declarations import COVERAGE as WORKER_COVERAGE
 
 JavaProfile = Literal[
     "symbols", "calls", "sql", "execution", "semantic", "lineage", "database", "orm"
@@ -177,7 +178,7 @@ class JavaSourceAdapter:
             key="java." + self.profile,
             version="2",
             routes=(SourceRoute(suffix=".java", language="java"),),
-            capabilities=(*capabilities, HTTP_COVERAGE),
+            capabilities=(*capabilities, HTTP_COVERAGE, WORKER_COVERAGE),
             entity_types=tuple(
                 dict.fromkeys(
                     (
@@ -291,7 +292,21 @@ class _PreparedJava:
         )
 
     async def prepare_http(self) -> None:
+        from code_crawler.bpmn_java_catalog import java_binding_catalog
+
         def build():
+            self._binding_catalog = (
+                java_binding_catalog(self._pairs(), self.adapter.profile)
+                if any(
+                    b"JobWorker" in s.content
+                    or b"ExternalTaskSubscription" in s.content
+                    for s in self.sources
+                )
+                else None
+            )
+            self.analysis_version += ":worker/1:" + (
+                self._binding_catalog.version if self._binding_catalog else "none"
+            )
             if mentions_http(self.sources):
                 self._http_catalog = java_http_catalog(
                     self._pairs(), self.adapter.profile
@@ -309,7 +324,11 @@ class _PreparedJava:
             pairs = self._pairs()
             http = self._http_catalog or java_http_catalog(pairs, self.adapter.profile)
             self._http_catalog = http
-            return (java_binding_catalog(pairs, self.adapter.profile), http)
+            return (
+                self._binding_catalog
+                or java_binding_catalog(pairs, self.adapter.profile),
+                http,
+            )
 
         return await asyncio.to_thread(collect)
 
@@ -328,7 +347,11 @@ class _PreparedJava:
                     result = self._symbol_catalog.get(source.file.path) or extract(
                         source
                     )
-                    analysis = result.analysis
+                    from code_crawler.worker_declarations import emit_workers
+
+                    analysis = emit_workers(
+                        source, result.analysis, self._binding_catalog
+                    )
                     diagnostics = ()
                     if self._http_catalog is not None:
                         analysis, diagnostics = emit_java_http(
@@ -345,6 +368,7 @@ class _PreparedJava:
                                 self.adapter.descriptor.capabilities[0],
                                 result.coverage,
                                 HTTP_COVERAGE,
+                                WORKER_COVERAGE,
                             ),
                         )
                     )
@@ -424,12 +448,15 @@ class _PreparedJava:
                     coverage = getattr(self.analyzer, attribute, None)
                     if coverage is not None:
                         capabilities.append(coverage)
+                from code_crawler.worker_declarations import emit_workers
+
+                analysis = emit_workers(file.source, analysis, self._binding_catalog)
                 diagnostics = ()
                 if self._http_catalog is not None:
                     analysis, diagnostics = emit_java_http(
                         file.source, analysis, self._http_catalog
                     )
-                capabilities.append(HTTP_COVERAGE)
+                capabilities.extend((HTTP_COVERAGE, WORKER_COVERAGE))
                 results.append(
                     AdapterFileResult(
                         analysis=analysis,

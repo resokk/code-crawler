@@ -148,7 +148,7 @@ and import checks do not imply that a framework is installed or running.
 Concrete topic references also produce deferred SymbolSelector external references
 with the qualified resource key and UNKNOWN certainty. Another repository is never
 consulted during indexing. These are future lookup keys; the global discovery
-catalog/C04 Kafka-specific resolver remains unsupported until separately extended.
+catalog/C04 supports explicit static NewTopic declaration candidates in discovery/3; runtime delivery remains unproven.
 Local exact symbol lookup by qualified resource key is already supported.
 
 ## Incremental lifecycle, budgets and verification
@@ -178,3 +178,14 @@ configuration candidates, malformed YAML/Java, budgets, AST sharing with BPMN,
 PG15 migration/publication, archived Evidence, full/incremental equivalence, reuse,
 version invalidation, config edits, consumer removal, independent repositories and
 failed-producer preservation.
+
+## Topic discovery (C10)
+
+Discovery projector `discovery/3` публикует KAFKA_TOPIC definitions только для
+static NewTopic declarations, не для producers/listeners/subscriptions. Exact
+topic key и optional cluster/environment сохраняют D07 source identity; неизвестный
+контекст не становится глобальным topic identity. C04 resolver/3 принимает
+существующие JSON selectors и возвращает кандидатов из выбранных C03 snapshots.
+Совпадение всегда PARTIAL/AMBIGUOUS: deployment и delivery не доказаны. Изменение
+published snapshot/generation меняет cache identity; pinned old snapshots читают
+свои старые declarations. Canonical Kafka facts не переписываются.

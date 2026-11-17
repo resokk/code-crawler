@@ -241,7 +241,7 @@ def test_external_candidates_unique_ambiguous_missing_partial_versions_and_fanou
             unsupported = await resolve("kafka")
             assert (
                 unsupported.status == "UNRESOLVED"
-                and unsupported.coverage.status == "UNSUPPORTED"
+                and unsupported.coverage.status == "PARTIAL"
             )
             assert (await resolve("http")).status == "UNRESOLVED"
             ambiguous = await resolve("exact", await context("target", "other"))
@@ -734,7 +734,7 @@ def test_matching_adapter_placeholders_remain_partial_with_complete_source_facts
                 assert result.status == "PARTIAL" and result.target is None
                 assert len(result.candidates) == 1
                 assert result.candidates[0].certainty == Certainty.INFERRED
-                assert result.coverage.analyzer_version == "2"
+                assert result.coverage.analyzer_version == "3"
                 assert "unknown parameter type identity" in result.reasons
             assert await conn.fetchval("SELECT count(*) FROM ucm_relations") == before
         finally:

@@ -28,7 +28,17 @@ proof. Connection aliases require an unambiguous canonical DatabaseContext in th
 entity’s source file; an alias
 is never treated as a global database identity. Missing schema uses explicit context
 search-path selection, without guessing across schemas. Dynamic identifiers remain
-partial. Kafka/worker declarations remain UNSUPPORTED in C02. OpenAPI operations (D05) are
+partial. Resolver version 3 supports C10/C11 declaration candidates:
+Kafka selectors use the existing D07 JSON `[cluster, environment, topic]` identity
+(with an optional repository-local site suffix). Only exact topic and explicitly
+known cluster/environment constrain lookup; the site suffix is never global
+identity. Malformed/dynamic identities have no lookup key. BPMN worker type is
+matched with the exact engine recorded by D02 source Evidence; absent/conflicting
+engine provenance produces no match. Dynamic worker expressions are not evaluated.
+Worker candidates expose optional `handler_id` to the canonical Java Method;
+BPMN_WORKER_HANDLER retains annotation + method/contract Evidence. These candidates
+always remain PARTIAL (or AMBIGUOUS), including with one matching declaration;
+there is no proof of runtime activation or delivery. OpenAPI operations (D05) are
 HTTP candidates: explicit service constraints require a matching deployment mapping.
 Without that mapping no arbitrary repository is selected. Contract facts do not
 declare canonical service identity/implementation binding, so HTTP matches stay
@@ -38,7 +48,7 @@ template execution semantics are not inferred.
 RESOLVED means one exact **declaration selector identity** in the selected indexed
 context, never proof of invocation/deployment. It requires a complete selector,
 STATIC_PROVEN/COMPLETE source facts, compatible version constraints and accessible
-source/target Evidence paths. Symbol names without signature proof remain PARTIAL. Resolver analyzer version 2
+source/target Evidence paths. Symbol names without signature proof remain PARTIAL. Resolver analyzer version 3
 also treats adapter placeholders (`kotlin.unknown`, `groovy.dynamic`,
 `vbscript.Variant`, TypeScript `any`/`unknown`) as incomplete type identity,
 including nested generic/array types. Exact-key candidates remain discoverable,

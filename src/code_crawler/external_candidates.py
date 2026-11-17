@@ -28,7 +28,7 @@ from code_crawler.ucm import (
     Text,
 )
 
-VERSION = "2"
+VERSION = "3"
 _UNKNOWN_TYPE = re.compile(
     r"(?<![\w.$])(?:kotlin\.unknown|groovy\.dynamic|vbscript\.Variant|unknown|any)(?![\w.$])|<unknown>"
 )
@@ -55,6 +55,7 @@ class ExternalCandidate(ContractModel):
     target: EntityRef
     certainty: Certainty
     contract_id: EntityId | None = None
+    handler_id: EntityId | None = None
     coverage: Coverage
     evidence: EvidencePath
     rule: Text
@@ -107,6 +108,7 @@ class SelectorLookup:
     key: tuple
     complete: bool
     reasons: tuple[str, ...] = ()
+    qualifiers: tuple[tuple[str, str], ...] = ()
 
 
 def normalize_selector(
@@ -120,9 +122,66 @@ def normalize_selector(
             ("kafka.topic::", "KAFKA_TOPIC"),
         ):
             if selector.qualified_name.startswith(prefix):
+                value = selector.qualified_name[len(prefix) :]
+                if kind == "KAFKA_TOPIC":
+                    try:
+                        identity = json.loads(value) if len(value) <= 16384 else None
+                    except (ValueError, TypeError, RecursionError):
+                        identity = None
+                    if (
+                        not isinstance(identity, list)
+                        or len(identity) not in (3, 6)
+                        or any(
+                            x is not None and (not isinstance(x, str) or not x.strip())
+                            for x in identity[:3]
+                        )
+                        or not isinstance(identity[2], str)
+                        or re.fullmatch(r"[A-Za-z0-9._-]{1,249}", identity[2]) is None
+                        or identity[2] in (".", "..")
+                        or (
+                            len(identity) == 6
+                            and (
+                                identity[3] != "site"
+                                or not isinstance(identity[4], str)
+                                or type(identity[5]) is not int
+                                or identity[5] < 0
+                            )
+                        )
+                    ):
+                        return SelectorLookup(
+                            kind,
+                            (),
+                            False,
+                            ("malformed or dynamic Kafka topic identity",),
+                        )
+                    return SelectorLookup(
+                        kind,
+                        (identity[2],),
+                        False,
+                        (
+                            "Kafka cluster/environment and delivery are not runtime proof",
+                        ),
+                        tuple(
+                            (name, item)
+                            for name, item in zip(
+                                ("cluster", "environment"), identity[:2]
+                            )
+                            if item is not None
+                        ),
+                    )
+                if kind == "BPMN_WORKER" and (
+                    not value.strip()
+                    or any(x in value for x in ("${", "#{", "<unknown>"))
+                ):
+                    return SelectorLookup(
+                        kind,
+                        (),
+                        False,
+                        ("dynamic worker selector is not an exact declaration key",),
+                    )
                 return SelectorLookup(
                     kind,
-                    (selector.qualified_name[len(prefix) :],),
+                    (value,),
                     False,
                     ("framework binding/deployment semantics are not proven",),
                 )
@@ -284,6 +343,34 @@ async def _resolve(conn, source_key, reference_id, context, grants, limit, cache
             if origin.source_range:
                 origin_file_id = origin.source_range.source_file_id
     lookup = normalize_selector(reference.selector)
+    if lookup.kind == "BPMN_WORKER":
+        engines = {
+            e.rule.split(".")[0]
+            for e in reference.evidence
+            if e.analyzer == "bpmn.java"
+            and e.rule
+            in (
+                "camunda7.external.worker",
+                "camunda8.external.worker",
+                "flowable.external.worker",
+            )
+        }
+        engines &= {"camunda7", "camunda8", "flowable"}
+        if len(engines) == 1:
+            lookup = SelectorLookup(
+                lookup.kind,
+                lookup.key,
+                False,
+                lookup.reasons,
+                (("engine", engines.pop()),),
+            )
+        else:
+            lookup = SelectorLookup(
+                lookup.kind,
+                (),
+                False,
+                (*lookup.reasons, "worker engine/profile is not uniquely established"),
+            )
     reasons = list(lookup.reasons)
     proofs = await _source_evidence(conn, reference, source)
     if len(reference.evidence) > 32:
@@ -344,7 +431,7 @@ async def _resolve(conn, source_key, reference_id, context, grants, limit, cache
         reasons.append(f"{lookup.kind} target declaration producer is unsupported")
     if reference.version_hint and not bounded:
         reasons.append("version hint is not verified by any selected commit/snapshot")
-    if supported and bounded and (lookup.kind != "DATABASE" or db_key):
+    if supported and bounded and lookup.key and (lookup.kind != "DATABASE" or db_key):
         # A database selector can match table/view kinds, but never schema/column or another database version.
         keys = [lookup.key]
         if isinstance(reference.selector, HttpSelector):
@@ -375,6 +462,7 @@ async def _resolve(conn, source_key, reference_id, context, grants, limit, cache
             LEFT JOIN ucm_snapshot_sources a ON a.snapshot_id=f.snapshot_id AND a.source_file_id=f.entity_id AND a.content_sha256=f.content_sha256
             WHERE (e.snapshot_id,e.generation) IN (SELECT * FROM unnest($1::uuid[],$2::uuid[]))
               AND e.kind=$3 AND g.projector_version=$4 AND g.state='READY'
+              AND NOT EXISTS (SELECT 1 FROM jsonb_each($7::jsonb) q(key,value) WHERE e.qualifier->q.key IS DISTINCT FROM q.value)
             ORDER BY r.repository_key,e.snapshot_id,e.entity_id LIMIT $6
             """,
             [s.snapshot_id for s in bounded],
@@ -383,6 +471,7 @@ async def _resolve(conn, source_key, reference_id, context, grants, limit, cache
             discovery.VERSION,
             json.dumps(keys, ensure_ascii=False),
             limit + 1,
+            json.dumps(dict(lookup.qualifiers)),
         )
     truncated = len(rows) > limit
     if truncated:
@@ -413,6 +502,7 @@ async def _resolve(conn, source_key, reference_id, context, grants, limit, cache
                 ),
                 certainty=Certainty.INFERRED,
                 contract_id=json.loads(row["qualifier"]).get("contract_id"),
+                handler_id=json.loads(row["qualifier"]).get("handler_id"),
                 coverage=_coverage(),
                 evidence=evidence,
                 rule=f"selector.exact.{lookup.kind.lower()}",

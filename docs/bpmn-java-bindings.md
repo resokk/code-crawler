@@ -155,3 +155,19 @@ BPMN adapter сам не создаёт SQL execution, SQL parsing или Java C
 `tests/integration/test_bpmn_java_storage.py` (PG15: CLI, publish/read/trace,
 reuse, ambiguity, annotation rename, profile change, deletion, parser/binding
 failure, immutable old snapshots и remote-only targets).
+
+## Worker discovery (C11)
+
+Java profiles сохраняют поддержанные `WORKER` registrations из того же D02 catalog
+как отдельные BPMN_WORKER Symbols, даже без BPMN XML в repository. Связь
+BPMN_WORKER_HANDLER ведёт к прежнему canonical Method и сохраняет Evidence
+annotation + method/interface. Literal engine и worker_type — BPMN_ATTRIBUTE
+Values. Dynamic placeholders, enabled=false, abstract/static workers, неверные
+imports и обычные beans не создают discovery definitions.
+
+Capability `bpmn.worker.declarations`, версия `bpmn.worker/1`, всегда PARTIAL.
+Правила локального BPMN_HANDLER и его Resolution/Certainty не изменены.
+Worker catalog hash входит в Java analysis fingerprint; изменение registration
+инвалидирует reuse. Проекты без признаков worker annotations не строят этот
+catalog дополнительно. C02 discovery/3 и C04 resolver/3 ищут declarations
+в выбранных C03 snapshots, без cross-repository canonical relations.

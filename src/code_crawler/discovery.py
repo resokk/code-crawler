@@ -5,7 +5,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 
 import asyncpg
 
-VERSION = "discovery/2"
+VERSION = "discovery/3"
 MAX_REPOSITORIES = 32
 MAX_LIMIT = 200
 COVERAGE = {
@@ -14,10 +14,10 @@ COVERAGE = {
     "DATABASE": "PARTIAL",
     "BPMN_PROCESS": "PARTIAL",
     "HTTP": "PARTIAL",
-    "BPMN_WORKER": "UNSUPPORTED",
-    "KAFKA_TOPIC": "UNSUPPORTED",
+    "BPMN_WORKER": "PARTIAL",
+    "KAFKA_TOPIC": "PARTIAL",
     "DATASET": "UNSUPPORTED",
-    "KAFKA": "UNSUPPORTED",
+    "KAFKA": "PARTIAL",
     "REFERENCE_DATA": "UNSUPPORTED",
 }
 
@@ -30,8 +30,17 @@ KINDS = (
     "BPMN_WORKER",
     "REFERENCE_DATA",
     "KAFKA",
+    "KAFKA_TOPIC",
 )
-SUPPORTED = ("SYMBOL", "DATABASE", "BPMN_PROCESS", "HTTP")
+SUPPORTED = (
+    "SYMBOL",
+    "DATABASE",
+    "BPMN_PROCESS",
+    "HTTP",
+    "KAFKA",
+    "KAFKA_TOPIC",
+    "BPMN_WORKER",
+)
 
 
 async def build_generation(conn: asyncpg.Connection, snapshot_id: UUID) -> UUID:
@@ -76,6 +85,15 @@ async def build_generation(conn: asyncpg.Connection, snapshot_id: UUID) -> UUID:
               AND t.owner_id=s.entity_id AND t.role='PARAMETER'),'[]'::jsonb) AS parameters
           FROM ucm_symbols s WHERE s.snapshot_id=$1
             AND s.symbol_kind IN ('CLASS','METHOD','CONSTRUCTOR','FIELD')
+        ), attributes AS (
+          SELECT r.snapshot_id,r.source_id,jsonb_object_agg(a.name,v.literal) AS values
+          FROM ucm_relations r
+          JOIN ucm_entities a ON a.snapshot_id=r.snapshot_id AND a.entity_id=r.target_id
+          JOIN ucm_values v ON v.snapshot_id=a.snapshot_id AND v.entity_id=a.entity_id
+          WHERE r.snapshot_id=$1 AND r.relation_kind IN ('KAFKA_ATTRIBUTE','BPMN_ATTRIBUTE')
+           AND r.resolution='RESOLVED' AND v.value_kind='LITERAL'
+          GROUP BY r.snapshot_id,r.source_id
+          HAVING count(*)=count(DISTINCT a.name)
         ), projections AS (
           SELECT s.entity_id,'SYMBOL' AS kind,jsonb_build_array(s.qualified_name) AS key,
                  jsonb_build_object('symbol_kind',s.symbol_kind,'qualified_name',s.qualified_name,
@@ -118,6 +136,36 @@ async def build_generation(conn: asyncpg.Connection, snapshot_id: UUID) -> UUID:
           WHERE s.snapshot_id=$1 AND s.symbol_kind='BPMN_ELEMENT'
           AND s.qualified_name='{http://www.omg.org/spec/BPMN/20100524/MODEL}process'
           AND v.value_kind='LITERAL' AND jsonb_typeof(v.literal)='string' AND length(v.literal #>> '{}')>0
+
+          UNION ALL
+          SELECT topic.entity_id,k.kind,jsonb_build_array(a.values->>'topic'),
+                 jsonb_build_object('cluster',a.values->>'cluster','environment',a.values->>'environment')
+          FROM ucm_symbols topic
+          JOIN attributes a ON a.snapshot_id=topic.snapshot_id AND a.source_id=topic.entity_id
+          CROSS JOIN (VALUES ('KAFKA_TOPIC'),('KAFKA')) k(kind)
+          WHERE topic.snapshot_id=$1 AND topic.symbol_kind='KAFKA_TOPIC'
+            AND jsonb_typeof(a.values->'topic')='string'
+            AND a.values->>'topic' ~ '^[A-Za-z0-9._-]{1,249}$'
+            AND a.values->>'topic' NOT IN ('.','..')
+            AND EXISTS (SELECT 1 FROM ucm_relations d
+              JOIN ucm_symbols endpoint ON endpoint.snapshot_id=d.snapshot_id AND endpoint.entity_id=d.source_id
+              JOIN attributes api ON api.snapshot_id=endpoint.snapshot_id AND api.source_id=endpoint.entity_id
+              WHERE d.snapshot_id=topic.snapshot_id AND d.target_id=topic.entity_id
+                AND d.relation_kind='KAFKA_DECLARES_TOPIC' AND d.resolution='RESOLVED'
+                AND endpoint.symbol_kind='KAFKA_DECLARATION'
+                AND api.values->>'api'='org.apache.kafka.clients.admin.NewTopic')
+          UNION ALL
+          SELECT worker.entity_id,'BPMN_WORKER',jsonb_build_array(a.values->>'worker_type'),
+                 jsonb_build_object('engine',a.values->>'engine','handler_id',h.target_id,
+                                    'namespace',NULL,'service',NULL)
+          FROM ucm_symbols worker
+          JOIN attributes a ON a.snapshot_id=worker.snapshot_id AND a.source_id=worker.entity_id
+          JOIN ucm_relations h ON h.snapshot_id=worker.snapshot_id AND h.source_id=worker.entity_id
+            AND h.relation_kind='BPMN_WORKER_HANDLER' AND h.resolution='RESOLVED'
+          JOIN ucm_symbols method ON method.snapshot_id=h.snapshot_id AND method.entity_id=h.target_id AND method.symbol_kind='METHOD'
+          WHERE worker.snapshot_id=$1 AND worker.symbol_kind='BPMN_WORKER'
+            AND a.values->>'engine' IN ('camunda7','camunda8')
+            AND jsonb_typeof(a.values->'worker_type')='string' AND length(a.values->>'worker_type')>0
 
           UNION ALL
           SELECT op.entity_id,'HTTP',jsonb_build_array(NULL,mv.literal #>> '{}',pv.literal #>> '{}',root.entity_id),
