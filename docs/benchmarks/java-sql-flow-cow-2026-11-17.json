@@ -1,0 +1,104 @@
+{
+  "baseline": "d07a14d193e3c0db907a2223cd35a45c263baa51",
+  "python": "3.12.14",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "cpu_count": 3,
+  "physical_memory_bytes": 10452459520,
+  "cgroup": {
+    "cpu.max": "200000 100000",
+    "memory.max": "8589934592"
+  },
+  "source_sha256": {
+    "java.py": "ffff313973bad4ac30b241ed186cf840f475e823d30871fea332369e3744d685",
+    "java_sql.py": "6e5c887d640de17fc2351a7b196b0e1f6cf508a8f5b1c7c682fcaed5332023ee",
+    "java_sql_flow_benchmark.py": "b7e51c734ad05a9d8ff56671a995935faf0674ca63dbc59b3a5a58bad1cabe18"
+  },
+  "results": [
+    {
+      "mode": "main",
+      "fixture": "read_heavy",
+      "fixture_sha256": "a76f3b4e62863accce65bad98a57d406cd0c70ed311e3aeaf2d14a81dc28f8da",
+      "seconds": 1.9967673979699612,
+      "peak_rss_bytes": 82911232,
+      "entities": 949,
+      "facts_sha256": "8d53eaa18507bad7fa5c7cacafc513e3b16c7eb4cd18f2c3c6028ec5fafcd326",
+      "analysis_io_in_blocks": 0,
+      "analysis_io_out_blocks": 0,
+      "max_paths": 256,
+      "clones": 3070,
+      "materializations": 3070
+    },
+    {
+      "mode": "deepcopy",
+      "fixture": "read_heavy",
+      "fixture_sha256": "a76f3b4e62863accce65bad98a57d406cd0c70ed311e3aeaf2d14a81dc28f8da",
+      "seconds": 30.140550308977254,
+      "peak_rss_bytes": 280535040,
+      "entities": 949,
+      "facts_sha256": "8d53eaa18507bad7fa5c7cacafc513e3b16c7eb4cd18f2c3c6028ec5fafcd326",
+      "analysis_io_in_blocks": 0,
+      "analysis_io_out_blocks": 0,
+      "max_paths": 256,
+      "clones": 3070,
+      "materializations": 3070
+    },
+    {
+      "mode": "cow",
+      "fixture": "read_heavy",
+      "fixture_sha256": "a76f3b4e62863accce65bad98a57d406cd0c70ed311e3aeaf2d14a81dc28f8da",
+      "seconds": 0.18007234804099426,
+      "peak_rss_bytes": 56549376,
+      "entities": 949,
+      "facts_sha256": "8d53eaa18507bad7fa5c7cacafc513e3b16c7eb4cd18f2c3c6028ec5fafcd326",
+      "analysis_io_in_blocks": 0,
+      "analysis_io_out_blocks": 0,
+      "max_paths": 256,
+      "clones": 3070,
+      "materializations": 0
+    },
+    {
+      "mode": "main",
+      "fixture": "write_heavy",
+      "fixture_sha256": "e29b85fec447ba2be17ec353a053a29a91fd90f4230c0e8379b1b6438dd344b8",
+      "seconds": 0.24176496401196346,
+      "peak_rss_bytes": 59994112,
+      "entities": 887,
+      "facts_sha256": "ab93073934982ecf14b195793e072fa4d194052dee6a146b4d49586dbe4940d2",
+      "analysis_io_in_blocks": 0,
+      "analysis_io_out_blocks": 0,
+      "max_paths": 256,
+      "clones": 1022,
+      "materializations": 1022
+    },
+    {
+      "mode": "deepcopy",
+      "fixture": "write_heavy",
+      "fixture_sha256": "e29b85fec447ba2be17ec353a053a29a91fd90f4230c0e8379b1b6438dd344b8",
+      "seconds": 2.077567578002345,
+      "peak_rss_bytes": 115961856,
+      "entities": 887,
+      "facts_sha256": "ab93073934982ecf14b195793e072fa4d194052dee6a146b4d49586dbe4940d2",
+      "analysis_io_in_blocks": 0,
+      "analysis_io_out_blocks": 0,
+      "max_paths": 256,
+      "clones": 1022,
+      "materializations": 1022
+    },
+    {
+      "mode": "cow",
+      "fixture": "write_heavy",
+      "fixture_sha256": "e29b85fec447ba2be17ec353a053a29a91fd90f4230c0e8379b1b6438dd344b8",
+      "seconds": 0.24721979396417737,
+      "peak_rss_bytes": 59256832,
+      "entities": 887,
+      "facts_sha256": "ab93073934982ecf14b195793e072fa4d194052dee6a146b4d49586dbe4940d2",
+      "analysis_io_in_blocks": 0,
+      "analysis_io_out_blocks": 0,
+      "max_paths": 256,
+      "clones": 1022,
+      "materializations": 1022
+    }
+  ],
+  "equivalent": true,
+  "limitations": "One ordered fresh-process run per mode/case. Same current analyzer with swapped clone strategies, not full old checkouts. Synthetic corpus; no production throughput or memory SLA. RSS includes imports. Clone counts are not path merging."
+}

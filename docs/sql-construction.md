@@ -63,3 +63,45 @@ annotations/calls исключены; nativeQuery определяется AST f
 SQL semantic analysis должен учитывать kind fragments и partial reasons; оно,
 bindings и lineage здесь не реализованы. Execution sinks доступны отдельным
 opt-in `index_java_execution`; construction-only API сохраняет прежнее поведение.
+
+## Copy-on-write состояния Java SQL
+
+Ветвление сохраняет прежний порядок обхода и лимит 256 путей. `_SqlFlow.clone`
+разделяет граф variables/values до первой записи. Запись отделяет изменяемые
+bindings/values с сохранением aliases, в том числе через saved scope; неизменяемые
+fragments, reasons и spans остаются общими. При выходе из scope достаточно отделить
+таблицу bindings: последующая запись values всё ещё проходит барьер.
+
+Барьер записи покрывает declaration, assignment, dirty consumption и builder
+operations, включая append внутри выражения. После вложенного вызова RHS ссылка
+на binding обновляется: execution preview может отделить состояние. Это внутренний
+протокол: код, который вручную меняет `_Variable`/`_Value`, сначала вызывает
+`_writable()`. Legacy `_Flow` реализует этот hook как no-op. Поддержка builder
+aliasing не расширяется: прежние partial reasons сохраняются. Фильтра по наличию
+литералов и объединения эквивалентных путей нет.
+
+Контролируемый замер, Linux/Python 3.12, по одному свежему процессу на режим;
+одинаковый corpus и budget=256, полный digest фактов совпадает во всех режимах:
+
+| Сценарий | Clone из main `d07a14d`, с | COW, с | RSS main → COW, МиБ | Материализаций main → COW |
+| --- | ---: | ---: | ---: | ---: |
+| 128 locals, 18 read-only branches | 1,997 | 0,180 | 79,07 → 53,93 | 3070 → 0 |
+| 32 locals, 10 writing branches | 0,242 | 0,247 | 57,21 → 56,51 | 1022 → 1022 |
+
+Read-heavy быстрее примерно в 11 раз; write-heavy в этом замере медленнее на 2,2%.
+Это не SLA и не статистическая оценка эффекта на реальных репозиториях. Число
+forks не уменьшено; метод по-прежнему может упираться в path budget. RSS включает
+импорты и является process high-water, а не размером одного flow. Shared frames,
+queries и choices всё ещё имеют стоимость копирования.
+
+[Raw report](benchmarks/java-sql-flow-cow-2026-11-17.json) содержит SHA fixture,
+исходников/стенда, digest всех entities, clone/materialization counts, CPU/RAM/cgroup,
+RSS и process I/O blocks. Измеряется один текущий analyzer со сменой clone strategy:
+main clone извлекается из фиксированного commit, исторический deepcopy служит
+отдельным контрольным режимом. Это не сравнение полных старых checkout pipelines.
+
+Воспроизведение (baseline commit должен присутствовать в Git object database):
+
+```bash
+uv run python -m code_crawler.java_sql_flow_benchmark --output /tmp/java-sql-flow.json
+```

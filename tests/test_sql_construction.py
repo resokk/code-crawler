@@ -334,6 +334,7 @@ def test_flow_clone_isolates_state_and_keeps_shared_variables() -> None:
     flow.frames = [{"q": shared}]
 
     copy = flow.clone()
+    copy._writable()
     copy.variables["q"].value.partial = True
     copy.variables["q"].dirty = True
 

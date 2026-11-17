@@ -43,9 +43,38 @@ _MAX_PATHS = 256
 _TRUNCATED = "path limit reached: variants truncated"
 
 
+def _copy_state(
+    variables: dict[str, java._Variable],
+    frames: list[dict[str, java._Variable | None]],
+) -> tuple[dict[str, java._Variable], list[dict[str, java._Variable | None]]]:
+    # Only bindings/values are mutable. Preserve both kinds of alias, including
+    # values shared by distinct variables and saved shadowed bindings.
+    bindings: dict[int, java._Variable] = {}
+    values: dict[int, java._Value] = {}
+
+    def own(variable: java._Variable | None) -> java._Variable | None:
+        if variable is None:
+            return None
+        key = id(variable)
+        if key not in bindings:
+            copied = bindings[key] = copy.copy(variable)
+            if variable.value is not None:
+                value_key = id(variable.value)
+                if value_key not in values:
+                    values[value_key] = copy.copy(variable.value)
+                copied.value = values[value_key]
+        return bindings[key]
+
+    return (
+        {name: own(value) for name, value in variables.items()},
+        [{name: own(value) for name, value in frame.items()} for frame in frames],
+    )
+
+
 class _SqlFlow(java._Flow):
     def __init__(self, constants: dict, span: java.SourceSpan) -> None:
         super().__init__(constants, [])
+        self._shared = False
         self.fallback = span
         self.frames: list[dict[str, java._Variable | None]] = []
         self.choices: dict[int, Node] = {}
@@ -54,34 +83,26 @@ class _SqlFlow(java._Flow):
 
     def clone(self) -> "_SqlFlow":
         result = copy.copy(self)
-        # Variables and values are the only mutable parts of the state: fragments,
-        # reasons and spans are immutable, so a deepcopy of them only costs time.
-        # The memo keeps one copy per object, preserving sharing as deepcopy did.
-        memo: dict[int, java._Variable] = {}
-
-        def own(variable: java._Variable | None) -> java._Variable | None:
-            if variable is None:
-                return None
-            copied = memo.get(id(variable))
-            if copied is None:
-                copied = memo[id(variable)] = copy.copy(variable)
-                if copied.value is not None:
-                    copied.value = copy.copy(copied.value)
-            return copied
-
-        result.variables = {name: own(v) for name, v in self.variables.items()}
-        result.frames = [
-            {name: own(v) for name, v in frame.items()} for frame in self.frames
-        ]
+        self._shared = result._shared = True
+        result.frames = [dict(frame) for frame in self.frames]
         result.choices = dict(self.choices)
         result.queries = list(self.queries)
         result.reads = set()
         return result
 
+    def _writable(self) -> None:
+        if self._shared:
+            # Copy together: saved shadowed bindings can alias current values.
+            self.variables, self.frames = _copy_state(self.variables, self.frames)
+            self._shared = False
+
     def push(self) -> None:
         self.frames.append({})
 
     def pop(self) -> None:
+        if self.frames[-1] and self._shared:
+            # Scope exit changes bindings, not their values. Keep value writes guarded.
+            self.variables = dict(self.variables)
         for name, prior in self.frames.pop().items():
             value = self.variables[name]
             if value.dirty:
@@ -92,6 +113,7 @@ class _SqlFlow(java._Flow):
                 self.variables[name] = prior
 
     def _declare(self, declarator: Node, depth: int) -> None:
+        self._writable()
         name = java._text(declarator.child_by_field_name("name"))
         if self.frames and name not in self.frames[-1]:
             self.frames[-1][name] = self.variables.get(name)
@@ -162,6 +184,8 @@ class _SqlFlow(java._Flow):
                 and java._text(arguments.named_children[0]) == "0"
             )
             if name not in pure and not reset and variable.value is not None:
+                self._writable()
+                variable = self.variables[java._text(root)]
                 value = variable.value
                 variable.value = java._Value(
                     value.text,

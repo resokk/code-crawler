@@ -442,6 +442,9 @@ class _Flow:
         self.reads: set[str] = set()
         self.depth = 0
 
+    def _writable(self) -> None:
+        """Detach mutable state before writes; ordinary legacy flows own their state."""
+
     def run(self, node: Node | None, members: bool = False) -> None:
         if node is None:
             return
@@ -506,8 +509,10 @@ class _Flow:
         if value is None:
             return False
         self._emit(value, _line(node), _span(node))
-        for name in self.reads:
-            self.variables[name].dirty = False
+        if any(self.variables[name].dirty for name in self.reads):
+            self._writable()
+            for name in self.reads:
+                self.variables[name].dirty = False
         return True
 
     def _visit(self, node: Node, depth: int) -> None:
@@ -542,6 +547,7 @@ class _Flow:
             self._visit(child, inner)
 
     def _declare(self, declarator: Node, depth: int) -> None:
+        self._writable()
         name = _text(declarator.child_by_field_name("name"))
         initializer = declarator.child_by_field_name("value")
         value = None
@@ -564,12 +570,17 @@ class _Flow:
         operator = node.child_by_field_name("operator").type
         if variable is None or operator not in ("=", "+="):
             return False
+        self._writable()
+        variable = self.variables[_text(left)]
         right = node.child_by_field_name("right")
         self.reads = set()
         value = self.evaluate(right)
         reads = self.reads
         if value is None:
             self._visit(right, depth)
+        # Nested calls may fork previews or detach state while visiting the RHS.
+        self._writable()
+        variable = self.variables[_text(left)]
         if operator == "+=":
             value = _concat(variable.value, value)
         elif variable.dirty and _text(left) not in reads:
@@ -600,6 +611,8 @@ class _Flow:
             else None
         )
         if variable is not None and name in ("append", "insert", "setLength"):
+            self._writable()
+            variable = self.variables[_text(root)]
             if name == "append":
                 self.evaluate(node)
             elif name == "setLength":
@@ -723,6 +736,8 @@ class _Flow:
         if name in _PASS_THROUGH:
             return self.evaluate(receiver)
         if name in ("append", "concat") and len(arguments) == 1:
+            if name == "append":
+                self._writable()
             target = self.evaluate(receiver)
             if target is None:
                 return None
